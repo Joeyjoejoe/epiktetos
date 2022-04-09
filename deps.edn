@@ -1,3 +1,11 @@
-{:paths   []
- :deps    {org.clojure/clojure {:mvn/version "1.11.1"}}
- :aliases {:bin/lwjgl-version {:main-opts ["bin/lwjgl-version.clj"]}}}
+{:paths   ["src"]
+ :deps    {org.clojure/clojure {:mvn/version "1.11.1"}
+
+           ;; Exclude SLF4J logging backends to ensure only logback is used
+           org.clojure/tools.deps.alpha {:mvn/version "0.6.480", :exclusions [org.slf4j/slf4j-nop]}
+           ch.qos.logback/logback-classic {:mvn/version "1.2.11"}}
+
+ :aliases {:env/test {:extra-paths ["test"]
+                      :extra-deps {lambdaisland/kaocha {:mvn/version "1.63.998"}}}
+
+           :bin/lwjgl-version {:main-opts ["bin/lwjgl-version.clj"]}}}
