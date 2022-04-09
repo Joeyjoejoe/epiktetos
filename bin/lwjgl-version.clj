@@ -31,14 +31,14 @@
                     ;; "lwjgl-odbc"
                     ;; "lwjgl-openal"
                     ;; "lwjgl-opencl"
-                    ;; "lwjgl-opengl"
+                    "lwjgl-opengl"
                     ;; "lwjgl-opengles"
                     ;; "lwjgl-openvr"
                     ;; "lwjgl-par"
                     ;; "lwjgl-remotery"
                     ;; "lwjgl-rpmalloc"
                     ;; "lwjgl-sse"
-                    ;; "lwjgl-stb"
+                    "lwjgl-stb"
                     ;; "lwjgl-tinyexr"
                     ;; "lwjgl-tinyfd"
                     ;; "lwjgl-tootle"
@@ -67,7 +67,7 @@
         classifiers (get-classifiers module)]
     (cond (empty? classifiers)
           {lib-name mvn}
-          :else (into {lib-name mvn} (mapv #(hash-map (str lib-name "$" %) (merge mvn {:native-prefix ""})) classifiers)))))
+          :else (into {lib-name mvn} (mapv #(hash-map (symbol (str lib-name "$" %)) (merge mvn {:native-prefix ""})) classifiers)))))
 
 
 (cond
