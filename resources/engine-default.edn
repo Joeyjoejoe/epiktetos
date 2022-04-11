@@ -1,1 +1,7 @@
-{:window {:width 1280 :height 960 :title "Epictectus engine"}}
+{:glfw/window {:title               "Epictectus engine"
+               :width               1280
+               :height              960
+               :callback/cursor-pos "epictetus.window/mouse-callback"
+               :callback/key        "epictetus.window/keyboard-callback"
+               :mode/cursor         :cursor/disabled
+               :mode/lock-key       false}}

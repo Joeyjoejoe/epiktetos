@@ -1,9 +1,8 @@
 (ns epictetus.window
-  (:require [integrant.core :as ig]
+  (:require [clojure.string :as s]
+            [integrant.core :as ig]
             [epictetus.utils.buffer :as b]
-            ;;[clopengl.engine.glfw.controls.keyboard :as keyboard]
-	          ;;[clopengl.engine.glfw.controls.mouse :as mouse]
-            )
+            [epictetus.vocabulary.glfw :as glfw])
   (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback)
            (org.lwjgl.system MemoryUtil)
            (org.lwjgl.opengl GL11 GL)))
@@ -31,7 +30,7 @@
     (GLFW/glfwSetErrorCallback (GLFWErrorCallback/createPrint System/err))
 
     (when-not (GLFW/glfwInit)
-	    (throw (IllegalStateException. "Unable to initialize GLFW")))
+      (throw (IllegalStateException. "Unable to initialize GLFW")))
     (GLFW/glfwDefaultWindowHints)
     (GLFW/glfwWindowHint GLFW/GLFW_VISIBLE GLFW/GLFW_FALSE)
     (GLFW/glfwWindowHint GLFW/GLFW_RESIZABLE GL11/GL_TRUE)
@@ -44,28 +43,42 @@
 
     (GLFW/glfwCreateWindow ^Long width ^Long height ^String title (MemoryUtil/NULL) (MemoryUtil/NULL))))
 
-(defn configure [window]
-  (GLFW/glfwMakeContextCurrent window)
+(defn input-callback! [w property value]
+  (let [set-fn   (property glfw/dictionary)
+        cb-parts (s/split value #"/")
+        cb-ns    (symbol (first cb-parts))
+        cb-fn    (symbol (last  cb-parts))
+        cb       (ns-resolve cb-ns cb-fn)]
+    (if (nil? cb)
+      (throw (Exception. (str "Callback function " value " do not exists."))))
+      (set-fn w cb)))
+
+(defn input-mode! [w property value]
+    (let [mode  (property glfw/dictionary)
+          value (get glfw/dictionary value)]
+      (GLFW/glfwSetInputMode w mode value)))
+
+(defn configure [w opts]
+  (GLFW/glfwMakeContextCurrent w)
   (GLFW/glfwSwapInterval 1)
-  ;;  Init keyboard controls
-  ;; --- (GLFW/glfwSetKeyCallback window keyboard/key-callback)
-  (GLFW/glfwSetInputMode window GLFW/GLFW_STICKY_KEYS 1)
-  ;; Hide mouse cursor and capture its position.
+  (doseq [[k v] opts]
+    (cond
+      (isa? k :input/callback) (input-callback! w k v)
+      (isa? k :input/mode)     (input-mode! w k v)))
   ;; --- (mouse/center window (get-center window))
-  (GLFW/glfwSetInputMode window GLFW/GLFW_CURSOR GLFW/GLFW_CURSOR_DISABLED)
-  ;; --- (GLFW/glfwSetCursorPosCallback window mouse/fps-camera)
   (GL/createCapabilities)
   (GL11/glEnable GL11/GL_DEPTH_TEST)
-  window)
+  w)
 
-(defmethod ig/init-key :window [_ opts]
-  (let [window (create opts)]
-    (-> window
-        configure
-        GLFW/glfwShowWindow)
+(defmethod ig/init-key :glfw/window [_ opts]
+  (let [window (-> opts create (configure opts))]
     (println "OpenGL version:" (GL11/glGetString GL11/GL_VERSION))
+    (GLFW/glfwShowWindow window)
     window))
 
-(defmethod ig/halt-key! :window [_ window]
+(defmethod ig/halt-key! :glfw/window [_ window]
   (GLFW/glfwDestroyWindow window)
   (GLFW/glfwTerminate))
+
+(defn mouse-callback [])
+(defn keyboard-callback [])
