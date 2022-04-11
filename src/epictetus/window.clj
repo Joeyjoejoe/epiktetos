@@ -23,62 +23,90 @@
         y (/ (:height size) 2.0)]
     {:x x :y y}))
 
-(defn create
-  "Create the game window and set the OpenGl context where everything will be draw"
-  [params]
-  (let [{:keys [title width height]} params]
-    (GLFW/glfwSetErrorCallback (GLFWErrorCallback/createPrint System/err))
 
-    (when-not (GLFW/glfwInit)
-      (throw (IllegalStateException. "Unable to initialize GLFW")))
-    (GLFW/glfwDefaultWindowHints)
-    (GLFW/glfwWindowHint GLFW/GLFW_VISIBLE GLFW/GLFW_FALSE)
-    (GLFW/glfwWindowHint GLFW/GLFW_RESIZABLE GL11/GL_TRUE)
 
-    ;; Cross plateform compatiblity for OpenGL and GLSL (declaration order matters)
-    (GLFW/glfwWindowHint GLFW/GLFW_CONTEXT_VERSION_MAJOR 3)
-    (GLFW/glfwWindowHint GLFW/GLFW_CONTEXT_VERSION_MINOR 2)
-    (GLFW/glfwWindowHint GLFW/GLFW_OPENGL_PROFILE GLFW/GLFW_OPENGL_CORE_PROFILE)
-    (GLFW/glfwWindowHint GLFW/GLFW_OPENGL_FORWARD_COMPAT GL11/GL_TRUE)
+(defn window-hint! [property value]
+  (let [hint  (property glfw/dictionary)
+        value (or (get glfw/dictionary value) value)
+        f     (cond
+                (isa? glfw/grammar property :hint.type/integer) (:hint.type/integer glfw/dictionary)
+                (isa? glfw/grammar property :hint.type/string)  (:hint.type/string glfw/dictionary))]
+    (f hint value)))
 
-    (GLFW/glfwCreateWindow ^Long width ^Long height ^String title (MemoryUtil/NULL) (MemoryUtil/NULL))))
 
 (defn input-callback! [w property value]
-  (let [set-fn   (property glfw/dictionary)
+  (let [f        (property glfw/dictionary)
         cb-parts (s/split value #"/")
         cb-ns    (symbol (first cb-parts))
         cb-fn    (symbol (last  cb-parts))
         cb       (ns-resolve cb-ns cb-fn)]
     (if (nil? cb)
-      (throw (Exception. (str "Callback function " value " do not exists."))))
-      (set-fn w cb)))
+        (throw (Exception. (str "Callback function " value " do not exists.")))
+        (f w cb))))
+
 
 (defn input-mode! [w property value]
     (let [mode  (property glfw/dictionary)
           value (get glfw/dictionary value)]
       (GLFW/glfwSetInputMode w mode value)))
 
+
+(defn create-window
+  "Create the game window and set the OpenGl context where everything will be draw"
+  [params]
+  (GLFW/glfwSetErrorCallback (GLFWErrorCallback/createPrint System/err))
+  (when-not (GLFW/glfwInit)
+    (throw (IllegalStateException. "Unable to initialize GLFW")))
+
+  (GLFW/glfwDefaultWindowHints)
+
+  (let [{:keys [title width height display]} params
+        monitor (GLFW/glfwGetPrimaryMonitor)
+        video   (GLFW/glfwGetVideoMode monitor)]
+
+    (doseq [[k v] params]
+      (cond
+        (isa? glfw/grammar k :window/hint) (window-hint! k v)))
+
+    (cond
+      (= :fullscreen/windowed display)
+      (do (GLFW/glfwWindowHint GLFW/GLFW_RED_BITS (.redBits video))
+          (GLFW/glfwWindowHint GLFW/GLFW_GREEN_BITS (.greenBits video))
+          (GLFW/glfwWindowHint GLFW/GLFW_BLUE_BITS (.blueBits video))
+          (GLFW/glfwWindowHint GLFW/GLFW_REFRESH_RATE (.refreshRate video))
+          (GLFW/glfwCreateWindow (.width video) (.height video) title monitor (MemoryUtil/NULL)))
+
+      (= :fullscreen display)
+      (GLFW/glfwCreateWindow (.width video) (.height video) title monitor (MemoryUtil/NULL))
+
+      (= :windowed display)
+      (GLFW/glfwCreateWindow width height title (MemoryUtil/NULL) (MemoryUtil/NULL)))))
+
+
 (defn configure [w opts]
   (GLFW/glfwMakeContextCurrent w)
   (GLFW/glfwSwapInterval 1)
   (doseq [[k v] opts]
     (cond
-      (isa? k :input/callback) (input-callback! w k v)
-      (isa? k :input/mode)     (input-mode! w k v)))
+      (isa? glfw/grammar k :input/callback) (input-callback! w k v)
+      (isa? glfw/grammar k :input/mode)     (input-mode! w k v)))
   ;; --- (mouse/center window (get-center window))
   (GL/createCapabilities)
   (GL11/glEnable GL11/GL_DEPTH_TEST)
   w)
 
+
 (defmethod ig/init-key :glfw/window [_ opts]
-  (let [window (-> opts create (configure opts))]
+  (let [window (-> opts create-window (configure opts))]
     (println "OpenGL version:" (GL11/glGetString GL11/GL_VERSION))
     (GLFW/glfwShowWindow window)
     window))
 
+
 (defmethod ig/halt-key! :glfw/window [_ window]
   (GLFW/glfwDestroyWindow window)
   (GLFW/glfwTerminate))
+
 
 (defn mouse-callback [])
 (defn keyboard-callback [])

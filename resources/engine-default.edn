@@ -1,7 +1,14 @@
-{:glfw/window {:title               "Epictectus engine"
-               :width               1280
-               :height              960
-               :callback/cursor-pos "epictetus.window/mouse-callback"
-               :callback/key        "epictetus.window/keyboard-callback"
-               :mode/cursor         :cursor/disabled
-               :mode/lock-key       false}}
+{:glfw/window {:title                          "Epictectus engine"
+               :width                          800
+               :height                         600
+               :display                        :windowed
+               :callback/cursor-pos            "epictetus.window/mouse-callback"
+               :callback/key                   "epictetus.window/keyboard-callback"
+               :mode/cursor                    :cursor/normal
+               :mode/lock-key                  false
+               :hint.window/visible            false
+               :hint.window/resizable          true
+               :hint.context/version.maj       3
+               :hint.context/version.min       2
+               :hint.context/gl.profile        :gl.profile/core
+               :hint.context/gl.forward-compat true}}

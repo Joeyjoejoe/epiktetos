@@ -5,5 +5,4 @@
    (doseq [tag tags]
      (derive tag parent)))
   ([h tags parent]
-   (doseq [tag tags]
-     (derive h tag parent))))
+   (reduce  #(derive %1 %2 parent) h tags)))
