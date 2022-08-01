@@ -11,4 +11,12 @@
                :hint.context/version.maj       3
                :hint.context/version.min       2
                :hint.context/gl.profile        :gl.profile/core
-               :hint.context/gl.forward-compat true}}
+               :hint.context/gl.forward-compat true}
+
+ :opengl/shaders  {:foo {:path "shaders/default.vert" :stage :shader.stage/vertex}
+                   :bar {:path "shaders/default.frag" :stage :shader.stage/fragment}}
+
+ :opengl/programs {:light/source [:foo :bar]
+                   :basic        [:foo :baz]}
+
+ }
