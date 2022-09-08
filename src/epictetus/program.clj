@@ -1,13 +1,16 @@
 (ns epictetus.program
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
+            [epictetus.utils.glsl-parser :as glsl]
             [epictetus.vocabulary.opengl :as opengl])
   (:import  (org.lwjgl.opengl GL20)))
 
+
 (defn compile-shader [label stage-key path]
-  (let [stage (stage-key opengl/dictionary)
-        id    (GL20/glCreateShader stage)
-        code  (-> path (io/resource) (slurp))]
+  (let [stage    (stage-key opengl/dictionary)
+        id       (GL20/glCreateShader stage)
+        code     (-> path (io/resource) (slurp))
+        metadata (glsl/analyze-shader code)]
 
     (when (= 0 id)
       (throw (Exception. (str "Error creating shader of type: " stage-key))))
@@ -16,7 +19,7 @@
     (when (= 0 (GL20/glGetShaderi id GL20/GL_COMPILE_STATUS))
       (throw (Exception. (str "Error compiling shader: " (GL20/glGetShaderInfoLog id 1024) " in " path))))
 
-    {label {:id id :path path}}))
+    {label (merge {:id id :path path} metadata)}))
 
 (defmethod ig/prep-key :opengl/shaders [_ config]
   {:window (ig/ref :glfw/window) :shaders config})
@@ -31,9 +34,9 @@
 (defn compile-program [label shader-ids]
   (let [program-id (GL20/glCreateProgram)
                    ;; Attach compiled shaders code to program
-        _          (doseq [sid shader-ids] (println sid) (GL20/glAttachShader program-id sid))
+        _          (doseq [sid shader-ids] (GL20/glAttachShader program-id sid))
                    ;; Link program
-        _          (doseq []
+        _          (do
                     (GL20/glLinkProgram program-id)
                     (when (= 0 (GL20/glGetProgrami program-id GL20/GL_LINK_STATUS))
                       (throw (Exception. (str
