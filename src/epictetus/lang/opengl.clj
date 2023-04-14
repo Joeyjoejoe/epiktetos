@@ -1,4 +1,4 @@
-(ns epictetus.vocabulary.opengl
+(ns epictetus.lang.opengl
   (:require [epictetus.utils.keyword :as k])
   (:import (org.lwjgl.opengl GL20 GL32 GL40 GL43)))
 

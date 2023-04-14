@@ -1,4 +1,4 @@
-(ns epictetus.vocabulary.glfw
+(ns epictetus.lang.glfw
   (:require [epictetus.utils.keyword :as k])
   (:import (org.lwjgl.glfw GLFW)))
 

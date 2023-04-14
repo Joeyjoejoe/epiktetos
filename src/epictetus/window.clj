@@ -2,7 +2,7 @@
   (:require [clojure.string :as s]
             [integrant.core :as ig]
             [epictetus.utils.buffer :as b]
-            [epictetus.vocabulary.glfw :as glfw])
+            [epictetus.lang.glfw :as glfw])
   (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback)
            (org.lwjgl.system MemoryUtil)
            (org.lwjgl.opengl GL11 GL)))

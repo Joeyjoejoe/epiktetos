@@ -2,7 +2,7 @@
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
             [epictetus.utils.glsl-parser :as glsl]
-            [epictetus.vocabulary.opengl :as opengl])
+            [epictetus.lang.opengl :as opengl])
   (:import  (org.lwjgl.opengl GL20)))
 
 
