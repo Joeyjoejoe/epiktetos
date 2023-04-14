@@ -6,25 +6,25 @@
            org.clojure/tools.deps.alpha {:mvn/version "0.6.480", :exclusions [org.slf4j/slf4j-nop]}
            ch.qos.logback/logback-classic {:mvn/version "1.2.11"}
 
-           org.lwjgl/lwjgl                 {:mvn/version "3.3.1"}
-           org.lwjgl/lwjgl$natives-linux   {:mvn/version "3.3.1", :native-prefix ""}
-           org.lwjgl/lwjgl$natives-macos   {:mvn/version "3.3.1", :native-prefix ""}
-           org.lwjgl/lwjgl$natives-windows {:mvn/version "3.3.1", :native-prefix ""}
+           org.lwjgl/lwjgl                 {:mvn/version "3.3.2"}
+           org.lwjgl/lwjgl$natives-linux   {:mvn/version "3.3.2", :native-prefix ""}
+           org.lwjgl/lwjgl$natives-macos   {:mvn/version "3.3.2", :native-prefix ""}
+           org.lwjgl/lwjgl$natives-windows {:mvn/version "3.3.2", :native-prefix ""}
 
-           org.lwjgl/lwjgl-opengl                 {:mvn/version "3.3.1"}
-           org.lwjgl/lwjgl-opengl$natives-linux   {:mvn/version "3.3.1", :native-prefix ""}
-           org.lwjgl/lwjgl-opengl$natives-macos   {:mvn/version "3.3.1", :native-prefix ""}
-           org.lwjgl/lwjgl-opengl$natives-windows {:mvn/version "3.3.1", :native-prefix ""}
+           org.lwjgl/lwjgl-opengl                 {:mvn/version "3.3.2"}
+           org.lwjgl/lwjgl-opengl$natives-linux   {:mvn/version "3.3.2", :native-prefix ""}
+           org.lwjgl/lwjgl-opengl$natives-macos   {:mvn/version "3.3.2", :native-prefix ""}
+           org.lwjgl/lwjgl-opengl$natives-windows {:mvn/version "3.3.2", :native-prefix ""}
 
-           org.lwjgl/lwjgl-glfw                 {:mvn/version "3.3.1"}
-           org.lwjgl/lwjgl-glfw$natives-linux   {:mvn/version "3.3.1", :native-prefix ""}
-           org.lwjgl/lwjgl-glfw$natives-macos   {:mvn/version "3.3.1", :native-prefix ""}
-           org.lwjgl/lwjgl-glfw$natives-windows {:mvn/version "3.3.1", :native-prefix ""}
+           org.lwjgl/lwjgl-glfw                 {:mvn/version "3.3.2"}
+           org.lwjgl/lwjgl-glfw$natives-linux   {:mvn/version "3.3.2", :native-prefix ""}
+           org.lwjgl/lwjgl-glfw$natives-macos   {:mvn/version "3.3.2", :native-prefix ""}
+           org.lwjgl/lwjgl-glfw$natives-windows {:mvn/version "3.3.2", :native-prefix ""}
 
-           org.lwjgl/lwjgl-stb                 {:mvn/version "3.3.1"}
-           org.lwjgl/lwjgl-stb$natives-linux   {:mvn/version "3.3.1", :native-prefix ""}
-           org.lwjgl/lwjgl-stb$natives-macos   {:mvn/version "3.3.1", :native-prefix ""}
-           org.lwjgl/lwjgl-stb$natives-windows {:mvn/version "3.3.1", :native-prefix ""}}
+           org.lwjgl/lwjgl-stb                 {:mvn/version "3.3.2"}
+           org.lwjgl/lwjgl-stb$natives-linux   {:mvn/version "3.3.2", :native-prefix ""}
+           org.lwjgl/lwjgl-stb$natives-macos   {:mvn/version "3.3.2", :native-prefix ""}
+           org.lwjgl/lwjgl-stb$natives-windows {:mvn/version "3.3.2", :native-prefix ""}}
 
  :aliases {:test {:extra-paths ["env/test"]
                   :extra-deps {lambdaisland/kaocha {:mvn/version "1.63.998"}}}
