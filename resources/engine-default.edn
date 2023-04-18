@@ -2,14 +2,12 @@
                :width                          800
                :height                         600
                :display                        :windowed
-               :callback/cursor-pos            "epictetus.window/mouse-callback"
-               :callback/key                   "epictetus.window/keyboard-callback"
                :mode/cursor                    :cursor/normal
-               :mode/lock-key                  false
+               :mode/sticky-keys               true
                :hint.window/visible            false
                :hint.window/resizable          true
                :hint.context/version.maj       3
-               :hint.context/version.min       2
+               :hint.context/version.min       3
                :hint.context/gl.profile        :gl.profile/core
                :hint.context/gl.forward-compat true}
 

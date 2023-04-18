@@ -6,23 +6,18 @@
   {true                   GLFW/GLFW_TRUE
    false                  GLFW/GLFW_FALSE
 
-   ;; Inputs callbacks
-   :callback/key          'GLFW/glfwSetKeyCallback
-   :callback/char         'GLFW/glfwSetCharCallback
-   :callback/cursor-pos   'GLFW/glfwSetCursorPosCallback
-   :callback/cursor-enter 'GLFW/glfwSetCursorEnterCallback
-   :callback/mouse-button 'GLFW/glfwSetMouseButtonCallback
-   :callback/scroll       'GLFW/glfwSetScrollCallback
-   :callback/joystick     'GLFW/glfwSetJoystickCallback
-   :callback/drop         'GLFW/glfwSetDropCallback
-
-   ;; Inputs
+   ;; Cursor mode
+   :mode/cursor           GLFW/GLFW_CURSOR
    :cursor/normal         GLFW/GLFW_CURSOR_NORMAL
    :cursor/hidden         GLFW/GLFW_CURSOR_HIDDEN
    :cursor/disabled       GLFW/GLFW_CURSOR_DISABLED
    :cursor/raw-motion     GLFW/GLFW_RAW_MOUSE_MOTION
-   :mode/cursor           GLFW/GLFW_CURSOR
-   :mode/lock-key         GLFW/GLFW_LOCK_KEY_MODS
+
+   ;; Boolean modes
+   :mode/sticky-mouse-buttons  GLFW/GLFW_STICKY_MOUSE_BUTTONS
+   :mode/sticky-keys           GLFW/GLFW_STICKY_KEYS
+   :mode/lock-key              GLFW/GLFW_LOCK_KEY_MODS
+   :mode/raw-mouse-motion      GLFW/GLFW_RAW_MOUSE_MOTION
 
    ;; Window creation hints
    ;; https://www.glfw.org/docs/3.3/window_guide.html#window_hints
@@ -44,13 +39,8 @@
   (-> (make-hierarchy)
       (derive :fullscreen/windowed :fullscreen)
       (k/derivev
-        [:callback/key      :callback/joystick
-         :callback/char     :callback/cursor-pos
-         :callback/drop     :callback/mouse-button
-         :callback/scroll   :callback/cursor-enter]
-        :input/callback)
-      (k/derivev
-        [:mode/cursor :mode/lock-key]
+        [:mode/cursor :mode/lock-key :mode/sticky-keys
+         :mode/sticky-mouse-buttons :mode/raw-mouse-motion]
         :input/mode)
       (k/derivev
         [:hint.type/integer :hint.type/string]

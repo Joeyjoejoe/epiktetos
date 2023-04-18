@@ -1,11 +1,13 @@
 (ns epictetus.window
   (:require [clojure.string :as s]
             [integrant.core :as ig]
+            [epictetus.controls :as controls]
             [epictetus.utils.buffer :as b]
             [epictetus.lang.glfw :as glfw])
-  (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback)
+  (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback)
            (org.lwjgl.system MemoryUtil)
            (org.lwjgl.opengl GL11 GL)))
+
 
 (defn get-size
   "Return the window dimensions"
@@ -32,18 +34,6 @@
                 (isa? glfw/grammar property :hint.type/integer) (:hint.type/integer glfw/dictionary)
                 (isa? glfw/grammar property :hint.type/string)  (:hint.type/string glfw/dictionary))]
     (f hint value)))
-
-
-(defn input-callback! [w property value]
-  (let [f        (property glfw/dictionary)
-        cb-parts (s/split value #"/")
-        cb-ns    (symbol (first cb-parts))
-        cb-fn    (symbol (last  cb-parts))
-        cb       (ns-resolve cb-ns cb-fn)]
-    (if (nil? cb)
-        (throw (Exception. (str "Callback function " value " do not exists.")))
-        (f w cb))))
-
 
 (defn input-mode! [w property value]
     (let [mode  (property glfw/dictionary)
@@ -86,11 +76,15 @@
 (defn configure [w opts]
   (GLFW/glfwMakeContextCurrent w)
   (GLFW/glfwSwapInterval 1)
+
+  (controls/set-callbacks w)
+
   (doseq [[k v] opts]
     (cond
-      (isa? glfw/grammar k :input/callback) (input-callback! w k v)
-      (isa? glfw/grammar k :input/mode)     (input-mode! w k v)))
-  ;; --- (mouse/center window (get-center window))
+      (isa? glfw/grammar k :input/mode) (input-mode! w k v)))
+
+  (GLFW/glfwSetCursorPos w (double (first (get-center w))) (double (last (get-center w))))
+
   (GL/createCapabilities)
   (GL11/glEnable GL11/GL_DEPTH_TEST)
   w)
@@ -106,7 +100,3 @@
 (defmethod ig/halt-key! :glfw/window [_ window]
   (GLFW/glfwDestroyWindow window)
   (GLFW/glfwTerminate))
-
-
-(defn mouse-callback [])
-(defn keyboard-callback [])
