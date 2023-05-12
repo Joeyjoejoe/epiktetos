@@ -7,6 +7,8 @@
   (:import (org.lwjgl.glfw GLFW))
   (:gen-class))
 
+(def lag (atom 0.0))
+
 (defn run [config-path]
   (let [engine-state state/engine-state
         system (-> config-path
@@ -15,10 +17,15 @@
                    ig/read-string
                    ig/init)]
 
-    (loop []
+    (loop [curr-time (GLFW/glfwGetTime)
+           prev-time curr-time]
+
+      (swap! lag #(+ % (- curr-time prev-time)))
+      (while (>= @lag 0.1)
+        ;;  (update)
+        (swap! lag #(- % 0.1)))
 
       (clojure.pprint/pprint (:event/queue @engine-state))
-
       ;; GAME STATE UPDATE
       ;; Handle use inputs in :event/queue
       ;; side effects full
@@ -30,7 +37,6 @@
 
       ;; ;; reset event/queue
       (state/reset-events!)
-      (Thread/sleep 5000)
 
 
 
@@ -40,7 +46,7 @@
       (GLFW/glfwPollEvents)
 
       (if (not (GLFW/glfwWindowShouldClose (:glfw/window system)))
-        (recur)))
+        (recur (GLFW/glfwGetTime) curr-time)))
 
       (GLFW/glfwDestroyWindow (:glfw/window system))
       (GLFW/glfwTerminate)))

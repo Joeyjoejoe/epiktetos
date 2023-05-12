@@ -1,6 +1,6 @@
 (ns epictetus.state)
 
-(defonce engine-state
+(def engine-state
   (atom {:event/queue []}))
 
 (defn dispatch-event! [event]

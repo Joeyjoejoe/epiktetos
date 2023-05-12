@@ -23,9 +23,7 @@
   (let [size (get-size window)
         x (/ (:width size) 2.0)
         y (/ (:height size) 2.0)]
-    {:x x :y y}))
-
-
+    [x y]))
 
 (defn window-hint! [property value]
   (let [hint  (property glfw/dictionary)
