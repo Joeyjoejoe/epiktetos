@@ -21,10 +21,10 @@
 
     {label (merge {:id id :path path} metadata)}))
 
-(defmethod ig/prep-key :opengl/shaders [_ config]
-  {:window (ig/ref :glfw/window) :shaders config})
+(defmethod ig/prep-key :shaders [_ config]
+  {:window (ig/ref :window) :shaders config})
 
-(defmethod ig/init-key :opengl/shaders [_ config]
+(defmethod ig/init-key :shaders [_ config]
   (into {} (for [[label {:keys [path stage]}] (:shaders config)]
              (compile-shader label stage path))))
 
@@ -54,10 +54,10 @@
 
     {label program-id}))
 
-(defmethod ig/prep-key :opengl/programs [_ config]
-  {:shaders (ig/ref :opengl/shaders) :programs config})
+(defmethod ig/prep-key :programs [_ config]
+  {:shaders (ig/ref :shaders) :programs config})
 
-(defmethod ig/init-key :opengl/programs [_ config]
+(defmethod ig/init-key :programs [_ config]
   (into {} (for [[label shaders] (:programs config)]
              (let [shader-ids (map :id
                                    (vals

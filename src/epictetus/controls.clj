@@ -1,5 +1,6 @@
 (ns epictetus.controls
-  (:require [epictetus.state :as state])
+  (:require [epictetus.state :as state]
+            [epictetus.event :as event])
   (:import (org.lwjgl.glfw GLFW
                            GLFWKeyCallback
                            GLFWCursorPosCallback
@@ -174,13 +175,13 @@
             key-mod    (get keyboard-mods mods)]
 
         (if-let [event (get-in @mappings [[key-name key-mod] key-status])]
-          (state/dispatch-event! event))))))
+          (event/dispatch event))))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#gad6fae41b3ac2e4209aaa87b596c57f68
 (def mouse-callback
   (proxy [GLFWCursorPosCallback] []
     (invoke [window x y]
-      (state/dispatch-event! [:mouse/position {:x x :y y}]))))
+      (event/dispatch [:mouse/position {:x x :y y}]))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#ga0184dcb59f6d85d735503dcaae809727
 (def mouse-button-callback
@@ -191,7 +192,7 @@
             key-mod    (get keyboard-mods mods)]
 
         (if-let [event (get-in @mappings [[btn-name key-mod] btn-status])]
-          (state/dispatch-event! event))))))
+          (event/dispatch event))))))
 
 (defn set-callbacks [window]
   (GLFW/glfwSetCursorPosCallback window mouse-callback)
