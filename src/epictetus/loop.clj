@@ -9,7 +9,7 @@
 
 (def lag (atom 0.0))
 
-(defn run [window]
+(defn start [window]
 
   (loop [curr-time (GLFW/glfwGetTime)
          prev-time 0]

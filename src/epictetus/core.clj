@@ -1,29 +1,34 @@
 (ns epictetus.core
-  (:require [integrant.core :as ig]
+  (:require [clojure.pprint :refer [pprint]]
+            [integrant.core :as ig]
             [clojure.java.io :as io]
             [epictetus.state :as state]
             [epictetus.loop :as game-loop]
-            [epictetus.window :as _]
-            [epictetus.program :as __]))
+            [epictetus.window]
+            [epictetus.program]))
 
-(defn start
-  ([] (start "engine-default.edn" {}))
+(defn run
+  ([] (run "engine-default.edn" {}))
   ([config-path game-state]
-   (let [{:keys [window
-                 shaders
-                 programs]} (-> config-path
+   (let [{window   :glfw/window
+          shaders  :gl/shaders
+          programs :gl/programs} (-> config-path
                                 io/resource
                                 slurp
                                 ig/read-string
+                                ig/prep
                                 ig/init)
-         engine-state {:window/id   window
+         engine-state {:window/id      window
                        ;; :window/time nil
                        ;; :mouse/position [0.0 0.0 0.0]
                        :shader/program programs
                        :shader/source  shaders
                        :loop/running?  true}]
 
-     (println (str "  Engine state : " (reset! state/-engine engine-state)))
-     (println (str "  Game state : "   (reset! state/-game game-state)))
+     (println "Engine state")
+     (pprint (reset! state/-engine engine-state))
 
-     (game-loop/run window))))
+     (println "Game state")
+     (pprint (reset! state/-game game-state))
+
+     (game-loop/start window))))

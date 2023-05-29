@@ -88,13 +88,13 @@
   w)
 
 
-(defmethod ig/init-key :window [_ opts]
+(defmethod ig/init-key :glfw/window [_ opts]
   (let [window (-> opts create-window (configure opts))]
     (println "OpenGL version:" (GL11/glGetString GL11/GL_VERSION))
     (GLFW/glfwShowWindow window)
     window))
 
 
-(defmethod ig/halt-key! :window [_ window]
+(defmethod ig/halt-key! :glfw/window [_ window]
   (GLFW/glfwDestroyWindow window)
   (GLFW/glfwTerminate))

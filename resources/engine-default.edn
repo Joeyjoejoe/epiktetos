@@ -1,4 +1,4 @@
-{:window {:title                          "Epictectus engine"
+{:glfw/window {:title                          "Epictectus engine"
           :width                          800
           :height                         600
           :display                        :windowed
@@ -11,10 +11,10 @@
           :hint.context/gl.profile        :gl.profile/core
           :hint.context/gl.forward-compat true}
 
- :shaders  {:foo {:path "shaders/default.vert" :stage :shader.stage/vertex}
-                   :bar {:path "shaders/default.frag" :stage :shader.stage/fragment}}
+ :gl/shaders  {:foo {:path "shaders/default.vert" :stage :shader.stage/vertex}
+                  :bar {:path "shaders/default.frag" :stage :shader.stage/fragment}}
 
- :programs {:light/source [:foo :bar]
-                   :basic        [:foo :baz]}
+ :gl/programs {:light/source [:foo :bar]
+                   :basic        [:foo :bar]}
 
  }
