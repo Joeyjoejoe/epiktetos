@@ -181,7 +181,7 @@
 (def mouse-callback
   (proxy [GLFWCursorPosCallback] []
     (invoke [window x y]
-      (event/dispatch [:mouse/position {:x x :y y}]))))
+      (event/dispatch [:mouse/position [x y]]))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#ga0184dcb59f6d85d735503dcaae809727
 (def mouse-button-callback

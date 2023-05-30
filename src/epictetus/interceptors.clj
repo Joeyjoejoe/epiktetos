@@ -190,8 +190,17 @@
 
 
 
-(def mutate-game-state!
-  {:before (fn [context]
-             (assoc-coeffect context :game/state @state/-game))
-   :after  (fn [context]
-             (reset! state/-game (get-coeffect context :game/state)))})
+(def load-state
+  {:id     :state/load
+   :before (fn [context]
+             (-> context
+              (assoc-coeffect :engine/state @state/-engine)
+              (assoc-coeffect :game/state   @state/-game)))})
+
+(def save-state!
+  {:id    :state/mutate
+   :after (fn [context]
+            (let [engine (get-coeffect context :engine/state)
+                  game   (get-coeffect context :game/state)]
+              (reset! state/-game game)
+              (reset! state/-engine engine)))})

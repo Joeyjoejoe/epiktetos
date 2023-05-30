@@ -19,8 +19,8 @@
                                 ig/prep
                                 ig/init)
          engine-state {:window/id      window
-                       ;; :window/time nil
-                       ;; :mouse/position [0.0 0.0 0.0]
+                       :window/time    0
+                       :mouse/position [0.0 0.0]
                        :shader/program programs
                        :shader/source  shaders
                        :loop/running?  true}]
