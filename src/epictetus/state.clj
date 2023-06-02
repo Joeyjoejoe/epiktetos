@@ -1,6 +1,4 @@
-(ns epictetus.state
-  (:require [clojure.java.io :as io]
-            [integrant.core :as ig]))
+(ns epictetus.state)
 
-(def -game (atom {}))
-(def -engine (atom {}))
+(def game (atom {}))
+(def engine (atom {}))

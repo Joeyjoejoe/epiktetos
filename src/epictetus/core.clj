@@ -26,9 +26,9 @@
                        :loop/running?  true}]
 
      (println "Engine state")
-     (pprint (reset! state/-engine engine-state))
+     (pprint (reset! state/engine engine-state))
 
      (println "Game state")
-     (pprint (reset! state/-game game-state))
+     (pprint (reset! state/game game-state))
 
      (game-loop/start window))))

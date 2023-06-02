@@ -2,7 +2,7 @@
   (:require [epictetus.interceptors :as interc :refer [->interceptor load-state save-state!]]))
 
 (def queue (atom []))
-(def kind->id->handlers (atom {}))
+(def kind->id->handler (atom {}))
 
 (defn register
   ([id handler-fn]
@@ -15,7 +15,7 @@
                    (->interceptor {:id     :event-fn
                                    :before handler-fn})]]
 
-   (swap! kind->id->handlers assoc-in [kind id] pipeline))))
+   (swap! kind->id->handler assoc-in [kind id] pipeline))))
 
 (defn dispatch [event]
   (swap! queue conj event))
@@ -24,15 +24,23 @@
   ([event]
    (execute :event event))
   ([kind event]
-   (if-let [interceptors (get-in @kind->id->handlers [kind (get event 0)])]
-     (interc/execute event interceptors))))
+   (if-let [interceptors (get-in @kind->id->handler [kind (get event 0)])]
+     (interc/execute event interceptors)
+     (println "event not registered" event))))
 
 (register
-  :mouse/left-click
+  :count-click
   (fn [context]
     (update-in context
                [:coeffects :game/state :click/count]
                inc)))
+
+(register
+  :uncount-click
+  (fn [context]
+    (update-in context
+               [:coeffects :game/state :click/count]
+               dec)))
 
 (register
   :mouse/position

@@ -22,7 +22,7 @@
       (while (seq @event/queue)
         (let [e (peek @event/queue)]
           (event/execute e)
-          (pprint @state/-game)
+          (pprint @state/game)
           (swap! event/queue pop)))
 
       (swap! lag #(- % 0.1)))

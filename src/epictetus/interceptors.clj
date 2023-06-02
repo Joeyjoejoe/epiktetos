@@ -194,13 +194,13 @@
   {:id     :state/load
    :before (fn [context]
              (-> context
-              (assoc-coeffect :engine/state @state/-engine)
-              (assoc-coeffect :game/state   @state/-game)))})
+              (assoc-coeffect :engine/state @state/engine)
+              (assoc-coeffect :game/state   @state/game)))})
 
 (def save-state!
   {:id    :state/mutate
    :after (fn [context]
             (let [engine (get-coeffect context :engine/state)
                   game   (get-coeffect context :game/state)]
-              (reset! state/-game game)
-              (reset! state/-engine engine)))})
+              (reset! state/game game)
+              (reset! state/engine engine)))})

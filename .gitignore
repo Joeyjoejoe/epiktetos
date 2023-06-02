@@ -9,3 +9,5 @@ pom.xml.asc
 .rebel_readline_history
 .nrepl-port
 .cpcache/
+.clj-kondo/
+.lsp/

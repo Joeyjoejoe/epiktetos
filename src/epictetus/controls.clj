@@ -1,6 +1,7 @@
 (ns epictetus.controls
   (:require [epictetus.state :as state]
-            [epictetus.event :as event])
+            [epictetus.event :as event]
+            [epictetus.interceptors :as interc])
   (:import (org.lwjgl.glfw GLFW
                            GLFWKeyCallback
                            GLFWCursorPosCallback
@@ -151,19 +152,19 @@
                         GLFW/GLFW_MOUSE_BUTTON_8 :btn-7})
 
 (def default-mappings
-  {[:btn-left nil]  {:press [:mouse/left-click]}
-   [:space nil] {:press [:game/quit "Confirm message"]}})
+  {[:btn-left nil :press]  [:count-click]
+   [:btn-right nil :press] [:uncount-click]
+   [:escape nil :press]    [:game/quit "Confirm message"]})
 
-;; Map input combinations to events in this form
-;; keys->status->event
-(def mappings (atom default-mappings))
+;; t
+(def mapping (atom default-mappings))
 
 (defn set-mapping
   [[k mode status] event]
-  (swap! mappings assoc-in [[k mode] (or status :press)] event))
+  (swap! mapping assoc-in [[k mode] (or status :press)] event))
 
-(defn reset-mappings []
-  (reset! mappings default-mappings))
+;; (defn reset-mappings []
+;;   (reset! key->status->handler default-mappings))
 
 ;; proxy object signature: https://www.glfw.org/docs/3.3/group__input.html#ga5bd751b27b90f865d2ea613533f0453c
 ;; scancode Platform-specific key code and given as an alternative to k
@@ -173,9 +174,8 @@
       (let [key-status (keyword (get keyboard-events action))
             key-name   (get keyboard-keys k)
             key-mod    (get keyboard-mods mods)]
-
-        (if-let [event (get-in @mappings [[key-name key-mod] key-status])]
-          (event/dispatch event))))))
+        (if-let [e (get @mapping [key-name key-mod key-status])]
+          (event/dispatch e))))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#gad6fae41b3ac2e4209aaa87b596c57f68
 (def mouse-callback
@@ -190,9 +190,8 @@
       (let [btn-status (keyword (get keyboard-events action))
             btn-name   (get mouse-buttons button)
             key-mod    (get keyboard-mods mods)]
-
-        (if-let [event (get-in @mappings [[btn-name key-mod] btn-status])]
-          (event/dispatch event))))))
+        (if-let [e (get @mapping [btn-name key-mod btn-status])]
+          (event/dispatch e))))))
 
 (defn set-callbacks [window]
   (GLFW/glfwSetCursorPosCallback window mouse-callback)
