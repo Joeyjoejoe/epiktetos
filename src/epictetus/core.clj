@@ -7,17 +7,18 @@
             [epictetus.window]
             [epictetus.program]))
 
-(defn run
-  ([] (run "engine-default.edn" {}))
-  ([config-path game-state]
+(defn play
+  ([] (play {} "engine-default.edn"))
+  ([scene] (play scene "engine-default.edn"))
+  ([scene config-path]
    (let [{window   :glfw/window
           shaders  :gl/shaders
           programs :gl/programs} (-> config-path
-                                io/resource
-                                slurp
-                                ig/read-string
-                                ig/prep
-                                ig/init)
+                                     io/resource
+                                     slurp
+                                     ig/read-string
+                                     ig/prep
+                                     ig/init)
          engine-state {:window/id      window
                        :window/time    0
                        :mouse/position [0.0 0.0]
@@ -26,6 +27,6 @@
                        :loop/running?  true}]
 
      (println "Game state")
-     (pprint (reset! state/game game-state))
+     (pprint (reset! state/game scene))
 
      (game-loop/start window))))
