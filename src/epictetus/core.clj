@@ -25,9 +25,6 @@
                        :shader/source  shaders
                        :loop/running?  true}]
 
-     (println "Engine state")
-     (pprint (reset! state/engine engine-state))
-
      (println "Game state")
      (pprint (reset! state/game game-state))
 

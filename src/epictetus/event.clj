@@ -47,5 +47,5 @@
   (fn [context]
     (let [value (get-in context [:coeffects :event 1])]
       (assoc-in context
-                [:coeffects :engine/state :mouse/position]
+                [:coeffects :game/state :mouse/position]
                 value))))

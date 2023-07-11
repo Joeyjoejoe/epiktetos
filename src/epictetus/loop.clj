@@ -22,11 +22,11 @@
       (while (seq @event/queue)
         (let [e (peek @event/queue)]
           (event/execute e)
-          (pprint @state/game)
           (swap! event/queue pop)))
 
       (swap! lag #(- % 0.1)))
 
+          (pprint @state/game)
     ;; render
 
     (GLFW/glfwSwapBuffers window)
