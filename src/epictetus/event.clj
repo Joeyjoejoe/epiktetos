@@ -1,5 +1,5 @@
 (ns epictetus.event
-  (:require [epictetus.interceptors :as interc :refer [->interceptor load-state save-state!]]))
+  (:require [epictetus.interceptors :as interc :refer [->interceptor handle-state!]]))
 
 (def queue (atom []))
 (def kind->id->handler (atom {}))
@@ -10,8 +10,7 @@
   ([kind id handler-fn]
 
    ;; Events interceptors chain
-   (let [pipeline [save-state!
-                   load-state
+   (let [pipeline [handle-state!
                    (->interceptor {:id     :event-fn
                                    :before handler-fn})]]
 

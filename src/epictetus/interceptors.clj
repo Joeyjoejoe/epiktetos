@@ -187,10 +187,7 @@
       change-direction
       (invoke-interceptors :after)))
 
-
-
-
-(def load-state
+(def handle-state!
   {:id     :state/load
    :before (fn [context]
              (-> context
