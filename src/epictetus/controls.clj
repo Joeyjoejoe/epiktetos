@@ -1,7 +1,5 @@
 (ns epictetus.controls
-  (:require [epictetus.state :as state]
-            [epictetus.event :as event]
-            [epictetus.interceptors :as interc])
+  (:require [epictetus.event :as event])
   (:import (org.lwjgl.glfw GLFW
                            GLFWKeyCallback
                            GLFWCursorPosCallback
@@ -151,21 +149,6 @@
                         GLFW/GLFW_MOUSE_BUTTON_7 :btn-6
                         GLFW/GLFW_MOUSE_BUTTON_8 :btn-7})
 
-(def default-mappings
-  {[:btn-left nil :press]  [:count-click]
-   [:btn-right nil :press] [:uncount-click]
-   [:escape nil :press]    [:game/quit "Confirm message"]})
-
-;; t
-(def mapping (atom default-mappings))
-
-(defn set-mapping
-  [[k mode status] event]
-  (swap! mapping assoc-in [[k mode] (or status :press)] event))
-
-;; (defn reset-mappings []
-;;   (reset! key->status->handler default-mappings))
-
 ;; proxy object signature: https://www.glfw.org/docs/3.3/group__input.html#ga5bd751b27b90f865d2ea613533f0453c
 ;; scancode Platform-specific key code and given as an alternative to k
 (def keyboard-callback
@@ -173,15 +156,19 @@
     (invoke [window k scancode action mods]
       (let [key-status (keyword (get keyboard-events action))
             key-name   (get keyboard-keys k)
-            key-mod    (get keyboard-mods mods)]
-        (if-let [e (get @mapping [key-name key-mod key-status])]
-          (event/dispatch e))))))
+            key-mod    (get keyboard-mods mods)
+            event-key  (->> [key-status key-name key-mod]
+                            (remove nil?)
+                            vec)]
+        (when (event/handler? event-key)
+          (event/dispatch [event-key]))))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#gad6fae41b3ac2e4209aaa87b596c57f68
 (def mouse-callback
   (proxy [GLFWCursorPosCallback] []
     (invoke [window x y]
-      (event/dispatch [:mouse/position [x y]]))))
+      (when (event/handler? :mouse/position)
+        (event/dispatch [:mouse/position [x y]])))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#ga0184dcb59f6d85d735503dcaae809727
 (def mouse-button-callback
@@ -189,13 +176,14 @@
     (invoke [window button action mods]
       (let [btn-status (keyword (get keyboard-events action))
             btn-name   (get mouse-buttons button)
-            key-mod    (get keyboard-mods mods)]
-        (if-let [e (get @mapping [btn-name key-mod btn-status])]
-          (event/dispatch e))))))
+            key-mod    (get keyboard-mods mods)
+            event-key  (->> [btn-status btn-name key-mod]
+                            (remove nil?)
+                            vec)]
+        (when (event/handler? event-key)
+          (event/dispatch [event-key]))))))
 
 (defn set-callbacks [window]
   (GLFW/glfwSetCursorPosCallback window mouse-callback)
   (GLFW/glfwSetMouseButtonCallback window mouse-button-callback)
   (GLFW/glfwSetKeyCallback window keyboard-callback))
-
-

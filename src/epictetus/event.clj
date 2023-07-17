@@ -4,20 +4,23 @@
 (def queue (atom []))
 (def kind->id->handler (atom {}))
 
+(defn handler?
+  ([event] (handler? :event event))
+  ([kind event]
+   (get-in @kind->id->handler [kind event])))
+
+(defn dispatch [event]
+  (swap! queue conj event))
+
 (defn register
   ([id handler-fn]
    (register :event id handler-fn))
   ([kind id handler-fn]
-
    ;; Events interceptors chain
    (let [pipeline [handle-state!
                    (->interceptor {:id     :event-fn
                                    :before handler-fn})]]
-
-   (swap! kind->id->handler assoc-in [kind id] pipeline))))
-
-(defn dispatch [event]
-  (swap! queue conj event))
+     (swap! kind->id->handler assoc-in [kind id] pipeline))))
 
 (defn execute
   ([event]
@@ -25,18 +28,18 @@
   ([kind event]
    (if-let [interceptors (get-in @kind->id->handler [kind (get event 0)])]
      (interc/execute event interceptors)
-     (println "event not registered" event))))
+     (println "event not registered" (get event 0)))))
 
 (register
-  :count-click
-  (fn [context]
+  [:press :btn-left]
+  (fn count-click [context]
     (update-in context
                [:coeffects :game/state :click/count]
                inc)))
 
 (register
-  :uncount-click
-  (fn [context]
+  [:press :btn-right]
+  (fn uncount-click [context]
     (update-in context
                [:coeffects :game/state :click/count]
                dec)))
