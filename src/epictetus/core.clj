@@ -18,13 +18,7 @@
                                      slurp
                                      ig/read-string
                                      ig/prep
-                                     ig/init)
-         engine-state {:window/id      window
-                       :window/time    0
-                       :mouse/position [0.0 0.0]
-                       :shader/program programs
-                       :shader/source  shaders
-                       :loop/running?  true}]
+                                     ig/init)]
 
      (println "Game state")
      (pprint (reset! state/game scene))
