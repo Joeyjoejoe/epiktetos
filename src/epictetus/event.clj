@@ -4,6 +4,9 @@
 (def queue (atom []))
 (def kind->id->handler (atom {}))
 
+(defn id [event]
+  (get event 0))
+
 (defn handler?
   ([event] (handler? :event event))
   ([kind event]
@@ -26,9 +29,12 @@
   ([event]
    (execute :event event))
   ([kind event]
-   (if-let [interceptors (get-in @kind->id->handler [kind (get event 0)])]
+   (if-let [interceptors (get-in @kind->id->handler [kind (id event)])]
      (interc/execute event interceptors)
-     (println "event not registered" (get event 0)))))
+     (println "event not registered" (id event)))))
+
+
+;; Usage examples
 
 (register
   [:press :btn-left]

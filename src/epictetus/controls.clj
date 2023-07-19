@@ -157,11 +157,11 @@
       (let [key-status (keyword (get keyboard-events action))
             key-name   (get keyboard-keys k)
             key-mod    (get keyboard-mods mods)
-            event-key  (->> [key-status key-name key-mod]
+            event-id   (->> [key-status key-name key-mod]
                             (remove nil?)
                             vec)]
-        (when (event/handler? event-key)
-          (event/dispatch [event-key]))))))
+        (when (event/handler? event-id)
+          (event/dispatch [event-id]))))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#gad6fae41b3ac2e4209aaa87b596c57f68
 (def mouse-callback
@@ -177,11 +177,11 @@
       (let [btn-status (keyword (get keyboard-events action))
             btn-name   (get mouse-buttons button)
             key-mod    (get keyboard-mods mods)
-            event-key  (->> [btn-status btn-name key-mod]
+            event-id   (->> [btn-status btn-name key-mod]
                             (remove nil?)
                             vec)]
-        (when (event/handler? event-key)
-          (event/dispatch [event-key]))))))
+        (when (event/handler? event-id)
+          (event/dispatch [event-id]))))))
 
 (defn set-callbacks [window]
   (GLFW/glfwSetCursorPosCallback window mouse-callback)
