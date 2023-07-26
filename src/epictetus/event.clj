@@ -1,5 +1,5 @@
 (ns epictetus.event
-  (:require [epictetus.interceptors :as interc :refer [->interceptor handle-state!]]))
+  (:require [epictetus.interceptors :as interc]))
 
 (def queue (atom []))
 
@@ -39,22 +39,5 @@
      (interc/execute event interceptors)
      (println "event not registered" (id event)))))
 
-(defn ->coeffect
-  ([id]
-   (->interceptor
-     :id      :coeffects
-     :before  (fn coeffects-before
-                [context]
-                (if-let [handler (get-handler :coeffect id)]
-                  (update context :coeffects handler)
-                  (println "No cofx handler registered for" id)))))
-  ([id value]
-   (->interceptor
-     :id     :coeffects
-     :before  (fn coeffects-before
-                [context]
-                (if-let [handler (get-handler :coeffect id)]
-                  (update context :coeffects handler value)
-                  (println "No cofx handler registered for" id))))))
 
 

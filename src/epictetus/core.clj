@@ -3,6 +3,7 @@
             [integrant.core :as ig]
             [clojure.java.io :as io]
             [epictetus.scene :as scene]
+            [epictetus.coeffect :as cofx]
             [epictetus.loop :as game-loop]
             [epictetus.event :as event]
             [epictetus.interceptors :as interc :refer [->interceptor handle-state!]]
@@ -33,16 +34,10 @@
   ([id coeffects handler-fn]
    (let [handler (->interceptor {:id     :event-fn
                                  :before handler-fn})
-         interceptors [handle-state! coeffects handler]
+         interceptors [handle-state! cofx/inject-scene coeffects handler]
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
 
-(defn reg-cofx
-  "A cofx is a function that takes the coeffects map and
-   an optional parameter, and return a modified version
-   of the coeffects map"
-  [id cofx-fn]
-  (event/register :coeffect id cofx-fn))
 
 
 ;;------------------------------------------------------;;
@@ -52,13 +47,9 @@
 ;;           (fn [cofx params]
 ;;             (assoc ctx :user (get-from-db params)))
 ;;
-(reg-cofx :load-scene
-          (fn [coeffects scene]
-            (assoc coeffects :scene2 scene)))
 
 (reg-event [:press :a]
-           [(event/->coeffect :load-scene {:foo :bar})
-            (event/->coeffect :doh!)]
+           [(cofx/inject :doh!)]
            (fn test-cofx [context]
              (pprint context)
              context))
