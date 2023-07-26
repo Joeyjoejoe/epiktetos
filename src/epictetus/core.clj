@@ -2,15 +2,15 @@
   (:require [clojure.pprint :refer [pprint]]
             [integrant.core :as ig]
             [clojure.java.io :as io]
-            [epictetus.state :as state]
+            [epictetus.scene :as scene]
             [epictetus.loop :as game-loop]
             [epictetus.window]
             [epictetus.program]))
 
 (defn play
   ([] (play {} "engine-default.edn"))
-  ([scene] (play scene "engine-default.edn"))
-  ([scene config-path]
+  ([state] (play state "engine-default.edn"))
+  ([state config-path]
    (let [{window   :glfw/window
           shaders  :gl/shaders
           programs :gl/programs} (-> config-path
@@ -21,6 +21,6 @@
                                      ig/init)]
 
      (println "Game state")
-     (pprint (reset! state/game scene))
+     (pprint (reset! scene/state state))
 
      (game-loop/start window))))

@@ -2,7 +2,7 @@
 
 (ns epictetus.interceptors
   (:require [clojure.set :as set]
-            [epictetus.state :as state]))
+            [epictetus.scene :as scene]))
 
 ;; Must be a pure function !
 ;; Must return a new state
@@ -191,7 +191,7 @@
   {:id     :state/load
    :before (fn [context]
              (-> context
-                 (assoc-coeffect :game/state   @state/game)))
+                 (assoc-coeffect :scene @scene/state)))
    :after  (fn [context]
-             (let [game   (get-coeffect context :game/state)]
-               (reset! state/game game)))})
+             (let [state   (get-coeffect context :scene)]
+               (reset! scene/state state)))})

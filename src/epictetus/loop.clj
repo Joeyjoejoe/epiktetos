@@ -1,6 +1,6 @@
 (ns epictetus.loop
   (:require
-    [epictetus.state :as state]
+    [epictetus.scene :as scene]
     [epictetus.event :as event]
     [clojure.pprint :refer [pprint]])
 
@@ -24,15 +24,16 @@
           (event/execute e)
           (swap! event/queue pop)))
 
+          (pprint @scene/state)
       (swap! lag #(- % 0.1)))
 
-          (pprint @state/game)
     ;; render
 
     (GLFW/glfwSwapBuffers window)
     (GLFW/glfwPollEvents)
 
-    (if (GLFW/glfwWindowShouldClose window)
+    ;; (if (GLFW/glfwWindowShouldClose window)
+    (if (:should-quit? @scene/state)
       (do (GLFW/glfwDestroyWindow window)
           (GLFW/glfwTerminate))
       (recur (GLFW/glfwGetTime) curr-time))))
