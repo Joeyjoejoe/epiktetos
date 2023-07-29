@@ -1,8 +1,7 @@
 ;; A copy of https://github.com/day8/re-frame/blob/master/src/re_frame/interceptor.cljc
 
 (ns epictetus.interceptors
-  (:require [clojure.set :as set]
-            [epictetus.scene :as scene]))
+  (:require [clojure.set :as set]))
 
 ;; Must be a pure function !
 ;; Must return a new state
@@ -186,10 +185,3 @@
       (invoke-interceptors :before)
       change-direction
       (invoke-interceptors :after)))
-
-;; TODO Should be re-implemented as do-fx
-(def update-scene!
-  {:id     :scene/update
-   :after  (fn [context]
-             (let [state (get-effect context :scene)]
-               (reset! scene/state state)))})

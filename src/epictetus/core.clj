@@ -4,9 +4,10 @@
             [clojure.java.io :as io]
             [epictetus.scene :as scene]
             [epictetus.coeffect :as cofx]
+            [epictetus.effect :as fx]
             [epictetus.loop :as game-loop]
             [epictetus.event :as event]
-            [epictetus.interceptors :as interc :refer [->interceptor update-scene!]]
+            [epictetus.interceptors :as interc :refer [->interceptor]]
             [epictetus.window]
             [epictetus.program]))
 
@@ -47,7 +48,7 @@
 
                                 (->> (handler-fn cofx fx)
                                      (assoc context :effects))))})
-         interceptors [update-scene! cofx/inject-scene coeffects handler]
+         interceptors [fx/do-fx cofx/inject-scene coeffects handler]
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
 
