@@ -187,11 +187,9 @@
       change-direction
       (invoke-interceptors :after)))
 
-(def handle-state!
-  {:id     :state/load
-   :before (fn [context]
-             (-> context
-                 (assoc-coeffect :scene @scene/state)))
+;; TODO Should be re-implemented as do-fx
+(def update-scene!
+  {:id     :scene/update
    :after  (fn [context]
-             (let [state   (get-coeffect context :scene)]
+             (let [state (get-effect context :scene)]
                (reset! scene/state state)))})

@@ -6,7 +6,7 @@
             [epictetus.coeffect :as cofx]
             [epictetus.loop :as game-loop]
             [epictetus.event :as event]
-            [epictetus.interceptors :as interc :refer [->interceptor handle-state!]]
+            [epictetus.interceptors :as interc :refer [->interceptor update-scene!]]
             [epictetus.window]
             [epictetus.program]))
 
@@ -29,12 +29,25 @@
      (game-loop/start window))))
 
 (defn reg-event
+  "Set the handler to an event id, with the option to add additional coeffects.
+
+  Handler are pure functions that takes two arguments:
+  - a map of coeffects containing input data for the handler function.
+  - a map of effects that the handler function must return (modified or not).
+
+  Coeffects and effects can be registered with reg-cofx and reg-fx functions"
   ([id handler-fn]
    (reg-event id [] handler-fn))
   ([id coeffects handler-fn]
-   (let [handler (->interceptor {:id     :event-fn
-                                 :before handler-fn})
-         interceptors [handle-state! cofx/inject-scene coeffects handler]
+   (let [handler (->interceptor
+                   {:id     :event-fn
+                    :before (fn handler [context]
+                              (let [{:keys [event scene] :as cofx} (:coeffects context)
+                                    fx     {:scene scene}]
+
+                                (->> (handler-fn cofx fx)
+                                     (assoc context :effects))))})
+         interceptors [update-scene! cofx/inject-scene coeffects handler]
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
 
@@ -50,32 +63,25 @@
 
 (reg-event [:press :a]
            [(cofx/inject :doh!)]
-           (fn test-cofx [context]
-             (pprint context)
-             context))
+           (fn test-cofx [cofx fx]
+             (pprint cofx)
+             fx))
 
 
 (reg-event
   [:press :btn-left]
-  (fn count-click [context]
-    (update-in context
-               [:coeffects :scene :click/count]
-               inc)))
+  (fn count-click [cofx fx]
+    (update-in fx [:scene :click/count] inc)))
 
 (reg-event
   [:press :btn-right]
-  (fn uncount-click [context]
-    (update-in context
-               [:coeffects :scene :click/count]
-               dec)))
+  (fn uncount-click [cofx fx]
+    (update-in fx [:scene :click/count] dec)))
 
 (reg-event
   :mouse/position
-  (fn [context]
-    (let [value (get-in context [:coeffects :event 1])]
-      (assoc-in context
-                [:coeffects :scene :mouse/position]
-                value))))
+  (fn [{[_ position] :event} fx]
+    (assoc-in fx [:scene :mouse/position] position)))
 
 ;; To set the close flag, we use glfwSetWindowShouldClose.
 ;; But we want to avoid any state mutation inside event handlers
@@ -87,7 +93,5 @@
 ;; of interceptor chain ?
 (reg-event
   [:press :escape]
-  (fn quit-flag [context]
-    (assoc-in context
-               [:coeffects :scene :should-quit?]
-               true)))
+  (fn quit-flag [cofx fx]
+    (assoc-in fx [:scene :should-quit?] true)))

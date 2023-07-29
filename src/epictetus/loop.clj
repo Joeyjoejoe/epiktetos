@@ -23,9 +23,9 @@
         (let [e (peek @event/queue)]
           (pprint e)
           (event/execute e)
+          (pprint @scene/state)
           (swap! event/queue pop)))
 
-          (pprint @scene/state)
       (swap! lag #(- % 0.1)))
 
     ;; render
