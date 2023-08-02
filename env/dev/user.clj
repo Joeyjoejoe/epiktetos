@@ -4,7 +4,7 @@
             [integrant.repl.state :refer [system config]]
             [puget.printer :as puget]
             [clojure.java.io :as io]
-            [epictetus.core :as _]))
+            [epictetus.core :as core]))
 
 ;; https://github.com/weavejester/integrant-repl
 ;; Provides worflow function (prep) (init) (go) (reset) (halt)
@@ -12,3 +12,9 @@
                                         io/resource
                                         slurp
                                         ig/read-string)))
+
+(doto
+  (Thread. (fn [] (core/play {:click/count 0})))
+  (.setDaemon true)
+  (.start))
+
