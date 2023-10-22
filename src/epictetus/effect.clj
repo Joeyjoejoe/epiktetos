@@ -31,3 +31,8 @@
 (reg-fx :scene
         (fn update-scene! [new-scene]
           (reset! scene/state new-scene)))
+
+(reg-fx :dispatch
+        (fn dispatch-event! [events]
+          (doseq [e events]
+            (event/dispatch e))))
