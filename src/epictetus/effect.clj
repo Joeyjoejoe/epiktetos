@@ -1,7 +1,8 @@
 (ns epictetus.effect
   (:require [epictetus.event :as event]
             [epictetus.scene :as scene]
-            [epictetus.interceptors :refer [->interceptor]]))
+            [epictetus.interceptors :refer [->interceptor]]
+            [clojure.pprint :refer [pprint]]))
 
 (defn reg-fx
   "A fx is a function that takes the coeffects map and
@@ -36,3 +37,12 @@
         (fn dispatch-event! [events]
           (doseq [e events]
             (event/dispatch e))))
+
+(reg-fx :render
+        (fn render!
+          ([id entity]
+           (println "Render model " id)
+           (pprint entity))
+          ([entities]
+           (doseq [[id entity] entities]
+             (render! id entity)))))
