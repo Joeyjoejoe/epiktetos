@@ -1,7 +1,7 @@
 (ns epictetus.event
   (:require [epictetus.interceptors :as interc]))
 
-(def queue (atom []))
+(def queue (atom clojure.lang.PersistentQueue/EMPTY))
 
 ;; Kinds :
 ;; - coeffects are just functions, later executed by do-cofx interceptor
