@@ -62,13 +62,6 @@
 ;;             (assoc ctx :user (get-from-db params)))
 ;;
 
-(reg-event [:press :a]
-           [(cofx/inject :doh!)]
-           (fn test-cofx [cofx fx]
-             (pprint cofx)
-             fx))
-
-
 (reg-event
   [:press :btn-left]
   (fn count-click [cofx fx]

@@ -23,7 +23,6 @@
         (let [e (peek @event/queue)]
           (pprint e)
           (event/execute e)
-          (pprint @scene/state)
           (swap! event/queue pop)))
 
       (swap! lag #(- % 0.1)))
