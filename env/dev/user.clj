@@ -12,9 +12,3 @@
                                         io/resource
                                         slurp
                                         ig/read-string)))
-
-(doto
-  (Thread. (fn [] (core/play {:click/count 0})))
-  (.setDaemon true)
-  (.start))
-

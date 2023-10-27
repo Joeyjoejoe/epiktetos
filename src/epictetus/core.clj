@@ -9,25 +9,29 @@
             [epictetus.event :as event]
             [epictetus.interceptors :as interc :refer [->interceptor]]
             [epictetus.window]
-            [epictetus.program]))
+            [epictetus.program])
+  (:import (org.lwjgl.glfw GLFW)))
 
-(defn play
-  ([] (play {} "engine-default.edn"))
-  ([state] (play state "engine-default.edn"))
-  ([state config-path]
-   (let [{window   :glfw/window
-          shaders  :gl/shaders
-          programs :gl/programs} (-> config-path
-                                     io/resource
-                                     slurp
-                                     ig/read-string
-                                     ig/prep
-                                     ig/init)]
+(def system (atom {}))
 
-     (println "Game state")
-     (pprint (reset! scene/state state))
+(defn start
+  ([]
+   (start "engine-default.edn"))
 
-     (game-loop/start window))))
+  ([conf-path]
+   (let [system (-> conf-path
+                    io/resource
+                    slurp
+                    ig/read-string
+                    ig/prep
+                    ig/init)]
+     (start conf-path system)))
+
+  ([_ sys]
+     (reset! system sys)
+     (event/dispatch [:loop/start])
+     (game-loop/start @system)
+     (event/dispatch [:loop/end])))
 
 (defn reg-event
   "Set the handler to an event id, with the option to add additional coeffects.
@@ -88,4 +92,6 @@
 (reg-event
   [:press :escape]
   (fn quit-flag [cofx fx]
-    (assoc-in fx [:scene :should-quit?] true)))
+    (GLFW/glfwSetWindowShouldClose (:glfw/window @system) true)))
+
+

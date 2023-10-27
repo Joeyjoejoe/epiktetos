@@ -9,7 +9,7 @@
 
 (def lag (atom 0.0))
 
-(defn start [window]
+(defn start [{window :glfw/window :as system}]
 
   (loop [curr-time (GLFW/glfwGetTime)
          prev-time 0]
@@ -32,8 +32,5 @@
     (GLFW/glfwSwapBuffers window)
     (GLFW/glfwPollEvents)
 
-    ;; (if (GLFW/glfwWindowShouldClose window)
-    (if (:should-quit? @scene/state)
-      (do (GLFW/glfwDestroyWindow window)
-          (GLFW/glfwTerminate))
+    (when-not (GLFW/glfwWindowShouldClose window)
       (recur (GLFW/glfwGetTime) curr-time))))
