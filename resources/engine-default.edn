@@ -1,20 +1,20 @@
 {:glfw/window {:title                          "Epictectus engine"
-          :width                          800
-          :height                         600
-          :display                        :windowed
-          :mode/cursor                    :cursor/normal
-          :mode/sticky-keys               false
-          :hint.window/visible            false
-          :hint.window/resizable          true
-          :hint.context/version.maj       3
-          :hint.context/version.min       3
-          :hint.context/gl.profile        :gl.profile/core
-          :hint.context/gl.forward-compat true}
+               :width                          800
+               :height                         600
+               :display                        :windowed
+               :mode/cursor                    :cursor/normal
+               :mode/sticky-keys               false
+               :hint.window/visible            false
+               :hint.window/resizable          true
+               :hint.context/version.maj       3
+               :hint.context/version.min       3
+               :hint.context/gl.profile        :gl.profile/core
+               :hint.context/gl.forward-compat true}
 
- :gl/shaders  {:foo {:path "shaders/default.vert" :stage :shader.stage/vertex}
-                  :bar {:path "shaders/default.frag" :stage :shader.stage/fragment}}
+ :gl/shaders  {:foo {:path "shaders/default.vert"
+                     :stage :shader.stage/vertex}
+               :bar {:path "shaders/default.frag"
+                     :stage :shader.stage/fragment}}
 
  :gl/programs {:light/source [:foo :bar]
-                   :basic        [:foo :bar]}
-
- }
+               :basic        [:foo :bar]}}

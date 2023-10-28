@@ -1,6 +1,5 @@
 (ns epictetus.core
-  (:require [clojure.pprint :refer [pprint]]
-            [integrant.core :as ig]
+  (:require [integrant.core :as ig]
             [clojure.java.io :as io]
             [epictetus.scene :as scene]
             [epictetus.coeffect :as cofx]
@@ -57,38 +56,13 @@
      (event/register :event id chain))))
 
 
-
-;;------------------------------------------------------;;
-;; Usage examples
-
-;; (reg-cofx :get-user
-;;           (fn [cofx params]
-;;             (assoc ctx :user (get-from-db params)))
-;;
-
-(reg-event
-  [:press :btn-left]
-  (fn count-click [cofx fx]
-    (update-in fx [:scene :click/count] inc)))
-
-(reg-event
-  [:press :btn-right]
-  (fn uncount-click [cofx fx]
-    (update-in fx [:scene :click/count] dec)))
-
+;; CORE events
 (reg-event
   :mouse/position
   (fn [{[_ position] :event} fx]
     (assoc-in fx [:scene :mouse/position] position)))
 
-;; To set the close flag, we use glfwSetWindowShouldClose.
-;; But we want to avoid any state mutation inside event handlers
-;; How can we delay this mutation at the end of interceptor chain ?
-;; Do we really need to use that glfw function, or can we use our
-;; own flags ?
-;; Do user will need to directly call opengl ond glfw function, and
-;; how can we handle these probably mutating operation at the end
-;; of interceptor chain ?
+
 (reg-event
   [:press :escape]
   (fn quit-flag [cofx fx]
