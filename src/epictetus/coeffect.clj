@@ -1,6 +1,6 @@
 (ns epictetus.coeffect
   (:require [epictetus.event :as event]
-            [epictetus.scene :as scene]
+            [epictetus.state :as state]
             [epictetus.interceptors :refer [->interceptor]]))
 
 (defn reg-cofx
@@ -29,10 +29,13 @@
                   (println "No cofx handler registered for" id))))))
 
 ;; Core coeffects
-
-(reg-cofx :inject-scene
+(reg-cofx :inject-system
           (fn [coeffects]
-            (assoc coeffects :scene @scene/state)))
+            (assoc coeffects :system @state/system)))
 
-(def inject-scene (inject :inject-scene))
+(reg-cofx :inject-db
+          (fn [coeffects]
+            (assoc coeffects :db @state/db)))
 
+(def inject-system (inject :inject-system))
+(def inject-db (inject :inject-db))

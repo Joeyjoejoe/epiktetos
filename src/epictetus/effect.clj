@@ -1,6 +1,6 @@
 (ns epictetus.effect
   (:require [epictetus.event :as event]
-            [epictetus.scene :as scene]
+            [epictetus.state :as state]
             [epictetus.interceptors :refer [->interceptor]]
             [clojure.pprint :refer [pprint]]))
 
@@ -17,21 +17,21 @@
     :after (fn do-all-fx
              [context]
              (let [effects               (:effects context)
-                   effects-without-scene (dissoc effects :scene)]
-               ;; :scene effect is guaranteed to be handled before all other effects.
-               (when-let [new-scene (:scene effects)]
-                 ((event/get-handler :effect :scene) new-scene))
+                   effects-without-db (dissoc effects :db)]
+               ;; :db effect is guaranteed to be handled before all other effects.
+               (when-let [new-db (:db effects)]
+                 ((event/get-handler :effect :db) new-db))
 
-               (doseq [[effect-key effect-value] effects-without-scene]
+               (doseq [[effect-key effect-value] effects-without-db]
                  (if-let [effect-fn (event/get-handler :effect effect-key)]
                    (effect-fn effect-value)
                    (println "no handler registered for effect:" effect-key ". Ignoring.")))))))
 
 ;; CORE EFFECTS
 
-(reg-fx :scene
-        (fn update-scene! [new-scene]
-          (reset! scene/state new-scene)))
+(reg-fx :db
+        (fn update-db! [new-db]
+          (reset! state/db new-db)))
 
 (reg-fx :dispatch
         (fn dispatch-event! [events]

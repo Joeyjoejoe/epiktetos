@@ -1,6 +1,5 @@
 (ns epictetus.loop
   (:require
-    [epictetus.scene :as scene]
     [epictetus.event :as event]
     [clojure.pprint :refer [pprint]])
 

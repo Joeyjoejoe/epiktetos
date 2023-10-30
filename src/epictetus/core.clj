@@ -1,7 +1,7 @@
 (ns epictetus.core
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
-            [epictetus.scene :as scene]
+            [epictetus.state :as state]
             [epictetus.coeffect :as cofx]
             [epictetus.effect :as fx]
             [epictetus.loop :as game-loop]
@@ -11,7 +11,8 @@
             [epictetus.program])
   (:import (org.lwjgl.glfw GLFW)))
 
-(def system (atom {}))
+(def system state/system)
+(def db state/db)
 
 (defn start
   ([]
@@ -46,12 +47,12 @@
    (let [handler (->interceptor
                    {:id     :event-fn
                     :before (fn handler [context]
-                              (let [{:keys [event scene] :as cofx} (:coeffects context)
-                                    fx     {:scene scene}]
+                              (let [{:keys [_ db] :as coeffects} (:coeffects context)
+                                    effect     {:db db}]
 
-                                (->> (handler-fn cofx fx)
+                                (->> (handler-fn coeffects effect)
                                      (assoc context :effects))))})
-         interceptors [fx/do-fx cofx/inject-scene coeffects handler]
+         interceptors [fx/do-fx cofx/inject-db cofx/inject-system coeffects handler]
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
 
@@ -60,7 +61,7 @@
 (reg-event
   :mouse/position
   (fn [{[_ position] :event} fx]
-    (assoc-in fx [:scene :mouse/position] position)))
+    (assoc-in fx [:db :mouse/position] position)))
 
 
 (reg-event
