@@ -1,6 +1,7 @@
 (ns epictetus.effect
   (:require [epictetus.event :as event]
             [epictetus.state :as state]
+            [epictetus.vertices :as vertices]
             [epictetus.interceptors :refer [->interceptor]]
             [clojure.pprint :refer [pprint]]))
 
@@ -41,8 +42,14 @@
 (reg-fx :render
         (fn render!
           ([id entity]
-           (println "Render model " id)
-           (pprint entity))
+           ;; TODO vao should be created before rendering
+           ;; Replace this with vao selection based on
+           ;; entiity data
+           (let [vao (get-in @state/system [:gl/vaos :vao/default])]
+             (->> entity
+                 (vertices/gpu-load vao) ;; => {:program/id 1 :vbo/id 1 :vao/id 1}
+                 (swap! state/rendering assoc id))))
+
           ([entities]
            (doseq [[id entity] entities]
              (render! id entity)))))

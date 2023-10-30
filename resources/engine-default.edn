@@ -11,10 +11,20 @@
                :hint.context/gl.profile        :gl.profile/core
                :hint.context/gl.forward-compat true}
 
- :gl/shaders  {:foo {:path "shaders/default.vert"
-                     :stage :shader.stage/vertex}
-               :bar {:path "shaders/default.frag"
-                     :stage :shader.stage/fragment}}
+ :gl/shaders  {:vert/default {:path "shaders/default.vert"
+                              :stage :shader.stage/vertex}
+               :frag/default {:path "shaders/default.frag"
+                              :stage :shader.stage/fragment}}
 
- :gl/programs {:light/source [:foo :bar]
-               :basic        [:foo :bar]}}
+ :gl/programs {:light/source [:vert/default :frag/default]
+               :basic        [:vert/default :frag/default]}
+
+ :gl/vaos     {:vao/default [{:key  :vertices
+                              :size 3
+                              :type :float}
+                             {:key :color
+                              :size 4
+                              :type :float}
+                             {:key :texture
+                              :size 2
+                              :type :float}]}}
