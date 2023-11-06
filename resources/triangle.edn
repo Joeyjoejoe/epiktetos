@@ -1,0 +1,6 @@
+{:program  :default
+ :position [0.0 0.0 0.0]
+ :data     {:indices  []
+            :vertices [{:coordinates [-0.5 -0.5 0.0] :color [1.0 0.0 0.0] :texture [0.0 0.0]}
+                       {:coordinates [ 0.5 -0.5 0.0] :color [1.0 0.0 0.0] :texture [0.0 0.0]}
+                       {:coordinates [ 0.0  0.5 0.0] :color [1.0 0.0 0.0] :texture [0.0 0.0]}]}}

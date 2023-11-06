@@ -67,6 +67,20 @@
 (reg-event
   [:press :escape]
   (fn quit-flag [cofx fx]
+    ;; TODO extract system part to proper cofx and fx
     (GLFW/glfwSetWindowShouldClose (:glfw/window @system) true)))
 
+;; EXPERIMENTATIONS
+(reg-event
+  [:press :m]
+  [(cofx/inject :edn/load "triangle.edn")]
+  (fn render-level [{model :edn/load} fx]
+    (-> fx
+        (update :render conj [:my-id model]))))
 
+(reg-event
+  [:press :c]
+  [(cofx/inject :edn/load "cube.edn")]
+  (fn render-level [{model :edn/load} fx]
+    (-> fx
+        (update :render conj [:my-id model]))))
