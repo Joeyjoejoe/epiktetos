@@ -45,7 +45,7 @@
            ;; TODO vao should be created before rendering
            ;; Replace this with vao selection based on
            ;; entiity data
-           (let [vao (get-in @state/system [:gl/vaos :vao/default])]
+           (let [vao (get-in @state/system [:gl/vaos :vao/static])]
              (->> entity
                  (vertices/gpu-load vao) ;; => {:program/id 1 :vbo/id 1 :vao/id 1}
                  (swap! state/rendering assoc id))))

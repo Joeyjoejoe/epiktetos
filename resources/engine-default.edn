@@ -16,15 +16,8 @@
                :frag/default {:path "shaders/default.frag"
                               :stage :shader.stage/fragment}}
 
- :gl/programs {:light/source [:vert/default :frag/default]
-               :basic        [:vert/default :frag/default]}
+ :gl/programs {:default      [:vert/default :frag/default]}
 
- :gl/vaos     {:vao/default [{:key  :vertices
+ :gl/vaos     {:vao/static  [{:key  :coordinates
                               :size 3
-                              :type :float}
-                             {:key :color
-                              :size 4
-                              :type :float}
-                             {:key :texture
-                              :size 2
                               :type :float}]}}

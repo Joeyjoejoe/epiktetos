@@ -1,6 +1,8 @@
 (ns epictetus.vertices
-  (:require [integrant.core :as ig])
-  (:import (org.lwjgl.opengl GL11 GL20 GL30)))
+  (:require [integrant.core :as ig]
+            [epictetus.utils.buffer :as buffer])
+  (:import (org.lwjgl BufferUtils)
+           (org.lwjgl.opengl GL11 GL15 GL20 GL30)))
 
 ;; TODO Add all possible types in thoses constants
 (defonce gl-types
@@ -46,17 +48,45 @@
                (create-vao vao-name attribs))
              (:vaos config))))
 
+(defn pack-vertex
+  [vertex schema]
+  (mapcat #(% vertex) schema))
+
+(defn pack-vertices
+  [entity schema]
+  (let [vertices (get-in entity [:data :vertices])]
+    (mapcat #(pack-vertex % schema) vertices)))
+
+(defn create-vbo
+  [entity schema]
+  (let [vbo-id   (GL15/glGenBuffers)
+        vertices (pack-vertices entity schema)
+        buffered (buffer/float-buffer vertices)]
+
+  (GL15/glBindBuffer GL15/GL_ARRAY_BUFFER vbo-id)
+  (GL15/glBufferData GL15/GL_ARRAY_BUFFER ^java.nio.DirectFloatBufferU buffered GL15/GL_STATIC_DRAW)
+
+  (assoc entity :vbo vbo-id)))
+
+
 (defn gpu-load
   [{:keys [id stride attribs] :as vao} entity]
   (GL30/glBindVertexArray id)
-  (let [schema (map :key attribs)]
-
+  (let [schema (map :key attribs)
+        entity (create-vbo entity schema)]
 
   (doseq [[index {:keys [key size type offset]}] (map-indexed vector attribs)]
     (GL20/glVertexAttribPointer index size (type gl-types) false stride offset)
     (GL20/glEnableVertexAttribArray index))
 
+  (GL15/glBindBuffer GL15/GL_ARRAY_BUFFER 0)
   (GL30/glBindVertexArray 0)
-  (assoc entity :vao/id id)))
+  (assoc entity :vao id)))
 
-
+;; Alternative to glVertexAttribPointer :
+;; https://www.khronos.org/opengl/wiki/Vertex_Specification#Separate_attribute_format
+;;
+;; Examples & explanations :
+;;  - https://gamedev.stackexchange.com/questions/46184/opengl-is-it-possible-to-use-vaos-without-specifying-a-vbo
+;;  - https://docs.google.com/presentation/d/13t-x_HWZOip8GWLAdlZu6_jV-VnIb0-FQBTVnLIsRSw/edit#slide=id.g75eed9a1c_0_183
+;;  - https://stackoverflow.com/questions/37972229/glvertexattribpointer-and-glvertexattribformat-whats-the-difference
