@@ -20,4 +20,7 @@
 
  :gl/vaos     {:vao/static  [{:key  :coordinates
                               :size 3
+                              :type :float}
+                             {:key  :color
+                              :size 3
                               :type :float}]}}
