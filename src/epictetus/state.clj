@@ -3,27 +3,21 @@
 ;; User managed state
 (def db (atom {}))
 
-;; Once epictetus config is processed, it will
-;; become a system.
-;; It servces as a storage for user made opengl resources
-;; like shaders, programs, window.
-;; Since epictetus config use integrant, users can add their
-;; own systems.
+;; system is the result of processing a config file through
+;; integrant (https://github.com/weavejester/integrant).
+;;
+;; Have a look to the engine default config at :
+;; https://github.com/Joeyjoejoe/epictetus/blob/master/resources/engine-default.edn.
+;;
+;; These are the core systems used in the engine :
+;;
+;;   :glfw/window  OpenGL context (the window).
+;;   :gl/shaders   Shaders creation.
+;;   :gl/programs  Shaders program pipelines.
+;;   :gl/vaos      GPU memory utility.
+;;
 (def system (atom {}))
 
 ;; Internal state containing rendered entities
 ;; It can only be modified through :render effects
 (def rendering (atom {}))
-
-;; An entity map (data not loaded in gpu)
-;; [entity/id {:data []
-;;             :program :foo
-;;             :position [...]}]
-
-;; An entity map with vertices loaded in gpu (ready to render)
-;; [entity/id {:data []
-;;             :vbo-id 0
-;;             :program/id 0
-;;             :program :foo
-;;             :position [...]}]
-
