@@ -54,7 +54,7 @@
 
 (defn pack-vertices
   [entity schema]
-  (let [vertices (get-in entity [:data :vertices])]
+  (let [vertices (get-in entity [:assets :vertices])]
     (mapcat #(pack-vertex % schema) vertices)))
 
 (defn create-vbo
