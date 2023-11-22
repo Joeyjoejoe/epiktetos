@@ -73,14 +73,14 @@
 ;; EXPERIMENTATIONS
 (reg-event
   [:press :m]
-  [(cofx/inject :edn/load "triangle.edn")]
+  [(cofx/inject :edn/load "triangle-no.edn")]
   (fn render-level [{model :edn/load} fx]
     (-> fx
-        (update :render conj [:my-id model]))))
+        (update :render conj [:bar model]))))
 
 (reg-event
   [:press :c]
-  [(cofx/inject :edn/load "cube.edn")]
+  [(cofx/inject :edn/load "triangle-se.edn")]
   (fn render-level [{model :edn/load} fx]
     (-> fx
-        (update :render conj [:my-id model]))))
+        (update :render conj [:foo model]))))
