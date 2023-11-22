@@ -1,8 +1,9 @@
 (ns epictetus.vertices
   (:require [integrant.core :as ig]
+            [epictetus.state :as state]
             [epictetus.utils.buffer :as buffer])
   (:import (org.lwjgl BufferUtils)
-           (org.lwjgl.opengl GL11 GL15 GL20 GL30)))
+           (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL44 GL45)))
 
 ;; TODO Add all possible types in thoses constants
 (defonce gl-types
@@ -31,13 +32,18 @@
   "Initialize a new vao with given attributes configurations. Returns
   a map "
   [vao-name attribs]
-  (let [id       (GL30/glGenVertexArrays)
-        stride   (reduce #(+ %1 (attrib-bytes %2)) 0 attribs)
-        vao-info {:id      id
-                  :stride  stride
-                  :attribs (map-indexed #(assoc %2 :offset (attrib-offset attribs %1))
-                                        attribs)}]
-   {vao-name vao-info}))
+  (let [vao       (GL45/glCreateVertexArrays)
+        stride   (reduce #(+ %1 (attrib-bytes %2)) 0 attribs)]
+
+    (doseq [[index {:keys [key size type]}] (map-indexed vector attribs)]
+      (let [offset (attrib-offset attribs index)]
+        (GL45/glVertexArrayAttribFormat vao index size (type gl-types) false offset)
+        (GL45/glEnableVertexArrayAttrib vao index)
+        (GL45/glVertexArrayAttribBinding vao index 0)))
+
+    {vao-name {:id vao
+               :attribs attribs
+               :stride stride}}))
 
 (defmethod ig/prep-key :gl/vaos [_ config]
   {:window (ig/ref :glfw/window) :vaos config})
@@ -57,31 +63,24 @@
   (let [vertices (get-in entity [:assets :vertices])]
     (mapcat #(pack-vertex % schema) vertices)))
 
+;; TODO Do not create duplicates vbo if a model witgh same assets
+;; alredy exists
 (defn create-vbo
   [entity schema]
-  (let [vbo-id   (GL15/glGenBuffers)
-        vertices (pack-vertices entity schema)
-        buffered (buffer/float-buffer vertices)]
-
-  (GL15/glBindBuffer GL15/GL_ARRAY_BUFFER vbo-id)
-  (GL15/glBufferData GL15/GL_ARRAY_BUFFER ^java.nio.DirectFloatBufferU buffered GL15/GL_STATIC_DRAW)
-
-  (assoc entity :vbo vbo-id)))
-
+  (let [vbo-id   (GL45/glCreateBuffers)
+        vertices (-> entity
+                     (pack-vertices schema)
+                     (buffer/float-buffer))]
+    (GL45/glNamedBufferStorage vbo-id vertices GL44/GL_DYNAMIC_STORAGE_BIT)
+    (assoc entity :vbo vbo-id)))
 
 (defn gpu-load
   [{:keys [id stride attribs] :as vao} entity]
-  (GL30/glBindVertexArray id)
-  (let [schema (map :key attribs)
-        entity (create-vbo entity schema)]
+  (let [schema (map :key attribs)]
+    (-> entity
+        (create-vbo schema)
+        (assoc :vao id))))
 
-  (doseq [[index {:keys [key size type offset]}] (map-indexed vector attribs)]
-    (GL20/glVertexAttribPointer index size (type gl-types) false stride offset)
-    (GL20/glEnableVertexAttribArray index))
-
-  (GL15/glBindBuffer GL15/GL_ARRAY_BUFFER 0)
-  (GL30/glBindVertexArray 0)
-  (assoc entity :vao id)))
 
 ;; Alternative to glVertexAttribPointer :
 ;; https://www.khronos.org/opengl/wiki/Vertex_Specification#Separate_attribute_format

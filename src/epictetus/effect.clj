@@ -48,7 +48,9 @@
            (let [vao (get-in @state/system [:gl/vaos :vao/static])]
              (->> entity
                  (vertices/gpu-load vao) ;; => {:program/id 1 :vbo/id 1 :vao/id 1}
-                 (swap! state/rendering assoc id))))
+                 (swap! state/rendering assoc-in [:vao/static id]))
+
+             ))
 
           ([entities]
            (doseq [[id entity] entities]

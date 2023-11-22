@@ -5,7 +5,7 @@
     [clojure.pprint :refer [pprint]])
 
   (:import (org.lwjgl.glfw GLFW)
-           (org.lwjgl.opengl GL11 GL20 GL30))
+           (org.lwjgl.opengl GL11 GL20 GL30 GL45))
   (:gen-class))
 
 (def lag (atom 0.0))
@@ -35,10 +35,18 @@
     ;; TODO We should iterate on vaos instead of entities which induces
     ;; to maintain vao vertices count.
     ;; What about rendering methods (single, instance, with(out) indices) ?
-    (doseq [[_ {:keys [vao program position assets]}] @state/rendering]
-     (GL20/glUseProgram (get-in @state/system [:gl/programs program]))
-     (GL30/glBindVertexArray vao)
-     (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))
+    (doseq [[vao-name entities] @state/rendering]
+      (let [vao-id     (get-in @state/system [:gl/vaos vao-name :id])
+            vao-stride (get-in @state/system [:gl/vaos vao-name :stride])]
+        (GL30/glBindVertexArray vao-id)
+
+        (doseq [[id {:keys [program position vbo assets]}] entities]
+          (println "render: " id program)
+          (GL20/glUseProgram (get-in @state/system [:gl/programs program]))
+
+          (GL45/glVertexArrayVertexBuffer vao-id 0 vbo 0 vao-stride)
+
+          (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))
 
     (GLFW/glfwSwapBuffers window)
     (GLFW/glfwPollEvents)
