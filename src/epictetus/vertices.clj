@@ -54,6 +54,13 @@
                (create-vao vao-name attribs))
              (:vaos config))))
 
+;; Delete buffers and reset state/rendering
+(defmethod ig/halt-key! :gl/vaos [_ system]
+  (doseq [[vao entities] system]
+    (for [[_ {:keys [vbo]}] entities]
+      (println (GL15/glDeleteBuffers vbo)))
+    (reset! state/rendering {})))
+
 (defn pack-vertex
   [vertex schema]
   (mapcat #(% vertex) schema))
