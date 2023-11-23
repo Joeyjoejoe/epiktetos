@@ -14,6 +14,6 @@
       (GL30/glBindVertexArray id)
       (doseq [[_ {:keys [program position vbo assets]}] entities]
 
-        (GL20/glUseProgram program)
+        (GL20/glUseProgram (:id program))
         (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
         (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets)))))))

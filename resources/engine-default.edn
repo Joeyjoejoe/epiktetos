@@ -16,7 +16,8 @@
                :frag/default {:path "shaders/default.frag"
                               :stage :shader.stage/fragment}}
 
- :gl/programs {:default      [:vert/default :frag/default]}
+ :gl/programs {:default      {:pipeline [:vert/default :frag/default]
+                              :layout   [:coordinates :color]}}
 
  :gl/vaos     {:vao/static  [{:key  :coordinates
                               :size 3

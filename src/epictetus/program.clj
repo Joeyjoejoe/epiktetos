@@ -28,38 +28,78 @@
   (into {} (for [[label {:keys [path stage]}] (:shaders config)]
              (compile-shader label stage path))))
 
+(defn create-program
+  [prog-conf]
+  (assoc prog-conf :id (GL20/glCreateProgram)))
 
 
+(defn build-pipeline
+  [{:keys [pipeline] :as prog-conf} shaders]
+  (let [shaders-pipeline (map #(% shaders) pipeline)]
+    (assoc prog-conf :pipeline shaders-pipeline)))
 
-(defn compile-program [label shader-ids]
-  (let [program-id (GL20/glCreateProgram)
-                   ;; Attach compiled shaders code to program
-        _          (doseq [sid shader-ids] (GL20/glAttachShader program-id sid))
-                   ;; Link program
-        _          (do
-                    (GL20/glLinkProgram program-id)
-                    (when (= 0 (GL20/glGetProgrami program-id GL20/GL_LINK_STATUS))
-                      (throw (Exception. (str
-                                            "Error linking shader to program " label ": "
-                                              (GL20/glGetProgramInfoLog program-id 1024))))))
-      ;;             ;; Get uniforms locations
-      ;;uniforms     (into {} (map
-      ;;                        (fn [[k v]] [k (interface/data->opengl! :glsl/uniform v program-id)])
-      ;;                        (:program/uniforms h)))
-      ]
+(defn attach-shaders!
+  [{:keys [id pipeline] :as prog-conf}]
+  (doseq [{shader-id :id} pipeline]
+    (GL20/glAttachShader id shader-id))
+  prog-conf)
 
-    ;; Delete shaders
-    (doseq [sid shader-ids]
-      (GL20/glDeleteShader sid))
+(defn link-program!
+  [{:keys [id key] :as prog-conf}]
+  (GL20/glLinkProgram id)
+  (when (= 0 (GL20/glGetProgrami id GL20/GL_LINK_STATUS))
+    (throw (Exception. (str
+                         "Error linking shader to program " key ": "
+                         (GL20/glGetProgramInfoLog id 1024)))))
+  prog-conf)
 
-    {label program-id}))
+(defn delete-shaders!
+  [{:keys [pipeline] :as prog-conf}]
+  (doseq [{shader-id :id} pipeline]
+    (GL20/glDeleteShader shader-id))
+  prog-conf)
+
+(defn compile-program!
+  [prog-conf]
+  (-> prog-conf
+      create-program
+      attach-shaders!
+      link-program!
+      delete-shaders!))
+
+(defn collect-uniforms
+  [{:keys [pipeline] :as prog-conf}]
+  (assoc prog-conf :uniforms
+         (into {} (map :uniforms pipeline))))
 
 (defmethod ig/prep-key :gl/programs [_ config]
-  {:shaders (ig/ref :gl/shaders) :programs config})
+  {:shaders  (ig/ref :gl/shaders)
+   :programs config})
 
-(defmethod ig/init-key :gl/programs [_ config]
-  (into {} (for [[label shaders] (:programs config)]
-             (let [shader-ids (map :id
-                                   (vals
-                                    (select-keys (:shaders config) shaders)))]
-              (compile-program label shader-ids)))))
+;; TODO replace pipeline by just the path to files
+(defmethod ig/init-key
+  :gl/programs
+  [_ {:keys [programs shaders]}]
+  (into {} (for [[prog-name prog-conf] programs]
+              {prog-name (-> prog-conf
+                            (assoc :key prog-name)
+                            (build-pipeline shaders)
+                            compile-program!
+                            collect-uniforms)})))
+
+;;  ;; Program config
+;;  {:prog/default {:layout   [:coordinates :color]
+;;                  :pipeline [:vert/default :frag/default]}}
+;;
+;;  ;; Prep program
+;;  {:shaders  #ig/ref :gl/shaders
+;;   :programs {:prog/default {:layout   [:coordinates :color]
+;;                             :pipeline [:vert/default :frag/default]}}}
+
+;;  ;; Program system
+;;  {:prog/default {:id       1
+;;                  :key      :prog/default
+;;                  :layout   [:coordinates :color]
+;;                  :pipeline ["shader/default.vert" "shaders/default.frag"]
+;;                  :uniforms {"projection" :mat4
+;;                             "worldPos"   :vec4}}}
