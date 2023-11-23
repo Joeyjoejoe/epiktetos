@@ -29,6 +29,8 @@
 
   ([_ sys]
      (reset! system sys)
+     (GLFW/glfwSetWindowShouldClose (:glfw/window sys) false)
+
      (event/dispatch [:loop/start])
      (game-loop/start @system)
      (event/dispatch [:loop/end])))
