@@ -82,10 +82,13 @@
     (assoc entity :vbo vbo-id)))
 
 (defn gpu-load
-  [{:keys [id stride attribs] :as vao} entity]
-  (let [schema (map :key attribs)]
+  [{:keys [id attribs] :as vao}
+   {:keys [program]    :as entity}]
+  (let [schema     (map :key attribs)
+        program-id (get-in @state/system [:gl/programs program])]
     (-> entity
         (create-vbo schema)
+        (assoc :program program-id)
         (assoc :vao id))))
 
 
