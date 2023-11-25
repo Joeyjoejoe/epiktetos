@@ -17,7 +17,7 @@
     (GL20/glShaderSource id code)
     (GL20/glCompileShader id)
     (when (= 0 (GL20/glGetShaderi id GL20/GL_COMPILE_STATUS))
-      (throw (Exception. (str "Error compiling shader: " (GL20/glGetShaderInfoLog id 1024) " in " path))))
+      (throw (Exception. (str "Error compiling shader: " path (GL20/glGetShaderInfoLog id 1024) " in " path))))
 
     {label (merge {:id id :path path} metadata)}))
 
@@ -67,10 +67,22 @@
       link-program!
       delete-shaders!))
 
+(defn build-uniform
+  [prog-id [uniform-name uniform-type]]
+  {uniform-name {:type     uniform-type
+                 :location (GL20/glGetUniformLocation ^Long prog-id ^String uniform-name)}})
+
 (defn collect-uniforms
-  [{:keys [pipeline] :as prog-conf}]
-  (assoc prog-conf :uniforms
-         (into {} (map :uniforms pipeline))))
+  [{:keys [id pipeline] :as prog-conf}]
+
+  (GL20/glUseProgram id)
+  (let [uniforms-list (into {} (filter not-empty
+                              (map :uniforms pipeline)))
+        uniforms      (into {} (map #(build-uniform id %)
+                                    uniforms-list))]
+    (GL20/glUseProgram 0)
+
+    (assoc prog-conf :uniforms uniforms)))
 
 (defmethod ig/prep-key :gl/programs [_ config]
   {:shaders  (ig/ref :gl/shaders)

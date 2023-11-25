@@ -48,8 +48,5 @@
           ([id entity]
            (let [vao (get-in @state/system [:gl/vaos :vao/static])]
              (->> entity
-                  (vertices/gpu-load vao)
+                  (vertices/gpu-load! vao)
                   (swap! state/rendering assoc-in [:vao/static id]))))))
-
-             ))
-

@@ -58,7 +58,7 @@
 (defmethod ig/halt-key! :gl/vaos [_ system]
   (doseq [[vao entities] system]
     (for [[_ {:keys [vbo]}] entities]
-      (println (GL15/glDeleteBuffers vbo)))
+      (GL15/glDeleteBuffers vbo))
     (reset! state/rendering {})))
 
 (defn pack-vertex
@@ -81,7 +81,7 @@
     (GL45/glNamedBufferStorage vbo-id vertices GL44/GL_DYNAMIC_STORAGE_BIT)
     (assoc entity :vbo vbo-id)))
 
-(defn gpu-load
+(defn gpu-load!
   [{:keys [id attribs] :as vao}
    {:keys [program]    :as entity}]
   (let [schema     (map :key attribs)
