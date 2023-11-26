@@ -86,3 +86,10 @@
   (fn render-level [{model :edn/load} fx]
     (-> fx
         (update :render conj [:foo model]))))
+
+(reg-event
+  [:press :v]
+  [(cofx/inject :edn/load "cube.edn")]
+  (fn render-level [{model :edn/load} fx]
+    (-> fx
+        (update :render conj [:cube model]))))

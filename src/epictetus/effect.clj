@@ -57,4 +57,3 @@
              (->> entity
                   (vertices/gpu-load! vao)
                   (swap! state/rendering assoc-in [:vao/static program id]))))))
-

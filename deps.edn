@@ -1,6 +1,7 @@
 {:paths   ["src" "resources"]
  :deps    {org.clojure/clojure {:mvn/version "1.11.1"}
            integrant/integrant {:mvn/version "0.8.0"}
+           org.joml/joml       {:mvn/version "1.10.5"}
 
            ;; Exclude SLF4J logging backends to ensure only logback is used
            org.clojure/tools.deps.alpha {:mvn/version "0.6.480", :exclusions [org.slf4j/slf4j-nop]}
