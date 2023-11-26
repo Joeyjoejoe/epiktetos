@@ -57,3 +57,16 @@
              (->> entity
                   (vertices/gpu-load! vao)
                   (swap! state/rendering assoc-in [:vao/static program id]))))))
+
+
+(reg-fx :delete
+       (fn delete-entity!
+         [entity-keys]
+         ;; TODO update path must be obtainable from entity-key
+         ;;  - Refactor state/rendering to vaoID->programID->entityIDS
+         ;;  - Add a global registery for vaos, programs and entities data (integrant system)
+         (apply swap! state/rendering update-in [:vao/static :default] dissoc entity-keys)))
+
+(reg-fx :delete-all
+       (fn delete-all [_]
+         (reset! state/rendering {})))

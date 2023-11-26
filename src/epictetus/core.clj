@@ -93,3 +93,8 @@
   (fn render-level [{model :edn/load} fx]
     (-> fx
         (update :render conj [:cube model]))))
+
+(reg-event
+  [:press :delete]
+  (fn remove-cube [_ fx]
+    (assoc fx :delete-all true)))
