@@ -42,13 +42,38 @@
         (.perspective fovy aspect zmin zmax)
         (.get buffer))))
 
+
+(defn int-buffer [data]
+  (let [arr (int-array data)
+        arr-nth (count data)]
+    (-> (BufferUtils/createIntBuffer arr-nth)
+        (.put arr)
+        (.flip))))
+
+(defn get-size
+  "Return the window dimensions"
+  []
+  (let [window (:glfw/window @state/system)
+        width (int-buffer [0])
+        height (int-buffer [0])]
+
+    (GLFW/glfwGetWindowSize window width height)
+    {:width (.get width 0) :height (.get height 0)}))
+
+(defn rotate-around [centerX centerY centerZ]
+  (let [t (GLFW/glfwGetTime)
+        x (* 10.0 (Math/sin t))
+        y (* -10.0 (Math/cos t))
+        z (* 10.0 (Math/cos t))]
+    (view-matrix x y z centerX centerY centerZ 0.0 1.0 0.0)))
+
 (defn pipeline
   []
   (GL11/glClearColor 0.0 1.0 1.0 1.0)
   (GL11/glClear (bit-or GL11/GL_COLOR_BUFFER_BIT GL11/GL_DEPTH_BUFFER_BIT))
 
-  (let [view        (view-matrix (* 10.0 (Math/sin (GLFW/glfwGetTime))) (* -10.0 (Math/cos (GLFW/glfwGetTime))) (* 10.0 (Math/cos (GLFW/glfwGetTime))) 0.0 0.0 0.0 0.0 1.0 0.0)
-        projection  (projection-matrix (. Math toRadians 45.0) (/ 800.0 600.0) 0.01 100.0)]
+  (let [{:keys [width height]} (get-size)
+        projectionMX  (projection-matrix (. Math toRadians 45.0) (/ width height) 0.01 100.0)]
 
 
   (doseq [[vao programs] @state/rendering]
@@ -58,18 +83,16 @@
 
     (doseq [[prog entities] programs]
       ;; (println "Use program" prog)
-      (-> @state/system
-          (get-in [:gl/programs prog :id])
-          GL20/glUseProgram)
+      (let [{pid :id unis :uniforms} (get-in @state/system [:gl/programs prog])]
+        (GL20/glUseProgram pid)
 
       ;; Set program wide uniforms
-      (GL20/glUniformMatrix4fv 2 false view);
-      (GL20/glUniformMatrix4fv 1 false projection);
+      (GL20/glUniformMatrix4fv (get-in unis ["view" :location]) false (rotate-around 0.0 0.0 0.0));
+      (GL20/glUniformMatrix4fv (get-in unis ["projection" :location]) false projectionMX);
 
       (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
         ;; (println "Render" entity-id)
-
         (GL20/glUniformMatrix4fv 0 false (model-matrix position));
 
         (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
-        (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets)))))))))
+        (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
