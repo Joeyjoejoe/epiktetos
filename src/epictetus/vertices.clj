@@ -85,7 +85,9 @@
   [{:keys [id attribs] :as vao}
    {:keys [program]    :as entity}]
   (let [schema     (map :key attribs)
-        program-id (get-in @state/system [:gl/programs program])]
+        program-id (-> @state/system
+                       (get-in [:gl/programs program])
+                       :id)]
     (-> entity
         (create-vbo schema)
         (assoc :program program-id)

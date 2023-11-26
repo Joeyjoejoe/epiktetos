@@ -45,8 +45,16 @@
            (doseq [[id entity] entities]
              (render! id entity)))
 
-          ([id entity]
+          ([id {:as entity :keys [program]}]
+           ;; - TODO Implement VAO selection based on program. Vao should be
+           ;; generated from program layout, which is determined by shaders
+           ;; attributes location (parsed from source shader files)
+           ;;
+           ;; - TODO Implement VBO duplication prevention. We must detect
+           ;; entities with same assets and render them using the same VBO.
+           ;; Which should be rendered using instance rendering ?
            (let [vao (get-in @state/system [:gl/vaos :vao/static])]
              (->> entity
                   (vertices/gpu-load! vao)
-                  (swap! state/rendering assoc-in [:vao/static id]))))))
+                  (swap! state/rendering assoc-in [:vao/static program id]))))))
+
