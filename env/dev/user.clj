@@ -1,6 +1,6 @@
 (ns user
   (:require [integrant.core :as ig]
-            [integrant.repl :refer [clear go halt prep init reset reset-all]]
+            [integrant.repl :as ig-repl] ;; :refer [clear go halt prep init reset reset-all]]
             [integrant.repl.state :refer [system config]]
             [puget.printer :as puget]
             [clojure.java.io :as io]
@@ -12,3 +12,25 @@
                                         io/resource
                                         slurp
                                         ig/read-string)))
+
+(defn start
+  "Start engine"
+  []
+  (ig-repl/go)
+  (core/start nil system))
+
+(defn resume
+  "Resume a paused loop"
+  []
+  (core/start nil system))
+
+(defn reset
+  "Restart engine (drop all states)"
+  []
+  (ig-repl/halt)
+  (go))
+
+(defn stop
+  "Stop engine"
+  []
+  (ig-repl/halt))
