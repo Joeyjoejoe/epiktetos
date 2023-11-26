@@ -28,7 +28,7 @@
   "Restart engine (drop all states)"
   []
   (ig-repl/halt)
-  (go))
+  (start))
 
 (defn stop
   "Stop engine"
