@@ -22,7 +22,8 @@
       ;; Consume events queue
       (while (seq @event/queue)
         (let [e (peek @event/queue)]
-          (pprint e)
+          (when-not (= :mouse/position (first e))
+            (pprint e))
           (event/execute e)
           (swap! event/queue pop)))
 
