@@ -19,10 +19,10 @@
 (defn model-matrix
   ([[x y z]] (model-matrix x y z))
   ([x y z]
-  (let [buffer (BufferUtils/createFloatBuffer 16)]
-    (-> (Matrix4f.)
-        (.translate x y z)
-        (.get buffer)))))
+   (let [buffer (BufferUtils/createFloatBuffer 16)]
+     (-> (Matrix4f.)
+         (.translate x y z)
+         (.get buffer)))))
 
 (defn view-matrix
   [eye-x    eye-y    eye-z
@@ -76,23 +76,23 @@
         projectionMX  (projection-matrix (. Math toRadians 45.0) (/ width height) 0.01 100.0)]
 
 
-  (doseq [[vao programs] @state/rendering]
-    (let [{:keys [id stride]} (get-in @state/system [:gl/vaos vao])]
-    ;; (println "Bind VAO" id)
-    (GL30/glBindVertexArray id)
+    (doseq [[vao programs] @state/rendering]
+      (let [{:keys [id stride]} (get-in @state/system [:gl/vaos vao])]
+        ;; (println "Bind VAO" id)
+        (GL30/glBindVertexArray id)
 
-    (doseq [[prog entities] programs]
-      ;; (println "Use program" prog)
-      (let [{pid :id unis :uniforms} (get-in @state/system [:gl/programs prog])]
-        (GL20/glUseProgram pid)
+        (doseq [[prog entities] programs]
+          ;; (println "Use program" prog)
+          (let [{pid :id unis :uniforms} (get-in @state/system [:gl/programs prog])]
+            (GL20/glUseProgram pid)
 
-      ;; Set program wide uniforms
-      (GL20/glUniformMatrix4fv (get-in unis ["view" :location]) false (rotate-around 0.0 0.0 0.0));
-      (GL20/glUniformMatrix4fv (get-in unis ["projection" :location]) false projectionMX);
+            ;; Set program wide uniforms
+            (GL20/glUniformMatrix4fv (get-in unis ["view" :location]) false (rotate-around 0.0 0.0 0.0));
+            (GL20/glUniformMatrix4fv (get-in unis ["projection" :location]) false projectionMX);
 
-      (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
-        ;; (println "Render" entity-id)
-        (GL20/glUniformMatrix4fv 0 false (model-matrix position));
+            (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
+              ;; (println "Render" entity-id)
+              (GL20/glUniformMatrix4fv (get-in unis ["model" :location]) false (model-matrix position));
 
-        (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
-        (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
+              (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
+              (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
