@@ -11,17 +11,7 @@
                :hint.context/gl.profile        :gl.profile/core
                :hint.context/gl.forward-compat true}
 
- :gl/shaders  {:vert/default {:path "shaders/default.vert"
-                              :stage :shader.stage/vertex}
-               :frag/default {:path "shaders/default.frag"
-                              :stage :shader.stage/fragment}}
-
- :gl/programs {:default      {:pipeline [:vert/default :frag/default]
-                              :layout   [:coordinates :color]}}
-
- :gl/vaos     {:vao/static  [{:key  :coordinates
-                              :size 3
-                              :type :float}
-                             {:key  :color
-                              :size 3
-                              :type :float}]}}
+ :shader/programs [{:name     :default
+                    :layout   [:float/coordinates :float/color]
+                    :pipeline [[:vertex "shaders/default.vert"]
+                               [:fragment "shaders/default.frag"]]}]}

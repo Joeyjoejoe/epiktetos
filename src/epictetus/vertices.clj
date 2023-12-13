@@ -63,7 +63,7 @@
 
 (defn pack-vertex
   [vertex schema]
-  (mapcat #(% vertex) schema))
+  (mapcat #((keyword %) vertex) schema))
 
 (defn pack-vertices
   [entity schema]
@@ -82,15 +82,12 @@
     (assoc entity :vbo vbo-id)))
 
 (defn gpu-load!
-  [{:keys [id attribs] :as vao}
+  [{id     :vao/id
+    layout :vao/layout :as vao}
    {:keys [program]    :as entity}]
-  (let [schema     (map :key attribs)
-        program-id (-> @state/system
-                       (get-in [:gl/programs program])
-                       :id)]
+  (let [schema  (map name layout)]
     (-> entity
         (create-vbo schema)
-        (assoc :program program-id)
         (assoc :vao id))))
 
 

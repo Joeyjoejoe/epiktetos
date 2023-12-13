@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]))
 
 (def glsl-regexps {
+  :attr/layout        #"(?m)^layout.+location.+=\s*([^\s)]).+in\s*([^\s]+)"
   :uniform/one-liners #"(?m)^[^\/\n\r]*uniform\s+(\S+)\s+(\S+)(?:;|\s*=)"
   :uniform/blocks     #""
   :struct/blocks      #"(?m)^struct\s+([^{\s]+)[^{]*\{([^}]*)\}"
@@ -17,6 +18,12 @@
        (mapv #(into [] (rseq (subvec % 1))))
        ;;(reduce #(apply assoc %1 (reverse (subvec %2 1))) {})
        ))
+
+(defn- map-attributes [source]
+  (->> source
+       (re-seq (:attr/layout glsl-regexps))
+       (mapv #(vector (Integer/parseInt (second %))
+                     (keyword (last %))))))
 
 (defn- map-structs
   "Return a map of all `struct` definied in shader-str"
@@ -39,7 +46,8 @@
   (let [structs (map-structs shader-str)]
     (->> shader-str
          (re-seq (:uniform/one-liners glsl-regexps))
-         (reduce #(apply assoc %1 (rseq (subvec %2 1))) {}))))
+         (mapv #(vector (last %)
+                        (keyword (second %)))))))
 
 (defn- map-inputs [shader-str] nil)
 (defn- map-outputs [shader-str] nil)
@@ -47,10 +55,11 @@
 (defn analyze-shader
   "Return a map of shader meta data"
   [shader-str]
-  {:structs  (map-structs shader-str)
-   :uniforms (map-uniforms shader-str)
-   :input    (map-inputs shader-str)
-   :output   (map-outputs shader-str)})
+  {:attribs (map-attributes shader-str)
+   :structs    (map-structs shader-str)
+   :uniforms   (map-uniforms shader-str)
+   :input      (map-inputs shader-str)
+   :output     (map-outputs shader-str)})
 
 ;;TODO
 ;; * Implement uniform Interface block

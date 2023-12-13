@@ -3,115 +3,166 @@
             [clojure.java.io :as io]
             [epictetus.utils.glsl-parser :as glsl]
             [epictetus.lang.opengl :as opengl])
-  (:import  (org.lwjgl.opengl GL20)))
+  (:import  (org.lwjgl.opengl GL11 GL20 GL45)))
+
+(defn compile-pipeline
+  "Given a pipeline config:
+
+  [[:vertex \"shaders/default.vert\"]
+   [:fragment \"shaders/default.frag\"]]
+
+  Returns a map of attributes and uniforms:
+
+  {:shader/ids [1 2]
+   :attribs    [[0 :vec3] [1 :vec3]]
+   :uniforms   [[\"view\" :mat4]
+                [\"projection\" :mat4]
+                [\"model\" :mat4]]}
+
+  These are the mandatory parameters for rendering
+  with the program pipeline"
+  [pipeline]
+
+  (apply merge-with
+         into
+         (for [[stage path] pipeline]
+           (let [id       (-> stage opengl/dictionary GL20/glCreateShader)
+                 source   (-> path (io/resource) (slurp))
+                 metadata (glsl/analyze-shader source)]
+
+             (when (= 0 id)
+               (throw (Exception. (str "Error creating shader of type: " stage))))
+
+             (GL20/glShaderSource id source)
+             (GL20/glCompileShader id)
+
+             (when (= 0 (GL20/glGetShaderi id GL20/GL_COMPILE_STATUS))
+               (throw (Exception. (str "shader compilation error: " [stage path] (GL20/glGetShaderInfoLog id 1024)))))
+             (assoc metadata :shader/ids [id])))))
 
 
-(defn compile-shader [label stage-key path]
-  (let [stage    (stage-key opengl/dictionary)
-        id       (GL20/glCreateShader stage)
-        code     (-> path (io/resource) (slurp))
-        metadata (glsl/analyze-shader code)]
+(defonce gl-types
+  {:float GL11/GL_FLOAT
+   :int   GL11/GL_INT
+   :byte  GL11/GL_BYTE})
 
-    (when (= 0 id)
-      (throw (Exception. (str "Error creating shader of type: " stage-key))))
-    (GL20/glShaderSource id code)
-    (GL20/glCompileShader id)
-    (when (= 0 (GL20/glGetShaderi id GL20/GL_COMPILE_STATUS))
-      (throw (Exception. (str "Error compiling shader: " path (GL20/glGetShaderInfoLog id 1024) " in " path))))
+(defonce struc-length
+  {:vec3 3
+   :vec4 4
+   :mat3 9
+   :mat4 16})
 
-    {label (merge {:id id :path path} metadata)}))
+(defonce type-bytes-sizes
+  {:float java.lang.Float/BYTES
+   :int   java.lang.Integer/BYTES
+   :byte  java.lang.Byte/BYTES})
 
-(defmethod ig/prep-key :gl/shaders [_ config]
-  {:window (ig/ref :glfw/window) :shaders config})
+(defn attrib-bytes
+  "Returns the bytes size of the given attrib"
+  [struc typ]
+  (let [type-bytes   ((keyword typ) type-bytes-sizes)
+        struc-length ((keyword struc) struc-length)]
+    (* struc-length type-bytes)))
 
-(defmethod ig/init-key :gl/shaders [_ config]
-  (into {} (for [[label {:keys [path stage]}] (:shaders config)]
-             (compile-shader label stage path))))
+(defn attrib-offset
+  "Given the index of an attrib in attribs collection,
+  returns the bytes size sum of previous attribs"
+  [attr-layout location]
+  (let [prev-attribs (subvec (apply vector attr-layout) 0 location)]
+    (->> prev-attribs
+         (map :size)
+         (reduce +))))
 
-(defn create-program
-  [prog-conf]
-  (assoc prog-conf :id (GL20/glCreateProgram)))
+(defn attribs-compile
+  [attribs layout]
+  (sort-by :location
+           (for [[location struc] attribs]
+             (let [attrib (get layout location)
+                   field  (name attrib)
+                   typ    (namespace attrib)
+                   k      (keyword (str (name struc) "." typ) field)]
+               {:location location
+                :typ      (keyword typ)
+                :size     (attrib-bytes struc typ)
+                :length   ((keyword struc) struc-length)
+                :key      k}))))
 
 
-(defn build-pipeline
-  [{:keys [pipeline] :as prog-conf} shaders]
-  (let [shaders-pipeline (map #(% shaders) pipeline)]
-    (assoc prog-conf :pipeline shaders-pipeline)))
 
-(defn attach-shaders!
-  [{:keys [id pipeline] :as prog-conf}]
-  (doseq [{shader-id :id} pipeline]
-    (GL20/glAttachShader id shader-id))
-  prog-conf)
+(defn compile-vao
+  "Create or get a VAO (vertex array object)
 
-(defn link-program!
-  [{:keys [id key] :as prog-conf}]
-  (GL20/glLinkProgram id)
-  (when (= 0 (GL20/glGetProgrami id GL20/GL_LINK_STATUS))
-    (throw (Exception. (str
-                         "Error linking shader to program " key ": "
-                         (GL20/glGetProgramInfoLog id 1024)))))
-  prog-conf)
+  layout  [:float/coordinates :float/color]
+  attribs [[0 :vec3] [1 :vec3]]
 
-(defn delete-shaders!
-  [{:keys [pipeline] :as prog-conf}]
-  (doseq [{shader-id :id} pipeline]
-    (GL20/glDeleteShader shader-id))
-  prog-conf)
+  Returns a vao map
 
-(defn compile-program!
-  [prog-conf]
-  (-> prog-conf
-      create-program
-      attach-shaders!
-      link-program!
-      delete-shaders!))
+  {:vao/id 1
+   :vao/layout [:vec3.float/coordinates :vec3.float/color]
+   :vao/stride 64}"
+  [layout attribs]
 
-(defn build-uniform
-  [prog-id [uniform-name uniform-type]]
-  {uniform-name {:type     uniform-type
-                 :location (GL20/glGetUniformLocation ^Long prog-id ^String uniform-name)}})
+  (let [vao         (GL45/glCreateVertexArrays)
+        attr-layout (attribs-compile attribs layout)
+        stride      (->> attr-layout
+                         (map :size)
+                         (reduce +))]
 
-(defn collect-uniforms
-  [{:keys [id pipeline] :as prog-conf}]
+    (doseq [{:keys [length location typ]} attr-layout]
+      (let [offset (attrib-offset attr-layout location)]
+        (GL45/glVertexArrayAttribFormat vao location length (typ gl-types) false offset)
+        (GL45/glEnableVertexArrayAttrib vao location)
+        (GL45/glVertexArrayAttribBinding vao location 0)))
 
-  (GL20/glUseProgram id)
-  (let [uniforms-list (into {} (filter not-empty
-                              (map :uniforms pipeline)))
-        uniforms      (into {} (map #(build-uniform id %)
-                                    uniforms-list))]
+    {:vao/id     vao
+     :vao/layout (vec (map :key attr-layout))
+     :vao/stride stride}))
+
+(defn compile-uniforms
+  [prog-id uniforms]
+  (GL20/glUseProgram prog-id)
+  (let [unif-with-locations (for [[name _ :as unif] uniforms]
+                              (conj unif (GL20/glGetUniformLocation ^Long prog-id ^String name)))]
     (GL20/glUseProgram 0)
+    (vec unif-with-locations)))
 
-    (assoc prog-conf :uniforms uniforms)))
 
-(defmethod ig/prep-key :gl/programs [_ config]
-  {:shaders  (ig/ref :gl/shaders)
-   :programs config})
-
-;; TODO replace pipeline by just the path to files
 (defmethod ig/init-key
-  :gl/programs
-  [_ {:keys [programs shaders]}]
-  (into {} (for [[prog-name prog-conf] programs]
-              {prog-name (-> prog-conf
-                            (assoc :key prog-name)
-                            (build-pipeline shaders)
-                            compile-program!
-                            collect-uniforms)})))
+  :shader/programs
+  [_ programs]
 
-;;  ;; Program config
-;;  {:prog/default {:layout   [:coordinates :color]
-;;                  :pipeline [:vert/default :frag/default]}}
+  (apply merge-with into (for [{:keys [name layout pipeline]} programs]
+
+    (let [{shaders :shader/ids
+           :keys [attribs uniforms]} (compile-pipeline pipeline)
+          vao                        (compile-vao layout attribs)
+          prog-id                    (GL20/glCreateProgram)]
+
+      (doseq [shader-id shaders]
+        (GL20/glAttachShader prog-id shader-id))
+
+      (GL20/glLinkProgram prog-id)
+      (when (= 0 (GL20/glGetProgrami prog-id GL20/GL_LINK_STATUS))
+        (throw (Exception. (str
+                             "Error linking shader to program " name ": "
+                             (GL20/glGetProgramInfoLog prog-id 1024)))))
+
+      (doseq [shader-id shaders]
+        (GL20/glDeleteShader shader-id))
+
+      {:vao      {(:vao/layout vao) vao}
+       :program  {name {:program/id prog-id
+                        :layout     (-> vao :vao/layout vec)
+                        :uniforms   (compile-uniforms prog-id uniforms)}}}))))
+
+
 ;;
-;;  ;; Prep program
-;;  {:shaders  #ig/ref :gl/shaders
-;;   :programs {:prog/default {:layout   [:coordinates :color]
-;;                             :pipeline [:vert/default :frag/default]}}}
-
-;;  ;; Program system
-;;  {:prog/default {:id       1
-;;                  :key      :prog/default
-;;                  :layout   [:coordinates :color]
-;;                  :pipeline ["shader/default.vert" "shaders/default.frag"]
-;;                  :uniforms {"projection" :mat4
-;;                             "worldPos"   :vec4}}}
+;;
+;;  :shaders {:vao {[:float/coordinates :float/color] {:vao/id 1
+;;                                                     :vao/layout [:float/coordinates :float/color]
+;;                                                     :vao/stride 64}}
+;;            :program {:default {:program/id 1
+;;                                :layout     [:float/coordinates :float/color]
+;;                                :uniforms   [["model" 1 :mat4]
+;;                                             ["view" 2 :mat4]
+;;                                             ["projection" 3 :mat4]]}}}
