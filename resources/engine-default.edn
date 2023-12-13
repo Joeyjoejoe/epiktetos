@@ -12,6 +12,6 @@
                :hint.context/gl.forward-compat true}
 
  :shader/programs [{:name     :default
-                    :layout   [:float/coordinates :float/color]
+                    :layout   [:vec3f/coordinates :vec3f/color]
                     :pipeline [[:vertex "shaders/default.vert"]
                                [:fragment "shaders/default.frag"]]}]}
