@@ -5,6 +5,8 @@
             [epictetus.lang.opengl :as opengl])
   (:import  (org.lwjgl.opengl GL11 GL20 GL45)))
 
+;; TODO Define halt-key! suspend-key! resume-key!
+
 (defonce gl-types
   {:vec3f {:bytes (* 3 java.lang.Float/BYTES)
            :type  GL11/GL_FLOAT
@@ -109,6 +111,7 @@
          (for [[stage path] pipeline]
            (let [id       (-> stage opengl/dictionary GL20/glCreateShader)
                  source   (-> path (io/resource) (slurp))
+                 ;; TODO parse attribute varname and store
                  metadata (glsl/analyze-shader source)]
 
              (when (= 0 id)

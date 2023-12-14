@@ -86,6 +86,8 @@
         ;; set eneity uniforms
         (GL20/glUniformMatrix4fv (get-in uniforms ["model" 0 2]) false (model-matrix position));
 
+        ;; TODO Implement other rendering methods (indice, instance)
+
         (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
         (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
 
