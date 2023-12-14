@@ -1,65 +1,6 @@
 (ns epictetus.vertices
-  (:require [integrant.core :as ig]
-            [epictetus.state :as state]
-            [epictetus.utils.buffer :as buffer])
-  (:import (org.lwjgl BufferUtils)
-           (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL44 GL45)))
-
-;; TODO Add all possible types in thoses constants
-(defonce gl-types
-  {:float GL11/GL_FLOAT
-   :byte  GL11/GL_BYTE})
-
-(defonce type-bytes-sizes
-  {:float java.lang.Float/BYTES
-   :byte  java.lang.Byte/BYTES})
-
-(defn attrib-bytes
-  "Returns the bytes size of the given attrib"
-  [{:keys [size type] :as attrib}]
-  (let [type-bytes (type type-bytes-sizes)]
-    (* size type-bytes)))
-
-(defn attrib-offset
-  "Given the index of an attrib in attribs collection,
-  returns the bytes size sum of previous attribs"
-  [attribs index]
-  (let [prev-attribs      (subvec attribs 0 index)
-        sum-attribs-bytes #(+ %1 (attrib-bytes %2))]
-    (reduce sum-attribs-bytes 0 prev-attribs)))
-
-(defn create-vao
-  "Initialize a new vao with given attributes configurations. Returns
-  a map "
-  [vao-name attribs]
-  (let [vao       (GL45/glCreateVertexArrays)
-        stride   (reduce #(+ %1 (attrib-bytes %2)) 0 attribs)]
-
-    (doseq [[index {:keys [key size type]}] (map-indexed vector attribs)]
-      (let [offset (attrib-offset attribs index)]
-        (GL45/glVertexArrayAttribFormat vao index size (type gl-types) false offset)
-        (GL45/glEnableVertexArrayAttrib vao index)
-        (GL45/glVertexArrayAttribBinding vao index 0)))
-
-    {vao-name {:id vao
-               :attribs attribs
-               :stride stride}}))
-
-(defmethod ig/prep-key :gl/vaos [_ config]
-  {:window (ig/ref :glfw/window) :vaos config})
-
-(defmethod ig/init-key :gl/vaos [_ config]
-  (into {} (map
-             (fn [[vao-name attribs]]
-               (create-vao vao-name attribs))
-             (:vaos config))))
-
-;; Delete buffers and reset state/rendering
-(defmethod ig/halt-key! :gl/vaos [_ system]
-  (doseq [[vao entities] system]
-    (for [[_ {:keys [vbo]}] entities]
-      (GL15/glDeleteBuffers vbo))
-    (reset! state/rendering {})))
+  (:require [epictetus.utils.buffer :as buffer])
+  (:import  (org.lwjgl.opengl GL44 GL45)))
 
 (defn pack-vertex
   [vertex schema]

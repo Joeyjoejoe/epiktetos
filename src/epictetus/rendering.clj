@@ -64,32 +64,32 @@
   (let [{:keys [width height]} (get-size)
         projectionMX  (projection-matrix (. Math toRadians 45.0) (/ width height) 0.01 100.0)]
 
-  (doseq [[vao-layout programs] @state/rendering]
-    (let [{:keys [:vao/id :vao/stride]} (get-in @state/system [:shader/programs :vao vao-layout])]
-    ;; (println "Bind VAO" id)
-    (GL30/glBindVertexArray id)
+    (doseq [[vao-layout programs] @state/rendering]
+      (let [{:keys [:vao/id :vao/stride]} (get-in @state/system [:gl/engine :vao vao-layout])]
+        ;; (println "Bind VAO" id)
+        (GL30/glBindVertexArray id)
 
-    (doseq [[prog entities] programs]
-      ;; (println "Use program" prog)
-      (let [{pid :program/id unis :uniforms} (get-in @state/system [:shader/programs :program prog])
-            ;; TODO Refactor uniforms managment
-            uniforms (group-by first unis)]
+        (doseq [[prog entities] programs]
+          ;; (println "Use program" prog)
+          (let [{pid :program/id unis :uniforms} (get-in @state/system [:gl/engine :program prog])
+                ;; TODO Refactor uniforms managment
+                uniforms (group-by first unis)]
 
-        (GL20/glUseProgram pid)
+            (GL20/glUseProgram pid)
 
-      ;; Set program wide uniforms
-      (GL20/glUniformMatrix4fv (get-in uniforms ["view" 0 2]) false (rotate-around 0.0 0.0 0.0))
-      (GL20/glUniformMatrix4fv (get-in uniforms ["projection" 0 2]) false projectionMX);
+            ;; Set program wide uniforms
+            (GL20/glUniformMatrix4fv (get-in uniforms ["view" 0 2]) false (rotate-around 0.0 0.0 0.0))
+            (GL20/glUniformMatrix4fv (get-in uniforms ["projection" 0 2]) false projectionMX);
 
-      (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
+            (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
 
-        ;; set eneity uniforms
-        (GL20/glUniformMatrix4fv (get-in uniforms ["model" 0 2]) false (model-matrix position));
+              ;; set eneity uniforms
+              (GL20/glUniformMatrix4fv (get-in uniforms ["model" 0 2]) false (model-matrix position));
 
-        ;; TODO Implement other rendering methods (indice, instance)
+              ;; TODO Implement other rendering methods (indice, instance)
 
-        (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
-        (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
+              (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
+              (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
 
 
 ;;    ;; Render context

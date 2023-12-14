@@ -1,11 +1,11 @@
 (ns epictetus.program
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
+            [epictetus.state :as state]
             [epictetus.utils.glsl-parser :as glsl]
             [epictetus.lang.opengl :as opengl])
-  (:import  (org.lwjgl.opengl GL11 GL20 GL45)))
+  (:import  (org.lwjgl.opengl GL11 GL15 GL20 GL45)))
 
-;; TODO Define halt-key! suspend-key! resume-key!
 
 (defonce gl-types
   {:vec3f {:bytes (* 3 java.lang.Float/BYTES)
@@ -88,7 +88,7 @@
      :vao/layout layout
      :vao/stride stride}))
 
-(defn compile-pipeline
+(defn compile-shaders
   "Given a pipeline config:
 
   [[:vertex \"shaders/default.vert\"]
@@ -125,13 +125,13 @@
              (assoc metadata :shader/ids [id])))))
 
 (defmethod ig/init-key
-  :shader/programs
-  [_ programs]
+  :gl/engine
+  [_ config]
 
-  (apply merge-with into (for [{:keys [name layout pipeline]} programs]
+  (apply merge-with into (for [{:keys [name layout pipeline]} (:programs config)]
 
     (let [{shaders :shader/ids
-           :keys [attribs uniforms]} (compile-pipeline pipeline)
+           :keys [attribs uniforms]} (compile-shaders pipeline)
           vao                        (compile-vao layout attribs)
           prog-id                    (GL20/glCreateProgram)]
 

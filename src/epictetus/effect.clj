@@ -53,8 +53,8 @@
            ;; - TODO Implement VBO duplication prevention. We must detect
            ;; entities with same assets and render them using the same VBO.
            ;; Which should be rendered using instance rendering ?
-           (let [{layout :layout} (get-in @state/system [:shader/programs :program program])
-                 vao              (get-in @state/system [:shader/programs :vao layout])]
+           (let [{layout :layout} (get-in @state/system [:gl/engine :program program])
+                 vao              (get-in @state/system [:gl/engine :vao layout])]
              (->> entity
                   (vertices/gpu-load! vao)
                   (swap! state/rendering assoc-in [layout program id]))))))

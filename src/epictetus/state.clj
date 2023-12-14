@@ -13,8 +13,6 @@
 ;;
 ;;   :glfw/window  OpenGL context (the window).
 ;;   :gl/shaders   Shaders creation.
-;;   :gl/programs  Shaders program pipelines.
-;;   :gl/vaos      GPU memory utility.
 ;;
 (def system (atom {}))
 

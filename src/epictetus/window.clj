@@ -89,7 +89,10 @@
 
 
 (defmethod ig/init-key :glfw/window [_ opts]
-  (let [window (-> opts create-window (configure opts))]
+  (let [window (-> opts
+                   create-window
+                   (configure opts))]
+
     (println "OpenGL version:" (GL11/glGetString GL11/GL_VERSION))
     (GLFW/glfwShowWindow window)
     window))
