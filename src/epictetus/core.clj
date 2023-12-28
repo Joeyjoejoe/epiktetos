@@ -28,12 +28,10 @@
      (start conf-path system)))
 
   ([_ sys]
-     (reset! system sys)
-     (GLFW/glfwSetWindowShouldClose (:glfw/window sys) false)
 
-     (event/dispatch [:loop/start])
-     (game-loop/start @system)
-     (event/dispatch [:loop/end])))
+     (GLFW/glfwSetWindowShouldClose (:glfw/window sys) false)
+     (reset! system sys)
+     (game-loop/start @system)))
 
 (defn reg-event
   "Set the handler to an event id, with the option to add additional coeffects.

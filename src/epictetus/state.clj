@@ -18,4 +18,17 @@
 
 ;; Internal state containing rendered entities
 ;; It can only be modified through :render effects
+;;
+;; vao/layout->program/name->entity/name->entity/data
+;;
+;; example : {[:vec3f/coordinates :vec3f/color]
+;;            {:default {:hero
+;;                       {{:program :default,
+;;                         :position [0.0 0.0 0.0],
+;;                         :vao 1
+;;                         :vbo 1
+;;                         :assets
+;;                         {:indices [],
+;;                          :vertices ...}}}}}}
+;;
 (def rendering (atom {}))

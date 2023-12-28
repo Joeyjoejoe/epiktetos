@@ -4,7 +4,8 @@
             [epictetus.state :as state]
             [epictetus.utils.glsl-parser :as glsl]
             [epictetus.lang.opengl :as opengl])
-  (:import  (org.lwjgl.opengl GL11 GL15 GL20 GL45)))
+  (:import  (org.lwjgl.glfw GLFW)
+            (org.lwjgl.opengl GL11 GL15 GL20 GL45)))
 
 
 (defonce gl-types
@@ -151,3 +152,17 @@
        :program  {name {:program/id prog-id
                         :layout     (-> vao :vao/layout vec)
                         :uniforms   (compile-uniforms prog-id uniforms)}}}))))
+
+(defmethod ig/halt-key!
+  :gl/engine
+  [_ system]
+
+  ;; reset state
+  (doseq [[layout programs] @state/rendering]
+    (doseq [[program-k entities] programs]
+      (for [[entity-id {:keys [vbo]}] entities]
+      (GL15/glDeleteBuffers vbo)))
+
+    (reset! state/rendering {})
+    (reset! state/system {})
+    (reset! state/db {})))
