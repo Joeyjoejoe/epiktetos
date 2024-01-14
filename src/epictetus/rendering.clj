@@ -1,90 +1,40 @@
 (ns epictetus.rendering
-  (:require [epictetus.state :as state])
+  (:require [epictetus.state :as state]
+            [epictetus.uniform :as u]
+            [epictetus.event :as event])
   (:import (org.joml Matrix4f)
            (org.lwjgl BufferUtils)
            (org.lwjgl.glfw GLFW)
            (org.lwjgl.opengl GL11 GL20 GL30 GL45)))
-
-(defn model-matrix
-  ([[x y z]] (model-matrix x y z))
-  ([x y z]
-   (let [buffer (BufferUtils/createFloatBuffer 16)]
-     (-> (Matrix4f.)
-         (.translate x y z)
-         (.get buffer)))))
-
-(defn view-matrix
-  [eye-x    eye-y    eye-z
-   center-x center-y center-z
-   up-x     up-y         up-z]
-  (let [buffer (BufferUtils/createFloatBuffer 16)]
-    (-> (Matrix4f.)
-        (.lookAt eye-x eye-y eye-z
-                 center-x center-y center-z
-                 up-x up-y up-z)
-        (.get buffer))))
-
-(defn projection-matrix
-  [fovy aspect zmin zmax]
-  (let [buffer (BufferUtils/createFloatBuffer 16)]
-    (-> (Matrix4f.)
-        (.perspective fovy aspect zmin zmax)
-        (.get buffer))))
-
-
-(defn int-buffer [data]
-  (let [arr (int-array data)
-        arr-nth (count data)]
-    (-> (BufferUtils/createIntBuffer arr-nth)
-        (.put arr)
-        (.flip))))
-
-(defn get-size
-  "Return the window dimensions"
-  []
-  (let [window (:glfw/window @state/system)
-        width (int-buffer [0])
-        height (int-buffer [0])]
-
-    (GLFW/glfwGetWindowSize window width height)
-    {:width (.get width 0) :height (.get height 0)}))
-
-(defn rotate-around [centerX centerY centerZ]
-  (let [t (GLFW/glfwGetTime)
-        x (* 10.0 (Math/sin t))
-        y (* -10.0 (Math/cos t))
-        z (* 10.0 (Math/cos t))]
-    (view-matrix x y z centerX centerY centerZ 0.0 1.0 0.0)))
 
 (defn pipeline
   []
   (GL11/glClearColor 0.0 1.0 1.0 1.0)
   (GL11/glClear (bit-or GL11/GL_COLOR_BUFFER_BIT GL11/GL_DEPTH_BUFFER_BIT))
 
-  (let [{:keys [width height]} (get-size)
-        projectionMX  (projection-matrix (. Math toRadians 45.0) (/ width height) 0.01 100.0)]
+  (let [db @state/db
+        system @state/system
+        global-u (u/compute-global-u db)]
 
     (doseq [[vao-layout programs] @state/rendering]
-      (let [{:keys [:vao/id :vao/stride]} (get-in @state/system [:gl/engine :vao vao-layout])]
+      (let [{:keys [:vao/id :vao/stride]} (get-in system [:gl/engine :vao vao-layout])]
         ;; (println "Bind VAO" id)
         (GL30/glBindVertexArray id)
 
         (doseq [[prog entities] programs]
           ;; (println "Use program" prog)
-          (let [{pid :program/id unis :uniforms} (get-in @state/system [:gl/engine :program prog])
+          (let [{pid :program/id unis :uniforms} (get-in system [:gl/engine :program prog])
                 ;; TODO Refactor uniforms managment
                 uniforms (group-by first unis)]
 
             (GL20/glUseProgram pid)
 
-            ;; Set program wide uniforms
-            (GL20/glUniformMatrix4fv (get-in uniforms ["view" 0 2]) false (rotate-around 0.0 0.0 0.0))
-            (GL20/glUniformMatrix4fv (get-in uniforms ["projection" 0 2]) false projectionMX);
+            (GL20/glUniformMatrix4fv (get-in uniforms ["view" 0 2]) false (:view global-u))
+            (GL20/glUniformMatrix4fv (get-in uniforms ["projection" 0 2]) false (:projection global-u))
 
             (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
 
-              ;; set eneity uniforms
-              (GL20/glUniformMatrix4fv (get-in uniforms ["model" 0 2]) false (model-matrix position));
+              (GL20/glUniformMatrix4fv (get-in uniforms ["model" 0 2]) false ((event/get-handler ::u/entity :model) db entity));
 
               ;; TODO Implement other rendering methods (indice, instance)
 

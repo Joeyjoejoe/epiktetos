@@ -16,6 +16,9 @@
   ([id] (get-handler :event id))
   ([kind id] (get-in @kind->id->handler [kind id])))
 
+(defn get-handlers [kind]
+  (kind @kind->id->handler))
+
 ;; Probably useless as a (when-let [h get-handler] ...) would suffice
 (defn handler?
   ([event] (handler? :event event))

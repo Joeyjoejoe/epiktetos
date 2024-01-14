@@ -35,6 +35,11 @@
     (register-uniform ::entity u-path handler)
     (println "entity uniform" u-path "callback signature must be: [db entity]")))
 
+(defn compute-global-u
+  "Compute value of all registered global uniforms"
+  [db]
+  (let [gus (event/get-handlers ::global)]
+    (update-vals gus #(% db))))
 
 ;; Uniform path hierarchy :
 ;; :foo < [:program-name :foo] <
