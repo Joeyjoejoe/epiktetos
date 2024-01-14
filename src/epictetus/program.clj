@@ -2,6 +2,7 @@
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
             [epictetus.state :as state]
+            [epictetus.uniform :as u]
             [epictetus.utils.glsl-parser :as glsl]
             [epictetus.lang.opengl :as opengl])
   (:import  (org.lwjgl.glfw GLFW)
@@ -51,12 +52,13 @@
                 :location  location}))))
 
 (defn compile-uniforms
-  [prog-id uniforms]
-  (GL20/glUseProgram prog-id)
-  (let [unif-with-locations (for [[name _ :as unif] uniforms]
-                              (conj unif (GL20/glGetUniformLocation ^Long prog-id ^String name)))]
+  [p-id u-seq]
+  (GL20/glUseProgram p-id)
+  (let [unif-with-locations (reduce (fn [m [u-name u-type]]
+                                      (assoc m (keyword u-name) {:location (u/locate-u p-id u-name)
+                                                                 :type u-type})) {} u-seq)]
     (GL20/glUseProgram 0)
-    (vec unif-with-locations)))
+    unif-with-locations))
 
 (defn compile-vao
   "Create or get a VAO (vertex array object)

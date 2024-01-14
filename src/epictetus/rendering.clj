@@ -23,18 +23,16 @@
 
         (doseq [[prog entities] programs]
           ;; (println "Use program" prog)
-          (let [{pid :program/id unis :uniforms} (get-in system [:gl/engine :program prog])
-                ;; TODO Refactor uniforms managment
-                uniforms (group-by first unis)]
+          (let [{pid :program/id u-map :uniforms} (get-in system [:gl/engine :program prog])]
 
             (GL20/glUseProgram pid)
 
-            (GL20/glUniformMatrix4fv (get-in uniforms ["view" 0 2]) false (:view global-u))
-            (GL20/glUniformMatrix4fv (get-in uniforms ["projection" 0 2]) false (:projection global-u))
+            (GL20/glUniformMatrix4fv (get-in u-map [:view :location]) false (:view global-u))
+            (GL20/glUniformMatrix4fv (get-in u-map [:projection :location]) false (:projection global-u))
 
             (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
 
-              (GL20/glUniformMatrix4fv (get-in uniforms ["model" 0 2]) false ((event/get-handler ::u/entity :model) db entity));
+              (GL20/glUniformMatrix4fv (get-in u-map [:model :location]) false ((event/get-handler ::u/entity :model) db entity));
 
               ;; TODO Implement other rendering methods (indice, instance)
 

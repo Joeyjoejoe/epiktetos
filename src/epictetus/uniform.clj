@@ -35,6 +35,11 @@
     (register-uniform ::entity u-path handler)
     (println "entity uniform" u-path "callback signature must be: [db entity]")))
 
+(defn locate-u
+  "Return uniform location in program"
+  [p-id u-name]
+  (GL20/glGetUniformLocation ^Long p-id ^String u-name))
+
 (defn compute-global-u
   "Compute value of all registered global uniforms"
   [db]
