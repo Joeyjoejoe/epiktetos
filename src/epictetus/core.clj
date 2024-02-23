@@ -155,6 +155,7 @@
                         (str (. (new java.util.Date) (getTime))))
           random-cube [entity-id (-> model
                                      (assoc :position position)
+                                     (assoc :speed (rand 10))
                                      (assoc-in [:assets :vertices] colored-vertices))]]
       (-> fx
           (update :render conj random-cube)))))
@@ -204,7 +205,14 @@
                (.perspective fovy aspect zmin zmax)
                (.get buffer)))))
 
+(reg-eu [:default :t]
+        (fn [db entities entity]
+          (GLFW/glfwGetTime)))
 
+(reg-eu [:default :speed]
+        (fn [db entities entity]
+          (or (:speed entity)
+              1.0)))
 
 
 

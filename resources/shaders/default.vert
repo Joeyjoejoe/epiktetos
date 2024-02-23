@@ -5,9 +5,17 @@ layout (location = 1) in vec3 vColor;
 
 out vec3 vertexColor;
 
-uniform mat4 view;
-uniform mat4 projection;
+// https://learnopengl.com/Getting-started/Coordinate-Systems
+// vertices tranformnations across various coordinates spaces
+
+// local->world space (transformation matrix of original position)
 uniform mat4 model;
+
+// world->view (transformation matrix to simulate camera)
+uniform mat4 view;
+
+// view->clip (set the frustum of visible items and perspective)
+uniform mat4 projection;
 
 void main()
 {
