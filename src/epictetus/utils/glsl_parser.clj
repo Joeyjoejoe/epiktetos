@@ -1,9 +1,18 @@
 (ns epictetus.utils.glsl-parser
   (:require [clojure.java.io :as io]))
 
+
+;; TODO SPIR-V An alternative GLSL format that could prevent the need for parsing
+;;      shader source with complicated regexp ?
+;;
+;;      spec: https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_introduction
+;;      playground (output format): https://shader-playground.timjones.io
+
+
 (def glsl-regexps {
   :attr/layout        #"(?m)^layout.+location.+=\s*([^\s)]).+in\s*([^\s]+)"
   :uniform/one-liners #"(?m)^[^\/\n\r]*uniform\s+(\S+)\s+(\S+)(?:;|\s*=)"
+  :unif/layout        #"(?m)^layout.+binding.+=\s*([^\s)]).+uniform\s*([^\s]+)"
   :uniform/blocks     #""
   :struct/blocks      #"(?m)^struct\s+([^{\s]+)[^{]*\{([^}]*)\}"
   :block/members      #"(?m)^\s*(\S+)\s+([^;\s]+);"

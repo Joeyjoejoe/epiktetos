@@ -12,30 +12,39 @@
   (GL11/glClearColor 0.0 1.0 1.0 1.0)
   (GL11/glClear (bit-or GL11/GL_COLOR_BUFFER_BIT GL11/GL_DEPTH_BUFFER_BIT))
 
-  (let [db @state/db
-        system @state/system
-        global-u (u/compute-global-u db)]
+  (let [r-context {:db        @state/db
+                   :system    @state/system
+                   :rendering @state/rendering
+                   :global-u  (u/compute-global-u @state/db)}]
 
-    (doseq [[vao-layout programs] @state/rendering]
-      (let [{:keys [:vao/id :vao/stride]} (get-in system [:gl/engine :vao vao-layout])]
+    (doseq [[vao-layout programs] (:rendering r-context)]
+      (let [{:keys [:vao/id :vao/stride]} (get-in (:system r-context)
+                                                  [:gl/engine :vao vao-layout])]
         ;; (println "Bind VAO" id)
         (GL30/glBindVertexArray id)
 
-        (doseq [[prog entities] programs]
-          ;; (println "Use program" prog)
-          (let [{pid :program/id u-map :uniforms} (get-in system [:gl/engine :program prog])]
+        (doseq [[program entities] programs]
+          (let [{:as p
+                 pid :program/id
+                 u-map :uniforms} (get-in (:system r-context)
+                                          [:gl/engine :program program])
 
-            (GL20/glUseProgram pid)
+                p-context (-> r-context
+                              (assoc :pid (GL20/glUseProgram pid))
+                              (assoc ::u/stage ::u/program)
+                              (assoc :program  program)
+                              (assoc :entities entities))
 
-            (GL20/glUniformMatrix4fv (get-in u-map [:view :location]) false (:view global-u))
-            (GL20/glUniformMatrix4fv (get-in u-map [:projection :location]) false (:projection global-u))
+                eu-queue (u/consume-u! p-context u-map)]
 
             (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
 
-              (GL20/glUniformMatrix4fv (get-in u-map [:model :location]) false ((event/get-handler ::u/entity :model) db entity));
+              (u/consume-u! (-> p-context
+                                (assoc ::u/stage ::u/entity)
+                                (assoc :entity   entity))
+                            u-map eu-queue)
 
               ;; TODO Implement other rendering methods (indice, instance)
-
               (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
               (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
 

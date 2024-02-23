@@ -10,7 +10,10 @@
 
 
 (defonce gl-types
-  {:vec3f {:bytes (* 3 java.lang.Float/BYTES)
+  {:vec2f {:bytes (* 2 java.lang.Float/BYTES)
+           :type  GL11/GL_FLOAT
+           :count 2}
+   :vec3f {:bytes (* 3 java.lang.Float/BYTES)
            :type  GL11/GL_FLOAT
            :count 3}
 
@@ -151,7 +154,8 @@
         (GL20/glDeleteShader shader-id))
 
       {:vao      {(:vao/layout vao) vao}
-       :program  {name {:program/id prog-id
+       :program  {name {:name name
+                        :program/id prog-id
                         :layout     (-> vao :vao/layout vec)
                         :uniforms   (compile-uniforms prog-id uniforms)}}}))))
 

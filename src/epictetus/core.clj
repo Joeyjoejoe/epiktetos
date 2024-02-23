@@ -159,9 +159,11 @@
       (-> fx
           (update :render conj random-cube)))))
 
+;; (reg-eu [:default :model]
+;;         (fn [db entities entity] ...))
 
 (reg-eu :model
-        (fn model-matrix [db entity]
+        (fn model-matrix [db entities entity]
           (let [[x y z] (:position entity)
                 buffer (BufferUtils/createFloatBuffer 16)]
             (-> (Matrix4f.)
@@ -187,8 +189,8 @@
                         up-x up-y up-z)
                (.get buffer)))))
 
-(reg-u :projection
-       (fn [db]
+(reg-u [:default :projection]
+       (fn [db entities]
          (let [window (:glfw/window @state/system)
                width  (util/int-buffer [0])
                height (util/int-buffer [0])
