@@ -54,14 +54,18 @@
                 :type      attrib-type
                 :location  location}))))
 
+;; Return a queue of uniforms values :
+;; [[:model :mat4 1]
+;;  [:view :mat4 2]
+;;  ...]
 (defn compile-uniforms
   [p-id u-seq]
   (GL20/glUseProgram p-id)
-  (let [unif-with-locations (reduce (fn [m [u-name u-type]]
-                                      (assoc m (keyword u-name) {:location (u/locate-u p-id u-name)
-                                                                 :type u-type})) {} u-seq)]
+  (let [unif-with-locations (map #(conj % (u/locate-u p-id (name (first %))))
+                                 u-seq)]
+    (println unif-with-locations)
     (GL20/glUseProgram 0)
-    unif-with-locations))
+    (apply conj clojure.lang.PersistentQueue/EMPTY unif-with-locations)))
 
 (defn compile-vao
   "Create or get a VAO (vertex array object)

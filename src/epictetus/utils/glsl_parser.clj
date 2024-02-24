@@ -55,7 +55,7 @@
   (let [structs (map-structs shader-str)]
     (->> shader-str
          (re-seq (:uniform/one-liners glsl-regexps))
-         (mapv #(vector (last %)
+         (mapv #(vector (keyword (last %))
                         (keyword (second %)))))))
 
 (defn- map-inputs [shader-str] nil)

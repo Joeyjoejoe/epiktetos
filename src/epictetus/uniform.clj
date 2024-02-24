@@ -6,10 +6,13 @@
 
 ;; Uniform stages represent a moment in the renderning process when
 ;; to get a uniform value with a call to get-value multi method.
+;; Stages values are vector of rendering context keys to us as
+;; parameter for the handler being exectued during this stage.
 (defonce u-stages #::{:global  [:db]
                       :program [:db :entities]
                       :entity  [:db :entities :entity]})
 
+;; TODO move me to utils
 (defmacro method->fn
   [meth arity]
   (let [args (take arity (map symbol [:a :b :c :d
@@ -64,38 +67,29 @@
   (let [gus (event/get-handlers ::global)]
     (update-vals gus #(% db))))
 
+(defn purge-u!
+  "Purge u-queue of its stage uniforms by setting their
+   values and returns a new queue of remaining uniforms.
+   Side effects occurs when setting a uniform value through
+   opengl, u-queue remains unchanged."
+  ([u-queue u-stage r-context]
+   (loop [u-queue  u-queue
+          i-max    (-> u-queue count)]
 
-;; TODO Actually, the queue contains uniforms keywords used to retrieve
-;;      uniforms data in u-map. We could remove u-map parameter by placing
-;;      [:model]
-;;      uniforms vallues in the queue instead:
-;;      [{:name :model :location 1 :type :mat4} ...]
-(defn consume-u!
-  "Consume given uniforms queue"
-  ([r-context u-map]
-   (consume-u! r-context u-map (apply conj clojure.lang.PersistentQueue/EMPTY (keys u-map))))
-  ([r-context u-map queue]
-   (loop [u-queue  queue
-          q-max    (count u-queue)
-          next-max (dec q-max)]
+     (let [[u-name u-type u-loc :as u]      (peek u-queue)
+           {:keys [program global-u]} r-context
+           handler      (or (event/get-handler u-stage [program u-name])
+                            (event/get-handler u-stage u-name))
+           g-value      (get global-u u-name)
+           stage-ks     (get u-stages u-stage)
+           handler-args (mapv #(get r-context %) stage-ks)]
 
-     (let [u       (peek u-queue)
-           handler (or (event/get-handler (::stage r-context)
-                                          [(:program r-context) u])
-                       (event/get-handler (::stage r-context) u))
-           g-value  (get (:global-u r-context) u)
-           {:keys   [location type]} (get u-map u)
-           stage-ks (get u-stages (::stage r-context))
-           handler-params (mapv #(get r-context %) stage-ks)]
-
-       (when-let [value (if handler
-                          (apply handler handler-params)
-                          g-value)]
-
-         (let [f (get types-fn type)
-               ar2-args [location value]
-               ;; (GL20/glUniformMatrix4fv location false value))
-               ar3-args [location false value]]
+       ;; Set uniform value
+       (when-let [u-val (if handler (apply handler handler-args)
+                                    g-value)]
+         (let [f (get types-fn u-type)
+               ar2-args [u-loc u-val]
+               ar3-args [u-loc false u-val]] ;; (GL20/glUniformMatrix4fv location false u-val))
            ;; TODO Replace cond on arity with system to link
            ;;      f parameters to data
            (cond (arity-eql? f 2) (apply f ar2-args)
@@ -103,17 +97,16 @@
 
        (cond
          ;; All queue uniforms processed once.
-         (= next-max 0) u-queue
+         (= (dec i-max) 0) u-queue
 
          ;; Not a global or a program uniform ?
          ;; Re-enqueue it for last attempt in ::entity stage
          (and (nil? handler)
               (nil? g-value)) (recur (conj (pop u-queue) u)
-                                     next-max
-                                     (dec next-max))
+                                     (dec i-max))
 
          ;; Set following uniform
-         :else (recur (pop u-queue) next-max (dec next-max)))))))
+         :else (recur (pop u-queue) (dec i-max)))))))
 
 ;; Uniform path hierarchy :
 ;; :foo < [:program-name :foo] <

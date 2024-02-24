@@ -26,23 +26,16 @@
         (doseq [[program entities] programs]
           (let [{:as p
                  pid :program/id
-                 u-map :uniforms} (get-in (:system r-context)
+                 u-queue :uniforms} (get-in (:system r-context)
                                           [:gl/engine :program program])
-
                 p-context (-> r-context
                               (assoc :pid (GL20/glUseProgram pid))
-                              (assoc ::u/stage ::u/program)
                               (assoc :program  program)
                               (assoc :entities entities))
-
-                eu-queue (u/consume-u! p-context u-map)]
+                eu-queue (u/purge-u! u-queue ::u/program p-context)]
 
             (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
-
-              (u/consume-u! (-> p-context
-                                (assoc ::u/stage ::u/entity)
-                                (assoc :entity   entity))
-                            u-map eu-queue)
+              (u/purge-u! eu-queue ::u/entity (assoc p-context :entity entity))
 
               ;; TODO Implement other rendering methods (indice, instance)
               (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
