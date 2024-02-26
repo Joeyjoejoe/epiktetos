@@ -13,7 +13,8 @@
             [epictetus.program])
   (:import (org.lwjgl.glfw GLFW)
            (org.joml Matrix4f)
-           (org.lwjgl BufferUtils)))
+           (org.lwjgl BufferUtils)
+           (org.lwjgl.opengl GL45)))
 
 (def system state/system)
 (def db state/db)
@@ -153,9 +154,13 @@
                                  (get-in model [:assets :vertices]))
           entity-id (-> "cube-"
                         (str (. (new java.util.Date) (getTime))))
+
+          texture (-> "textures" io/resource io/file .list rand-nth)
+
           random-cube [entity-id (-> model
                                      (assoc :position position)
-                                     (assoc :speed (rand 10))
+                                     (assoc :speed (rand 5))
+                                     (assoc-in [:assets :textures] [(str "textures/" texture)])
                                      (assoc-in [:assets :vertices] colored-vertices))]]
       (-> fx
           (update :render conj random-cube)))))
@@ -212,7 +217,11 @@
 (reg-eu [:default :speed]
         (fn [db entities entity]
           (or (:speed entity)
-              1.0)))
+              5.0)))
 
-
-
+(reg-eu :textIndex0
+        (fn [db entities entity]
+          (if-let [textures (get-in entity [:assets :textures])]
+            (do
+              (GL45/glBindTextureUnit 0 (first textures))
+              0))))

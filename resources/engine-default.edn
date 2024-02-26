@@ -13,6 +13,6 @@
 
  :gl/engine {:context #ig/ref :glfw/window
              :programs [{:name     :default
-                         :layout   [:vec3f/coordinates :vec3f/color]
+                         :layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]
                          :pipeline [[:vertex "shaders/default.vert"]
                                     [:fragment "shaders/default.frag"]]}]}}

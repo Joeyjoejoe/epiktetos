@@ -1,6 +1,7 @@
 {:program  :default
  :position [0.0 0.0 0.0]
- :assets   {:indices  []
+ :assets   {:textures ["textures/container.jpg"]
+            :indices  []
             :vertices [{:coordinates [-0.5 -0.5 -0.5] :color [1.0 0.0 1.0] :texture [0.0 0.0]}
                        {:coordinates [ 0.5 -0.5 -0.5] :color [1.0 0.0 0.0] :texture [1.0 0.0]}
                        {:coordinates [ 0.5  0.5 -0.5] :color [1.0 1.0 0.0] :texture [1.0 1.0]}

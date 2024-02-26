@@ -3,11 +3,15 @@
 out vec4 FragColor;
 
 in vec3 vertexColor;
+in vec2 textCoord;
 
 uniform float t;
 uniform float speed;
+uniform sampler2D textIndex0;
 
 void main()
 {
-    FragColor = vec4(vertexColor.r * sin(speed * t), vertexColor.g * tan(speed * t), vertexColor.b * cos(speed * t), 1.0);
+    FragColor = texture(textIndex0, textCoord) * vec4(vertexColor.r * (1.5 + cos(speed * t)),
+                                                    vertexColor.g * (1.5 + cos(speed * t)),
+                                                    vertexColor.b * (1.5 + cos(speed * t)), 1.0);
 }

@@ -1,6 +1,7 @@
 (ns epictetus.effect
   (:require [epictetus.event :as event]
             [epictetus.state :as state]
+            [epictetus.texture :as textures]
             [epictetus.vertices :as vertices]
             [epictetus.interceptors :refer [->interceptor]]
             [clojure.pprint :refer [pprint]]))
@@ -57,6 +58,7 @@
                  vao              (get-in @state/system [:gl/engine :vao layout])]
              (->> entity
                   (vertices/gpu-load! vao)
+                  (textures/load-entity)
                   (swap! state/rendering assoc-in [layout program id]))))))
 
 

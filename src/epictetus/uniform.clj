@@ -23,9 +23,12 @@
     `(fn ~signature
        ~body)))
 
+
+;; TODO Implement new types and map their arguments
 (def types-fn {:float (method->fn GL20/glUniform1f 2)
                :int   (method->fn GL20/glUniform1i 2)
-               :mat4  (method->fn GL20/glUniformMatrix4fv 3)})
+               :mat4  (method->fn GL20/glUniformMatrix4fv 3)
+               :sampler2D (method->fn GL20/glUniform1i 2)})
 
 
 
