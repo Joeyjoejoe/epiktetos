@@ -37,7 +37,9 @@
             (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
               (u/purge-u! eu-queue ::u/entity (assoc p-context :entity entity))
 
-              ;; TODO Implement other rendering methods (indice, instance)
+              ;; TODO Implement other rendering methods
+              ;;      - Instance rendering
+              ;;      - Indice drawing
               (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
               (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
 

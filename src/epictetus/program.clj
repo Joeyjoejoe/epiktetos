@@ -1,6 +1,7 @@
 (ns epictetus.program
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
+            [epictetus.texture :as texture]
             [epictetus.state :as state]
             [epictetus.uniform :as u]
             [epictetus.utils.glsl-parser :as glsl]
@@ -173,6 +174,7 @@
       (for [[entity-id {:keys [vbo]}] entities]
       (GL15/glDeleteBuffers vbo)))
 
+    (reset! texture/text-cache {})
     (reset! state/rendering {})
     (reset! state/system {})
     (reset! state/db {})))

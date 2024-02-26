@@ -159,7 +159,8 @@
 
           random-cube [entity-id (-> model
                                      (assoc :position position)
-                                     (assoc :speed (rand 5))
+                                     (assoc :speed (* (rand-nth [-1 1])
+                                                      (rand 5)))
                                      (assoc-in [:assets :textures] [(str "textures/" texture)])
                                      (assoc-in [:assets :vertices] colored-vertices))]]
       (-> fx

@@ -12,6 +12,6 @@ uniform sampler2D textIndex0;
 void main()
 {
     FragColor = texture(textIndex0, textCoord) * vec4(vertexColor.r * (1.5 + cos(speed * t)),
-                                                    vertexColor.g * (1.5 + cos(speed * t)),
-                                                    vertexColor.b * (1.5 + cos(speed * t)), 1.0);
+                                                      vertexColor.g * (2.0 + cos(speed * t)),
+                                                      vertexColor.b * (1.0 + cos(speed * t)), 1.0);
 }

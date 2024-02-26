@@ -4,8 +4,11 @@
            (org.lwjgl BufferUtils)
            (org.lwjgl.opengl GL11 GL30 GL45)))
 
+;; TODO Use a cache namespace for all cache needs.
 (def text-cache (atom {}))
 
+;; TODO Study GL45 methods params and extract the
+;;      relevant ones in an option map.
 (defn load-from-path
   [path]
   (let [file   (.getAbsolutePath (io/file (io/resource path)))
@@ -26,6 +29,7 @@
     (if-let [texture-data (STBImage/stbi_load file width height color desired-color-channels)]
       (let [w (.get width)
             h (.get height)]
+
         (GL45/glTextureStorage2D texture 1 GL11/GL_RGB8 w h)
         (GL45/glTextureSubImage2D texture 0 0 0 w h GL11/GL_RGB GL11/GL_UNSIGNED_BYTE texture-data)
         (GL45/glGenerateTextureMipmap texture)

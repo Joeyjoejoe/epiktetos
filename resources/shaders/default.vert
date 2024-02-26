@@ -26,7 +26,7 @@ void main()
 {
   vertexColor = vColor;
   textCoord = vTextCoords;
-  gl_Position = projection * view * model * vec4(vLocal.x, // + sin(speed * t),
-                                                 vLocal.y + tan(speed * t),
-                                                 vLocal.z, 1.0); // + cos(speed * t), 1.0);
+  gl_Position = projection * view * model * vec4(vLocal.x + speed * tan(t),
+                                                 vLocal.y + speed * tan(t),
+                                                 vLocal.z + cos(2.0 / speed * t), 1.0);
 }

@@ -1,3 +1,6 @@
+;; TODO Re-think state structure.
+;;      - What are the pros of a global index for
+;;        programs, vao, vbo etc...
 (ns epictetus.state)
 
 ;; User managed state

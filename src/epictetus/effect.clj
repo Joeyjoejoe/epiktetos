@@ -47,13 +47,7 @@
              (render! id entity)))
 
           ([id {:as entity :keys [program]}]
-           ;; - TODO Implement VAO selection based on program. Vao should be
-           ;; generated from program layout, which is determined by shaders
-           ;; attributes location (parsed from source shader files)
-           ;;
-           ;; - TODO Implement VBO duplication prevention. We must detect
-           ;; entities with same assets and render them using the same VBO.
-           ;; Which should be rendered using instance rendering ?
+           ;; TODO Assets cache (VBO duplication prevention & instance rendering)
            (let [{layout :layout} (get-in @state/system [:gl/engine :program program])
                  vao              (get-in @state/system [:gl/engine :vao layout])]
              (->> entity
@@ -66,8 +60,8 @@
        (fn delete-entity!
          [entity-keys]
          ;; TODO update path must be obtainable from entity-key
-         ;;  - Refactor state/rendering to vaoID->programID->entityIDS
-         ;;  - Add a global registery for vaos, programs and entities data (integrant system)
+         ;;      - Refactor state/rendering to vaoID->programID->entityIDS
+         ;;      - Add a global registery for vaos, programs and entities data (integrant system)
          (apply swap! state/rendering update-in [:vao/static :default] dissoc entity-keys)))
 
 (reg-fx :delete-all
