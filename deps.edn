@@ -1,6 +1,8 @@
 {:paths   ["src" "resources"]
  :deps    {org.clojure/clojure {:mvn/version "1.11.1"}
            integrant/integrant {:mvn/version "0.8.0"}
+           integrant/repl {:mvn/version "0.3.2"}
+
            org.joml/joml       {:mvn/version "1.10.5"}
 
            ;; Exclude SLF4J logging backends to ensure only logback is used
@@ -33,8 +35,7 @@
            :dev  {:extra-paths ["env/dev"]
                   :extra-deps  {integrant/repl {:mvn/version "0.3.2"}}}
 
-           :repl {:extra-deps {reply/reply {:mvn/version "0.5.0"}
-                               mvxcvi/puget {:mvn/version "1.3.2"}}
+           :repl {:extra-deps {reply/reply {:mvn/version "0.5.0"}}
                   :main-opts ["-m" "reply.main" "--port" "34001"]}
 
            :bin/lwjgl-version {:main-opts ["bin/lwjgl-version.clj"]}}}
