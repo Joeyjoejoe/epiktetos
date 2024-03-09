@@ -9,7 +9,7 @@
 (defn pack-vertices
   [entity schema]
   (let [vertices (get-in entity [:assets :vertices])]
-    (mapcat #(pack-vertex % schema) vertices)))
+    (flatten (mapcat #(pack-vertex % schema) vertices))))
 
 ;; TODO Do not create duplicates vbo if a model witgh same assets
 ;; alredy exists

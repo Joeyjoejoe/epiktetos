@@ -36,15 +36,16 @@
   [attr-layout location]
   (let [prev-attribs (subvec (apply vector attr-layout) 0 location)]
     (->> prev-attribs
-         (map #(get-in gl-types [(:type %) :bytes]))
+         (map #(* (get-in gl-types [(:type %) :bytes])
+                  (get % :length)))
          (reduce +))))
 
-(defn attribs-compile
+(defn build-program-layout
   "attribs are shader attributes metadata : [0 vec3 varname]
    layout is a single shader/program layout from config file"
   [attribs layout]
   (sort-by :location
-           (for [[location ds] attribs]
+           (for [[location typ varname arr-length] attribs]
              (let [attrib-key (get layout location) ;; EX: :vec3f/coordinates
                    attrib-name (name attrib-key)
                    attrib-type (-> attrib-key
@@ -52,8 +53,16 @@
                                    keyword)]
                {:key       attrib-key
                 :name      attrib-name
-                :type      attrib-type
-                :location  location}))))
+                :type      attrib-type ;; struct type + internal typ
+                :location  location
+                :length    (or arr-length 1)}))))
+
+(defn vertex-stride
+  [attribs]
+  (->> attribs
+       (map #(* (get-in gl-types [(:type %) :bytes])
+                (get % :length)))
+       (reduce +)))
 
 ;; Return a queue of uniforms values :
 ;; [[:model :mat4 1]
@@ -82,22 +91,42 @@
   [layout attribs]
 
   (let [vao         (GL45/glCreateVertexArrays)
-        attr-layout (attribs-compile attribs layout)
-        stride      (->> attr-layout
-                         (map #(get-in gl-types [(:type %) :bytes]))
-                         (reduce +))]
+        attr-layout (build-program-layout attribs layout)
+        stride      (vertex-stride attr-layout)]
 
-    (doseq [{:keys [location type]} attr-layout]
-      (let [offset       (attrib-offset attr-layout location)
-            attrib-type  (get-in gl-types [type :type])
-            attrib-count (get-in gl-types [type :count])]
-        (GL45/glVertexArrayAttribFormat vao location attrib-count attrib-type false offset)
-        (GL45/glEnableVertexArrayAttrib vao location)
-        (GL45/glVertexArrayAttribBinding vao location 0)))
+    (doseq [{:keys [location type length]} attr-layout]
+      (let [{attrib-type  :type
+             attrib-count :count
+             attrib-bytes :bytes} (get gl-types type)
+            base-offset  (attrib-offset attr-layout location)]
+
+        ;; Array support :
+        ;; A vertex attribute can be set as an array of basic types by appending [n] at
+        ;; the end of its shader variable name (where n is the number of elements in the
+        ;; array)
+        ;;
+        ;; Example from shader source:
+        ;;
+        ;;   `in vec2 vTextCoords[3];`
+        ;;
+        ;; This define a vertex attribute as an array of 3 vec2.
+        ;;
+        ;; Each array element will be considered as an independant attribute and assigned
+        ;; a uniq location `arr-loc`.
+        ;; Non-array attributes are transparently processed as an 1d array.
+        ;;
+        (dotimes [arr-index length]
+          (let [arr-loc (+ location arr-index)
+                offset  (+ base-offset (* arr-index attrib-bytes))]
+
+          (GL45/glVertexArrayAttribFormat vao arr-loc attrib-count attrib-type false offset)
+          (GL45/glEnableVertexArrayAttrib vao arr-loc)
+          (GL45/glVertexArrayAttribBinding vao arr-loc 0)))))
 
     {:vao/id     vao
      :vao/layout layout
      :vao/stride stride}))
+
 
 (defn compile-shaders
   "Given a pipeline config:
@@ -108,7 +137,7 @@
   Returns a map of attributes and uniforms:
 
   {:shader/ids [1 2]
-   :attribs    [[0 :vec3] [1 :vec3]]
+   :attribs    [[0 :vec3 \"var1\" 4] [1 :vec3 \"var2\"]]
    :uniforms   [[\"view\" :mat4]
                 [\"projection\" :mat4]
                 [\"model\" :mat4]]}
@@ -122,7 +151,6 @@
          (for [[stage path] pipeline]
            (let [id       (-> stage opengl/dictionary GL20/glCreateShader)
                  source   (-> path (io/resource) (slurp))
-                 ;; TODO parse attribute varname and store
                  metadata (glsl/analyze-shader source)]
 
              (when (= 0 id)

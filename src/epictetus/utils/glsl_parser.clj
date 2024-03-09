@@ -10,7 +10,7 @@
 
 
 (def glsl-regexps {
-  :attr/layout        #"(?m)^layout.+location.+=\s*([^\s)]).+in\s*([^\s]+)"
+  :attr/layout        #"(?m)^layout.+location.+=\s*([^\s)]).+in\s*([^\s]+)\s*([^\s;\[]+)(?>\[(.*)\]|)"
   :uniform/one-liners #"(?m)^[^\/\n\r]*uniform\s+(\S+)\s+(\S+)(?:;|\s*=)"
   :unif/layout        #"(?m)^layout.+binding.+=\s*([^\s)]).+uniform\s*([^\s]+)"
   :uniform/blocks     #""
@@ -29,10 +29,12 @@
        ))
 
 (defn- map-attributes [source]
-  (->> source
-       (re-seq (:attr/layout glsl-regexps))
-       (mapv #(vector (Integer/parseInt (second %))
-                     (keyword (last %))))))
+    (for [r (re-seq (:attr/layout glsl-regexps) source)
+          :let [v (subvec r 1)]]
+      (-> v
+          (update 0 #(when % (Integer/parseInt %)))
+          (update 3 #(when % (Integer/parseInt %)))
+          (update 1 keyword))))
 
 (defn- map-structs
   "Return a map of all `struct` definied in shader-str"
