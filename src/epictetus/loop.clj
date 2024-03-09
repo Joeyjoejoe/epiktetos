@@ -12,10 +12,13 @@
 
 (defn start [{window :glfw/window}]
 
-  (loop [curr-time (GLFW/glfwGetTime)
-         prev-time 0]
+  (loop [curr-time  (GLFW/glfwGetTime)
+         prev-time  0
+         delta-time 0]
 
-    (swap! lag #(+ % (- curr-time prev-time)))
+    (event/execute [:loop/iteration {:curr-time curr-time :delta delta-time}])
+
+    (swap! lag #(+ % delta-time))
 
     (while (>= @lag 0.1)
 
@@ -35,4 +38,4 @@
     (GLFW/glfwPollEvents)
 
     (when-not (GLFW/glfwWindowShouldClose window)
-      (recur (GLFW/glfwGetTime) curr-time))))
+      (recur (GLFW/glfwGetTime) curr-time (- (GLFW/glfwGetTime) curr-time)))))

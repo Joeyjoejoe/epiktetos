@@ -4,7 +4,8 @@
             [epictetus.texture :as textures]
             [epictetus.vertices :as vertices]
             [epictetus.interceptors :refer [->interceptor]]
-            [clojure.pprint :refer [pprint]]))
+            [clojure.pprint :refer [pprint]])
+  (:import (org.lwjgl.glfw GLFW)))
 
 (defn reg-fx
   "A fx is a function that takes the coeffects map and
@@ -34,6 +35,10 @@
 (reg-fx :db
         (fn update-db! [new-db]
           (reset! state/db new-db)))
+
+(reg-fx :system
+        (fn add-data-to-system [data]
+          (swap! state/system merge data)))
 
 (reg-fx :dispatch
         (fn dispatch-event! [events]
@@ -67,3 +72,8 @@
 (reg-fx :delete-all
        (fn delete-all [_]
          (reset! state/rendering {})))
+
+(reg-fx :loop/pause
+        (fn pause-loop [_]
+          (let [window  (get @state/system :glfw/window)]
+            (GLFW/glfwSetWindowShouldClose window true))))

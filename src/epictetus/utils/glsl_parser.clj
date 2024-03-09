@@ -66,11 +66,11 @@
 (defn analyze-shader
   "Return a map of shader meta data"
   [shader-str]
-  {:attribs (map-attributes shader-str)
-   :structs    (map-structs shader-str)
-   :uniforms   (map-uniforms shader-str)
-   :input      (map-inputs shader-str)
-   :output     (map-outputs shader-str)})
+  {:attribs  (map-attributes shader-str)
+   :structs  (map-structs shader-str)
+   :uniforms (map-uniforms shader-str)
+   :input    (map-inputs shader-str)
+   :output   (map-outputs shader-str)})
 
 ;;TODO
 ;; * Implement uniform Interface block

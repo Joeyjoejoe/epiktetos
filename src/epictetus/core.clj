@@ -48,10 +48,10 @@
    (let [handler (->interceptor
                    {:id     :event-fn
                     :before (fn handler [context]
-                              (let [{:keys [_ db] :as coeffects} (:coeffects context)
-                                    effect     {:db db}]
+                              (let [{:keys [db] :as cofx} (:coeffects context)
+                                    fx {:db db}]
 
-                                (->> (handler-fn coeffects effect)
+                                (->> (handler-fn cofx fx)
                                      (assoc context :effects))))})
          interceptors [fx/do-fx cofx/inject-db cofx/inject-system coeffects handler]
          chain        (->> interceptors flatten (remove nil?))]
@@ -94,9 +94,15 @@
   [upath f]
     (u/register-entity-uniform upath f))
 
-;; CORE events
+;; CORE EVENTS
+
 (reg-event
   [:press :escape]
-  (fn quit-flag [cofx fx]
-    ;; TODO extract system part to proper cofx and fx
-    (GLFW/glfwSetWindowShouldClose (:glfw/window @system) true)))
+  (fn quit-flag [_ fx]
+    (assoc fx :loop/pause true)))
+
+(reg-event :loop/iteration
+  (fn loop-infos [cofx fx]
+    (let [{[_ data] :event} cofx]
+      (assoc-in fx [:system :loop/iteration] data))))
+
