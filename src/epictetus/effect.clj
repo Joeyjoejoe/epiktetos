@@ -73,6 +73,11 @@
        (fn delete-all [_]
          (reset! state/rendering {})))
 
+;; TODO
+;; (reg-fx :entity/update-in
+;;         (fn assoc-in-entity [ks v]
+;;           (swap! state/rendering assoc-in ks v)))
+
 (reg-fx :loop/pause
         (fn pause-loop [_]
           (let [window  (get @state/system :glfw/window)]

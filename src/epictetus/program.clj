@@ -50,12 +50,19 @@
                    attrib-name (name attrib-key)
                    attrib-type (-> attrib-key
                                    namespace
-                                   keyword)]
-               {:key       attrib-key
-                :name      attrib-name
-                :type      attrib-type ;; struct type + internal typ
-                :location  location
-                :length    (or arr-length 1)}))))
+                                   keyword)
+                   attrib-length (or arr-length 1)
+                   layout-key    (if (> attrib-length 1)
+                                   (keyword (namespace attrib-key)
+                                            (str attrib-name "[" attrib-length "]"))
+                                   attrib-key)]
+
+               {:key        attrib-key
+                :layout-key layout-key
+                :name       attrib-name
+                :type       attrib-type
+                :location   location
+                :length     attrib-length}))))
 
 (defn vertex-stride
   [attribs]
@@ -124,7 +131,7 @@
           (GL45/glVertexArrayAttribBinding vao arr-loc 0)))))
 
     {:vao/id     vao
-     :vao/layout layout
+     :vao/layout (mapv :layout-key attr-layout)
      :vao/stride stride}))
 
 

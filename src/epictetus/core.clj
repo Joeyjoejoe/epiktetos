@@ -104,5 +104,5 @@
 (reg-event :loop/iteration
   (fn loop-infos [cofx fx]
     (let [{[_ data] :event} cofx]
-      (assoc-in fx [:system :loop/iteration] data))))
+      (assoc-in fx [:db :loop/iteration] data))))
 

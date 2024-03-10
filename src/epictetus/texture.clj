@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io])
   (:import (org.lwjgl.stb STBImage)
            (org.lwjgl BufferUtils)
-           (org.lwjgl.opengl GL11 GL30 GL45)))
+           (org.lwjgl.opengl GL11 GL12 GL30 GL45)))
 
 ;; TODO Use a cache namespace for all cache needs.
 (def text-cache (atom {}))
@@ -15,13 +15,16 @@
         width  (BufferUtils/createIntBuffer 1)
         height (BufferUtils/createIntBuffer 1)
         color  (BufferUtils/createIntBuffer 1)
-        desired-color-channels 3
+        ;; TODO channels depends on format :
+        ;;      - GL11/RGB have 3 color channels
+        ;;      - GL12/RGBA have 4 color channels
+        desired-color-channels 4
         texture (GL45/glCreateTextures GL11/GL_TEXTURE_2D)]
 
-    (GL45/glTextureParameteri texture GL11/GL_TEXTURE_WRAP_S GL11/GL_REPEAT)
-    (GL45/glTextureParameteri texture GL11/GL_TEXTURE_WRAP_T GL11/GL_REPEAT)
-    (GL45/glTextureParameteri texture GL11/GL_TEXTURE_MIN_FILTER GL11/GL_LINEAR)
-    (GL45/glTextureParameteri texture GL11/GL_TEXTURE_MAG_FILTER GL11/GL_LINEAR)
+    (GL45/glTextureParameteri texture GL11/GL_TEXTURE_WRAP_S GL12/GL_CLAMP_TO_EDGE) ;; GL11/GL_REPEAT)
+    (GL45/glTextureParameteri texture GL11/GL_TEXTURE_WRAP_T GL12/GL_CLAMP_TO_EDGE) ;; GL11/GL_REPEAT)
+    (GL45/glTextureParameteri texture GL11/GL_TEXTURE_MIN_FILTER GL11/GL_NEAREST)
+    (GL45/glTextureParameteri texture GL11/GL_TEXTURE_MAG_FILTER GL11/GL_NEAREST)
 
     ;; Flip the texture horizontaly, because OpenGL expects the 0.0 coordinate on the y-axis to be on the bottom side of the image, but images usually have 0.0 at the top of the y-axis
     (STBImage/stbi_set_flip_vertically_on_load true)
@@ -30,8 +33,8 @@
       (let [w (.get width)
             h (.get height)]
 
-        (GL45/glTextureStorage2D texture 1 GL11/GL_RGB8 w h)
-        (GL45/glTextureSubImage2D texture 0 0 0 w h GL11/GL_RGB GL11/GL_UNSIGNED_BYTE texture-data)
+        (GL45/glTextureStorage2D texture 1 GL11/GL_RGBA8 w h)
+        (GL45/glTextureSubImage2D texture 0 0 0 w h GL11/GL_RGBA GL11/GL_UNSIGNED_BYTE texture-data)
         (GL45/glGenerateTextureMipmap texture)
         (STBImage/stbi_image_free texture-data)
 

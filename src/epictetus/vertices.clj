@@ -1,5 +1,6 @@
 (ns epictetus.vertices
-  (:require [epictetus.utils.buffer :as buffer])
+  (:require [epictetus.utils.buffer :as buffer]
+            [clojure.string :refer [replace]])
   (:import  (org.lwjgl.opengl GL44 GL45)))
 
 (defn pack-vertex
@@ -26,7 +27,9 @@
   [{id     :vao/id
     layout :vao/layout :as vao}
    {:keys [program]    :as entity}]
-  (let [schema  (map name layout)]
+  (let [schema  (map #(replace (name %)
+                               #"\[.*\]" "")
+                     layout)]
     (-> entity
         (create-vbo schema)
         (assoc :vao id))))

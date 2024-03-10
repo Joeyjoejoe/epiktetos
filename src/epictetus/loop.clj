@@ -16,7 +16,7 @@
          prev-time  0
          delta-time 0]
 
-    (event/execute [:loop/iteration {:curr-time curr-time :delta delta-time}])
+    (event/execute [:loop/iteration {:time/current curr-time :time/delta delta-time}])
 
     (swap! lag #(+ % delta-time))
 
