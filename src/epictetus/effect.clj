@@ -36,6 +36,7 @@
         (fn update-db! [new-db]
           (reset! state/db new-db)))
 
+;; TODO Mutate internal state, find a better alternative
 (reg-fx :system
         (fn add-data-to-system [data]
           (swap! state/system merge data)))
@@ -58,8 +59,9 @@
              (->> entity
                   (vertices/gpu-load! vao)
                   (textures/load-entity)
-                  (swap! state/rendering assoc-in [layout program id]))))))
+                  (swap! state/entities assoc id))
 
+             (swap! state/rendering assoc-in [layout program id] true)))))
 
 (reg-fx :delete
        (fn delete-entity!
@@ -72,11 +74,6 @@
 (reg-fx :delete-all
        (fn delete-all [_]
          (reset! state/rendering {})))
-
-;; TODO
-;; (reg-fx :entity/update-in
-;;         (fn assoc-in-entity [ks v]
-;;           (swap! state/rendering assoc-in ks v)))
 
 (reg-fx :loop/pause
         (fn pause-loop [_]

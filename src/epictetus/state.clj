@@ -35,3 +35,6 @@
 ;;                          :vertices ...}}}}}}
 ;;
 (def rendering (atom {}))
+
+;; internal state of entities data by id
+(def entities (atom {}))

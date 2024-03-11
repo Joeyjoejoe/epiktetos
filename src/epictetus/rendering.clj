@@ -34,14 +34,15 @@
                               (assoc :entities entities))
                 eu-queue (u/purge-u! u-queue ::u/program p-context)]
 
-            (doseq [[entity-id {:as entity :keys [position vbo assets]}] entities]
-              (u/purge-u! eu-queue ::u/entity (assoc p-context :entity entity))
+            (doseq [[entity-id draw?] entities]
+              (let [{:as entity :keys [position vbo assets]} (get @state/entities entity-id)]
+                (u/purge-u! eu-queue ::u/entity (assoc p-context :entity entity))
 
-              ;; TODO Implement other rendering methods
-              ;;      - Instance rendering
-              ;;      - Indice drawing
-              (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
-              (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets))))))))))
+                ;; TODO Implement other rendering methods
+                ;;      - Instance rendering
+                ;;      - Indice drawing
+                (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
+                (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets)))))))))))
 
 
 ;;    ;; Render context

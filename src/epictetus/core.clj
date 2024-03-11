@@ -7,12 +7,12 @@
             [epictetus.loop :as game-loop]
             [epictetus.event :as event]
             [epictetus.uniform :as u]
+            [epictetus.entity :as entity]
             [epictetus.interceptors :as interc :refer [->interceptor]]
             [epictetus.window]
             [epictetus.program])
   (:import (org.lwjgl.glfw GLFW)))
 
-(def system state/system)
 (def db state/db)
 
 (defn start
@@ -31,8 +31,8 @@
   ([_ sys]
 
      (GLFW/glfwSetWindowShouldClose (:glfw/window sys) false)
-     (reset! system sys)
-     (game-loop/start @system)))
+     (reset! state/system sys)
+     (game-loop/start @state/system)))
 
 (defn reg-event
   "Set the handler to an event id, with the option to add additional coeffects.
