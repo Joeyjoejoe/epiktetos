@@ -12,30 +12,37 @@
 
 (defn start [{window :glfw/window}]
 
-  (loop [curr-time  (GLFW/glfwGetTime)
-         prev-time  0
-         delta-time 0]
+  (loop [{:as    loop-iter
+          {:keys [curr delta]} ::time} #::{:iter 1
+                                          :time {:curr (GLFW/glfwGetTime)
+                                                 :prev 0
+                                                 :delta 0}}]
 
-    (event/execute [:loop/iteration {:time/current curr-time :time/delta delta-time}])
+      (event/execute [:epictetus.core/loop-infos loop-iter])
 
-    (swap! lag #(+ % delta-time))
+      (swap! lag #(+ % delta))
 
-    (while (>= @lag 0.1)
+      (while (>= @lag 0.1)
 
-      ;; Consume events queue
-      (while (seq @event/queue)
-        (let [e (peek @event/queue)]
-          (when-not (= :mouse/position (first e))
-            (pprint e))
-          (event/execute e)
-          (swap! event/queue pop)))
+        ;; Consume events queue
+        (while (seq @event/queue)
+          (let [e (peek @event/queue)]
+            (when-not (= :mouse/position (first e))
+              (pprint e))
+            (event/execute e)
+            (swap! event/queue pop)))
 
-      (swap! lag #(- % 0.1)))
+        (swap! lag #(- % 0.1)))
 
-    (rendering/pipeline)
+      (rendering/pipeline)
 
-    (GLFW/glfwSwapBuffers window)
-    (GLFW/glfwPollEvents)
+      (GLFW/glfwSwapBuffers window)
+      (GLFW/glfwPollEvents)
 
     (when-not (GLFW/glfwWindowShouldClose window)
-      (recur (GLFW/glfwGetTime) curr-time (- (GLFW/glfwGetTime) curr-time)))))
+      (-> loop-iter
+          (assoc-in [::time :curr]  (GLFW/glfwGetTime))
+          (assoc-in [::time :prev]  curr)
+          (assoc-in [::time :delta] (- (GLFW/glfwGetTime) curr))
+          (update ::iter inc)
+          recur))))

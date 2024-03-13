@@ -101,8 +101,8 @@
   (fn quit-flag [_ fx]
     (assoc fx :loop/pause true)))
 
-(reg-event :loop/iteration
+(reg-event ::loop-infos
   (fn loop-infos [cofx fx]
-    (let [{[_ data] :event} cofx]
-      (assoc-in fx [:db :loop/iteration] data))))
+    (let [{[_ loop-iter] :event} cofx]
+      (assoc-in fx [:db :loop/iter] loop-iter))))
 
