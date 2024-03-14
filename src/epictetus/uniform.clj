@@ -25,8 +25,12 @@
 
 
 ;; TODO Implement new types and map their arguments
+;; TODO Create get-type fn to handle not implemented types
 (def types-fn {:float (method->fn GL20/glUniform1f 2)
                :int   (method->fn GL20/glUniform1i 2)
+               :vec2  (method->fn GL20/glUniform2f 3)
+               :vec3  (method->fn GL20/glUniform3f 4)
+               :vec4  (method->fn GL20/glUniform4f 5)
                :mat4  (method->fn GL20/glUniformMatrix4fv 3)
                :sampler2D (method->fn GL20/glUniform1i 2)})
 
@@ -90,13 +94,10 @@
        ;; Set uniform value
        (when-let [u-val (if handler (apply handler handler-args)
                                     g-value)]
-         (let [f (get types-fn u-type)
-               ar2-args [u-loc u-val]
-               ar3-args [u-loc false u-val]] ;; (GL20/glUniformMatrix4fv location false u-val))
-           ;; TODO Replace cond on arity with system to link
-           ;;      f parameters to data
-           (cond (arity-eql? f 2) (apply f ar2-args)
-                 (arity-eql? f 3) (apply f ar3-args))))
+         (let [f    (get types-fn u-type)
+               args (cond (arity-eql? f 3) [u-loc false u-val] ;; (GL20/glUniformMatrix4fv location transpose? u-val))
+                          :else            (flatten [u-loc u-val]))]
+            (apply f args)))
 
        (cond
          ;; All queue uniforms processed once.
@@ -133,13 +134,13 @@
 ;; : (method->fn GL20/glUniform1iv 3)
 ;; : (method->fn GL30/glUniform1ui 2)
 ;; : (method->fn GL30/glUniform1uiv 3)
-;; : (method->fn GL20/glUniform2f 3)
+;; :
 ;; : (method->fn GL20/glUniform2fv 3)
 ;; : (method->fn GL20/glUniform2i 3)
 ;; : (method->fn GL20/glUniform2iv 3)
 ;;
 ;; : (method->fn GL30/glUniform2uiv 3)
-;; : (method->fn GL20/glUniform3f 4)
+;; :
 ;; : (method->fn GL20/glUniform3fv 3)
 ;; : (method->fn GL20/glUniform3i 4)
 ;; : (method->fn GL20/glUniform3iv 3)
