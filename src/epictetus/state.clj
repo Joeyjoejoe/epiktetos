@@ -3,7 +3,19 @@
 ;;        programs, vao, vbo etc...
 (ns epictetus.state)
 
-;; User managed state
+;; User managed state map
+;; keys in :core namespace denote data automaticaly merged
+;; on each loop iteration. They provides important about
+;; the state of the engine:
+
+;; - :core/loop contains informations about the current
+;;              loop iteration.
+;;
+;; {:iter <iteration-number> :time {:curr  <current-time>
+;;                                  :prev  <previous-time>
+;;                                  :delta <delta-time>}}
+;;
+;; user/cognitive-load
 (def db (atom {}))
 
 ;; system is the result of processing a config file through

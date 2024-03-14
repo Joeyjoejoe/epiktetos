@@ -1,6 +1,7 @@
 (ns epictetus.loop
   (:require
     [epictetus.event :as event]
+    [epictetus.state :as state]
     [epictetus.rendering :as rendering]
     [clojure.pprint :refer [pprint]])
 
@@ -13,14 +14,19 @@
 (defn start [{window :glfw/window}]
 
   (loop [{:as    loop-iter
-          {:keys [curr delta]} ::time} #::{:iter 1
-                                          :time {:curr (GLFW/glfwGetTime)
-                                                 :prev 0
-                                                 :delta 0}}]
-
-      (event/execute [:epictetus.core/loop-infos loop-iter])
+          {:keys [curr delta]} :time} {:iter 1
+                                        :time {:curr (GLFW/glfwGetTime)
+                                               :prev 0
+                                               :delta 0}}]
 
       (swap! lag #(+ % delta))
+      (swap! state/db assoc-in [:db :core/loop] loop-iter)
+
+      ;; Bind :epictetus.event/loop.iter, a user definable event.
+      ;; It is guaranteed to run once per loop iterations
+      ;; user/cognitive-load
+      (event/execute [:epictetus.event/loop.iter loop-iter])
+
 
       (while (>= @lag 0.1)
 
@@ -41,8 +47,8 @@
 
     (when-not (GLFW/glfwWindowShouldClose window)
       (-> loop-iter
-          (assoc-in [::time :curr]  (GLFW/glfwGetTime))
-          (assoc-in [::time :prev]  curr)
-          (assoc-in [::time :delta] (- (GLFW/glfwGetTime) curr))
-          (update ::iter inc)
+          (assoc-in [:time :curr]  (GLFW/glfwGetTime))
+          (assoc-in [:time :prev]  curr)
+          (assoc-in [:time :delta] (- (GLFW/glfwGetTime) curr))
+          (update :iter inc)
           recur))))
