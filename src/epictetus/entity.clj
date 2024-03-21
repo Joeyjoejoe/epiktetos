@@ -1,26 +1,69 @@
 (ns epictetus.entity
   (:require [epictetus.effect :refer [reg-fx]]
-            [epictetus.coeffect :refer [reg-cofx]]
-            [epictetus.state  :as state]))
+            [epictetus.coeffect :refer [reg-cofx cofx-error]]
+            [epictetus.state  :as state]
+            [epictetus.texture :as textures]
+            [epictetus.vertices :as vertices]))
 
-(defn do-mut
-  [entity mut]
-  (let [[k value] mut]
-    (if (vector? k)
-      (assoc-in entity k value)
-      (assoc    entity k value))))
+(defn delete-all!
+  "Remove all entities."
+  []
+  (reset! state/entities {}))
 
-(reg-fx :entity/set
-        (fn mutate-entity! [[id muts]]
-          ;; (assoc fx :entity/set [:hero {:motion [:walk :right]}])
-          (let [entity (get @state/entities id)]
-            (->> muts
-                 (reduce do-mut entity)
-                 (swap! state/entities assoc id)))))
+(reg-cofx :entity/get-all
+          (fn get-all-entities
+            [coeffects]
+            (assoc coeffects :entity @state/entities)))
 
-(reg-cofx :entity/get
-          (fn get-entity
-            [coeffects & ids]
-                (assoc coeffects :entity
-                                 (select-keys @state/entities ids))))
+(defonce get-all-ids #{:all :* "*"})
+
+(defn get-entity
+  [cofx id]
+   (if-let [entity (get @state/entities id)]
+     (assoc cofx id entity)
+     (if (get get-all-ids id)
+       (assoc cofx :all (mapv val @state/entities))
+       (cofx-error cofx :entity/get id "Entity not found"))))
+
+(defn delete-entity!
+  "Remove an entity from rendering entities"
+  [id]
+  (swap! state/entities dissoc id))
+
+(defn update-entity!
+  "Update an entity map by providing a new one"
+  [entity]
+  (let [id (:id entity)]
+    (swap! state/entities assoc id entity)))
+
+(defn render-entity!
+  "Register an new entity in state/entities and load assets for rendering
+   on next loop iteration."
+  ([entity]
+   ;; TODO Assets cache (VBO duplication prevention & instance rendering)
+   (let [{:keys [id program]} entity
+         {layout :layout}     (get-in @state/system [:gl/engine :program program])
+         vao                  (get-in @state/system [:gl/engine :vao layout])]
+
+     (->> entity
+          (vertices/gpu-load! vao)
+          (textures/load-entity)
+          (swap! state/entities assoc id))
+
+     (swap! state/rendering assoc-in [layout program id] true))))
+
+(reg-fx :entity/render render-entity!)
+(reg-fx :entity/update update-entity!)
+(reg-fx :entity/delete delete-entity!)
+(reg-fx :entity/delete-all delete-all!)
+
+
+(reg-cofx :entity/get get-entity)
+
+
+
+
+
+
+
 

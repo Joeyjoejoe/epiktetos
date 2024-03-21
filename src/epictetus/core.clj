@@ -53,7 +53,7 @@
 
                                 (->> (handler-fn cofx fx)
                                      (assoc context :effects))))})
-         interceptors [fx/do-fx cofx/inject-db cofx/inject-system coeffects handler]
+         interceptors [fx/do-fx cofx/inject-db cofx/inject-system coeffects cofx/error-logger handler]
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
 

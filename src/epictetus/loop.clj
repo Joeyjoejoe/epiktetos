@@ -20,12 +20,15 @@
                                                :delta 0}}]
 
       (swap! lag #(+ % delta))
-      (swap! state/db assoc-in [:db :core/loop] loop-iter)
+      (swap! state/db assoc :core/loop loop-iter)
 
       ;; Bind :epictetus.event/loop.iter, a user definable event.
       ;; It is guaranteed to run once per loop iterations
       ;; user/cognitive-load
       (event/execute [:epictetus.event/loop.iter loop-iter])
+
+      ;; TODO apply entities transformations that can be multi threaded:
+      ;; like motions, animations ?
 
 
       (while (>= @lag 0.1)
@@ -33,8 +36,6 @@
         ;; Consume events queue
         (while (seq @event/queue)
           (let [e (peek @event/queue)]
-            (when-not (= :mouse/position (first e))
-              (pprint e))
             (event/execute e)
             (swap! event/queue pop)))
 
