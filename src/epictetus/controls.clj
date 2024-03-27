@@ -154,12 +154,17 @@
 (def keyboard-callback
   (proxy [GLFWKeyCallback] []
     (invoke [window k scancode action mods]
-      (let [key-status (keyword (get keyboard-events action))
-            key-name   (get keyboard-keys k)
-            key-mod    (get keyboard-mods mods)
-            event-id   (->> [key-status key-name key-mod]
+      (let [key-status   (keyword (get keyboard-events action))
+            key-name     (get keyboard-keys k)
+            key-mod      (get keyboard-mods mods)
+            event-no-mod [key-status key-name :*]
+            event-id     (->> [key-status key-name key-mod]
                             (remove nil?)
                             vec)]
+
+        (when (event/handler? event-no-mod)
+          (event/dispatch [event-no-mod]))
+
         (when (event/handler? event-id)
           (event/dispatch [event-id]))))))
 
@@ -177,9 +182,14 @@
       (let [btn-status (keyword (get keyboard-events action))
             btn-name   (get mouse-buttons button)
             key-mod    (get keyboard-mods mods)
+            event-no-mod [btn-status btn-name :*]
             event-id   (->> [btn-status btn-name key-mod]
                             (remove nil?)
                             vec)]
+
+        (when (event/handler? event-no-mod)
+          (event/dispatch [event-no-mod]))
+
         (when (event/handler? event-id)
           (event/dispatch [event-id]))))))
 
