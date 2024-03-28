@@ -5,10 +5,6 @@
             [epictetus.texture :as textures]
             [epictetus.vertices :as vertices]))
 
-(defn delete-all!
-  "Remove all entities."
-  []
-  (reset! state/entities {}))
 
 (defonce GET-ALL-IDS #{:all :* "*"})
 
@@ -23,7 +19,10 @@
 (defn delete-entity!
   "Remove an entity from rendering entities"
   [id]
-  (swap! state/entities dissoc id))
+  (let [{:keys [program]} (get @state/entities id)
+        {layout :layout}  (get-in @state/system [:gl/engine :program program])]
+    (swap! state/rendering update-in [layout program] dissoc id)
+    (swap! state/entities dissoc id)))
 
 (defn update-entity!
   "Update an entity map by providing a new one"
@@ -35,6 +34,12 @@
   "Update an entity map by providing a new one"
   [entities]
     (reset! state/entities entities))
+
+(defn delete-all!
+  "Remove all entities."
+  [_]
+  (reset! state/entities {})
+  (reset! state/rendering {}))
 
 (defn render-entity!
   "Register an new entity in state/entities and load assets for rendering
