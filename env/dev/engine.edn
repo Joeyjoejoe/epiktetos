@@ -1,6 +1,6 @@
 {:glfw/window {:title                          "Epictectus engine"
-               :width                          800
-               :height                         600
+               :width                          1920
+               :height                         1080
                :display                        :windowed
                :mode/cursor                    :cursor/normal
                :mode/sticky-keys               false
@@ -19,4 +19,8 @@
                         {:name     :sprite
                          :layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]
                          :pipeline [[:vertex "shaders/sprite.vert"]
+                                    [:fragment "shaders/default.frag"]]}
+                        {:name     :sprite12
+                         :layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]
+                         :pipeline [[:vertex "shaders/sprite12.vert"]
                                     [:fragment "shaders/default.frag"]]}]}}

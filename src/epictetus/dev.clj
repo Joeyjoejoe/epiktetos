@@ -7,10 +7,12 @@
 
 ;; https://github.com/weavejester/integrant-repl
 ;; Provides worflow function (prep) (init) (go) (reset) (halt)
-(integrant.repl/set-prep! #(ig/prep (-> "engine-default.edn"
-                                        io/resource
-                                        slurp
-                                        ig/read-string)))
+
+(if-let [config (io/resource "engine.edn")]
+  (integrant.repl/set-prep! #(ig/prep (-> config
+                                          slurp
+                                          ig/read-string)))
+  (throw (Exception. "Missing config file: engine.edn")))
 
 (defn start
   "Start engine"
