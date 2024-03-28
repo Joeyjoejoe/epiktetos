@@ -1,39 +1,63 @@
 (ns user
   (:require [epictetus.core :refer [reg-event reg-u reg-eu]]
-            [epictetus.coeffect :as cofx]
-            [epictetus.utils.buffer :as util]
             [clojure.java.io :as io]
+            [clojure.edn :as edn]
+            [epictetus.coeffect :as cofx :refer [reg-cofx]]
+            [epictetus.utils.buffer :as util]
             [epictetus.state :as state]
             [epictetus.dev :refer [start stop resume reset]])
 
 
   (:import (org.lwjgl.glfw GLFW)
-           (org.joml Matrix4f)
+           (org.joml Matrix4f Vector3f)
            (org.lwjgl BufferUtils)
-           (org.lwjgl.opengl GL45))
-  )
+           (org.lwjgl.opengl GL45)))
 
+;; (defn time-back-and-forth
+;;   [t duration]
+;;   (let [cnt    (/ t duration)
+;;         elapse (mod t duration)
+;;         percent (/ (* elapse 100.0)
+;;                    duration)]
+;;     (/ (if (even? (int cnt))
+;;          percent
+;;          (- 100 percent))
+;;        100)))
+;;
+;;
+;;
+;; (defn rotate-around
+;;   [mat center angle]
+;;     (-> mat
+;;         (.translate center)
+;;         (.rotateY (. Math toRadians angle))
+;;         (.translate (.negate center))))
 
-;; Camera uniforms
 (reg-eu :model
         (fn model-matrix [db entities entity]
-          (let [{:keys [position scale], :or {scale 1.0}} entity
+          (let [{:keys [position scale]
+                 :or   {scale 1.0}} entity
                 [x y z] position
                 buffer (BufferUtils/createFloatBuffer 16)]
-            (-> (Matrix4f.)
-                (.translate x y z)
-                (.scale scale scale scale)
-                (.get buffer)))))
+
+              (-> (Matrix4f.)
+                  (.translate x y z)
+                  (.scale scale scale scale)
+                  (.get buffer)))))
 
 (reg-u :view
        (fn [db]
-         (let [t (GLFW/glfwGetTime)
+         (let [;; camera position
                eye-x 0.0 ;; (* 10.0 (Math/sin t))
-               eye-y 0.0 ;; (* -10.0 (Math/cos t))
-               eye-z 25.0 ;; (* 10.0 (Math/cos t))
+               eye-y 2.0 ;; (* -10.0 (Math/cos t))
+               eye-z 5.8 ;; (* 10.0 (Math/cos t))
+
+               ;; look point
                center-x 0.0
                center-y 0.0
                center-z 0.0
+
+               ;; Which camera axis is up
                up-x     0.0
                up-y     1.0
                up-z     0.0
@@ -75,38 +99,31 @@
               (GL45/glBindTextureUnit 0 (first textures))
               0))))
 
-(reg-eu [:sprite :animIndex]
-        (fn [db entities entity]
-
-          (let [now (get-in db [:loop/iteration :time/current])
-                {:keys [:anim/duration :anim/frames :anim/start]} entity
-                 frame-duration (/ duration frames)
-                 elapsed        (- now (or start 0.0))
-                 frame-nth   (-> (/ elapsed frame-duration)
-                                 (Math/floor))]
-
-              ;; TODO find algo for "backward cycle" animations
-              ;; 0 1 2
-              (-> frame-nth
-                  (mod frames)
-                  int))))
-
-(reg-event
-  :mouse/position
-  (fn [{[_ position] :event} fx]
-    (assoc-in fx [:db :mouse/position] position)))
+(reg-cofx :edn/load
+          (fn parse-at
+            [coeffects path]
+            (let [data (-> path
+                           io/resource
+                           slurp
+                           edn/read-string)]
+              (-> coeffects
+                  (assoc :edn/load data)))))
 
 (reg-event
   [:press :delete]
   (fn remove-cube [_ fx]
-    (assoc fx :delete-all true)))
+    (assoc fx :entity/delete-all true)))
+
+(reg-event
+  [:press :space :shift]
+  (fn remove-cube [_ fx]
+    (assoc fx :entity/delete :cube)))
 
 (reg-event
   [:press :space]
-  [(cofx/inject :edn/load "hero.edn")]
-  (fn render-level [{model :edn/load} fx]
-    (-> fx
-        (update :render conj [:hero model]))))
+  [(cofx/inject :edn/load "cube.edn")]
+  (fn [{model :edn/load} fx]
+    (assoc fx :entity/render (assoc model :id :cube))))
 
 (reg-event
   [:repeat :space]
@@ -127,13 +144,11 @@
 
           texture (-> "textures" io/resource io/file .list rand-nth)
 
-          random-cube [entity-id (-> model
-                                     (assoc :position position)
-                                     (assoc :scale (rand 1.0))
-                                     (assoc :speed (* (rand 100) (rand-nth [-1 1])))
-                                     (assoc-in [:assets :textures] [(str "textures/" texture)])
-                                     (assoc-in [:assets :vertices] colored-vertices))]]
-      (-> fx
-          (update :render conj random-cube)))))
-
-
+          random-cube (-> model
+                          (assoc :id entity-id)
+                          (assoc :position position)
+                          (assoc :scale (rand 1.0))
+                          (assoc :speed (* (rand 100) (rand-nth [-1 1])))
+                          (assoc-in [:assets :textures] [(str "textures/" texture)])
+                          (assoc-in [:assets :vertices] colored-vertices))]
+      (assoc fx :entity/render random-cube))))
