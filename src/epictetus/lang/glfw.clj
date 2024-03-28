@@ -2,7 +2,7 @@
   (:require [epictetus.utils.keyword :as k])
   (:import (org.lwjgl.glfw GLFW)))
 
-(defonce dictionary
+(defonce DICTIONARY
   {true                   GLFW/GLFW_TRUE
    false                  GLFW/GLFW_FALSE
 
@@ -35,7 +35,7 @@
    :gl.profile/compat GLFW/GLFW_OPENGL_COMPAT_PROFILE
    :gl.profile/any    GLFW/GLFW_OPENGL_ANY_PROFILE})
 
-(defonce grammar
+(defonce GRAMMAR
   (-> (make-hierarchy)
       (derive :fullscreen/windowed :fullscreen)
       (k/derivev

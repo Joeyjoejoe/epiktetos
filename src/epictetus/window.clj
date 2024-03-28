@@ -26,16 +26,16 @@
     [x y]))
 
 (defn window-hint! [property value]
-  (let [hint  (property glfw/dictionary)
-        value (or (get glfw/dictionary value) value)
+  (let [hint  (property glfw/DICTIONARY)
+        value (or (get glfw/DICTIONARY value) value)
         f     (cond
-                (isa? glfw/grammar property :hint.type/integer) (:hint.type/integer glfw/dictionary)
-                (isa? glfw/grammar property :hint.type/string)  (:hint.type/string glfw/dictionary))]
+                (isa? glfw/GRAMMAR property :hint.type/integer) (:hint.type/integer glfw/DICTIONARY)
+                (isa? glfw/GRAMMAR property :hint.type/string)  (:hint.type/string glfw/DICTIONARY))]
     (f hint value)))
 
 (defn input-mode! [w property value]
-    (let [mode  (property glfw/dictionary)
-          value (get glfw/dictionary value)]
+    (let [mode  (property glfw/DICTIONARY)
+          value (get glfw/DICTIONARY value)]
       (GLFW/glfwSetInputMode w mode value)))
 
 
@@ -54,7 +54,7 @@
 
     (doseq [[k v] params]
       (cond
-        (isa? glfw/grammar k :window/hint) (window-hint! k v)))
+        (isa? glfw/GRAMMAR k :window/hint) (window-hint! k v)))
 
     (cond
       (= :fullscreen/windowed display)
@@ -79,7 +79,7 @@
 
   (doseq [[k v] opts]
     (cond
-      (isa? glfw/grammar k :input/mode) (input-mode! w k v)))
+      (isa? glfw/GRAMMAR k :input/mode) (input-mode! w k v)))
 
   (GLFW/glfwSetCursorPos w (double (first (get-center w))) (double (last (get-center w))))
 

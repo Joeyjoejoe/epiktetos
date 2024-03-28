@@ -10,10 +10,11 @@
             (org.lwjgl.opengl GL11 GL15 GL20 GL32 GL40 GL45)))
 
 
-(defonce gl-types
+(defonce GL-TYPES
   {:vec2f {:bytes (* 2 java.lang.Float/BYTES)
            :type  GL11/GL_FLOAT
            :count 2}
+
    :vec3f {:bytes (* 3 java.lang.Float/BYTES)
            :type  GL11/GL_FLOAT
            :count 3}
@@ -50,7 +51,7 @@
   [attr-layout location]
   (let [prev-attribs (subvec (apply vector attr-layout) 0 location)]
     (->> prev-attribs
-         (map #(* (get-in gl-types [(:type %) :bytes])
+         (map #(* (get-in GL-TYPES [(:type %) :bytes])
                   (get % :length)))
          (reduce +))))
 
@@ -81,7 +82,7 @@
 (defn vertex-stride
   [attribs]
   (->> attribs
-       (map #(* (get-in gl-types [(:type %) :bytes])
+       (map #(* (get-in GL-TYPES [(:type %) :bytes])
                 (get % :length)))
        (reduce +)))
 
@@ -117,7 +118,7 @@
     (doseq [{:keys [location type length]} attr-layout]
       (let [{attrib-type  :type
              attrib-count :count
-             attrib-bytes :bytes} (get gl-types type)
+             attrib-bytes :bytes} (get GL-TYPES type)
             base-offset  (attrib-offset attr-layout location)]
 
         ;; Array support :
@@ -169,7 +170,7 @@
   (apply merge-with
          into
          (for [[stage path] pipeline]
-           (let [id       (-> stage opengl/dictionary GL20/glCreateShader)
+           (let [id       (-> stage opengl/DICTIONARY GL20/glCreateShader)
                  source   (-> path (io/resource) (slurp))
                  metadata (glsl/analyze-shader source)]
 

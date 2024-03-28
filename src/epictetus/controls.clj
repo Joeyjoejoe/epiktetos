@@ -5,12 +5,12 @@
                            GLFWCursorPosCallback
                            GLFWMouseButtonCallback)))
 
-(defonce keyboard-events {GLFW/GLFW_PRESS   "press"
+(defonce KEYBOARD-EVENTS {GLFW/GLFW_PRESS   "press"
                           GLFW/GLFW_RELEASE "release"
                           GLFW/GLFW_REPEAT  "repeat"})
 
 ;; https://www.glfw.org/docs/3.3/group__mods.html#ga6ed94871c3208eefd85713fa929d45aa
-(defonce keyboard-mods {GLFW/GLFW_MOD_SHIFT     :shift
+(defonce KEYBOARD-MODS {GLFW/GLFW_MOD_SHIFT     :shift
                         GLFW/GLFW_MOD_CONTROL   :control
                         GLFW/GLFW_MOD_ALT       :alt
                         GLFW/GLFW_MOD_SUPER     :super
@@ -18,7 +18,7 @@
                         GLFW/GLFW_MOD_NUM_LOCK  :num-lock})
 
 ;; https://www.glfw.org/docs/3.3/group__keys.html
-(defonce keyboard-keys {GLFW/GLFW_KEY_UNKNOWN       :unknown
+(defonce KEYBOARD-KEYS {GLFW/GLFW_KEY_UNKNOWN       :unknown
                         GLFW/GLFW_KEY_SPACE         :space
                         GLFW/GLFW_KEY_APOSTROPHE    :apostrophe
                         GLFW/GLFW_KEY_COMMA         :comma
@@ -140,7 +140,7 @@
                         GLFW/GLFW_KEY_RIGHT_SUPER   :right-super
                         GLFW/GLFW_KEY_MENU          :menu})
 
-(defonce mouse-buttons {GLFW/GLFW_MOUSE_BUTTON_1 :btn-left
+(defonce MOUSE-BUTTONS {GLFW/GLFW_MOUSE_BUTTON_1 :btn-left
                         GLFW/GLFW_MOUSE_BUTTON_2 :btn-right
                         GLFW/GLFW_MOUSE_BUTTON_3 :btn-middle
                         GLFW/GLFW_MOUSE_BUTTON_4 :btn-3
@@ -154,9 +154,9 @@
 (def keyboard-callback
   (proxy [GLFWKeyCallback] []
     (invoke [window k scancode action mods]
-      (let [key-status   (keyword (get keyboard-events action))
-            key-name     (get keyboard-keys k)
-            key-mod      (get keyboard-mods mods)
+      (let [key-status   (keyword (get KEYBOARD-EVENTS action))
+            key-name     (get KEYBOARD-KEYS k)
+            key-mod      (get KEYBOARD-MODS mods)
             event-no-mod [key-status key-name :*]
             event-id     (->> [key-status key-name key-mod]
                             (remove nil?)
@@ -179,9 +179,9 @@
 (def mouse-button-callback
   (proxy [GLFWMouseButtonCallback] []
     (invoke [window button action mods]
-      (let [btn-status (keyword (get keyboard-events action))
-            btn-name   (get mouse-buttons button)
-            key-mod    (get keyboard-mods mods)
+      (let [btn-status (keyword (get KEYBOARD-EVENTS action))
+            btn-name   (get MOUSE-BUTTONS button)
+            key-mod    (get KEYBOARD-MODS mods)
             event-no-mod [btn-status btn-name :*]
             event-id   (->> [btn-status btn-name key-mod]
                             (remove nil?)

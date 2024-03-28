@@ -8,9 +8,9 @@
 ;; to get a uniform value with a call to get-value multi method.
 ;; Stages values are vector of rendering context keys to us as
 ;; parameter for the handler being exectued during this stage.
-(defonce u-stages #::{:global  [:db]
-                      :program [:db :entities]
-                      :entity  [:db :entities :entity]})
+(defonce UNIFORM-STAGES #::{:global  [:db]
+                            :program [:db :entities]
+                            :entity  [:db :entities :entity]})
 
 ;; TODO move me to utils
 (defmacro method->fn
@@ -44,7 +44,7 @@
      (register-uniform ::program u-path handler)
      (println "program uniform" u-path "callback signature must be: [db entities]")))
   ([ustage u-path handler]
-   (if (ustage u-stages)
+   (if (ustage UNIFORM-STAGES)
      (event/register ustage u-path handler)
      (println "Unknown uniform stage" ustage))))
 
@@ -88,7 +88,7 @@
            handler      (or (event/get-handler u-stage [program u-name])
                             (event/get-handler u-stage u-name))
            g-value      (get global-u u-name)
-           stage-ks     (get u-stages u-stage)
+           stage-ks     (get UNIFORM-STAGES u-stage)
            handler-args (mapv #(get r-context %) stage-ks)]
 
        ;; Set uniform value

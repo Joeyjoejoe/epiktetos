@@ -2,7 +2,7 @@
   (:require [epictetus.utils.keyword :as k])
   (:import (org.lwjgl.opengl GL20 GL32 GL40 GL43)))
 
-(defonce dictionary
+(defonce DICTIONARY
   {:vertex          GL20/GL_VERTEX_SHADER
    :fragment        GL20/GL_FRAGMENT_SHADER
    :geometry        GL32/GL_GEOMETRY_SHADER

@@ -10,18 +10,13 @@
   []
   (reset! state/entities {}))
 
-(reg-cofx :entity/get-all
-          (fn get-all-entities
-            [coeffects]
-            (assoc coeffects :entity @state/entities)))
-
-(defonce get-all-ids #{:all :* "*"})
+(defonce GET-ALL-IDS #{:all :* "*"})
 
 (defn get-entity
   [cofx id]
    (if-let [entity (get @state/entities id)]
      (assoc cofx id entity)
-     (if (get get-all-ids id)
+     (if (get GET-ALL-IDS id)
        (assoc cofx :all (mapv val @state/entities))
        (cofx-error cofx :entity/get id "Entity not found"))))
 
@@ -65,6 +60,11 @@
 
 
 (reg-cofx :entity/get get-entity)
+(reg-cofx :entity/get-all
+          (fn get-all-entities
+            [coeffects]
+            (assoc coeffects :entity @state/entities)))
+
 
 
 
