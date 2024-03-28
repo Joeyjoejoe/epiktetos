@@ -7,7 +7,7 @@
             [epictetus.utils.glsl-parser :as glsl]
             [epictetus.lang.opengl :as opengl])
   (:import  (org.lwjgl.glfw GLFW)
-            (org.lwjgl.opengl GL11 GL15 GL20 GL45)))
+            (org.lwjgl.opengl GL11 GL15 GL20 GL32 GL40 GL45)))
 
 
 (defonce gl-types
@@ -29,6 +29,20 @@
    :mat4f {:bytes (* 16 java.lang.Float/BYTES)
            :type  GL11/GL_FLOAT
            :count 16}})
+
+(defonce DRAW-PRIMITIVES
+  {:triangles                GL11/GL_TRIANGLES
+   :lines                    GL11/GL_LINES
+   :points                   GL11/GL_POINTS
+   :line-strip               GL11/GL_LINE_STRIP
+   :line-loop                GL11/GL_LINE_LOOP
+   :line-strip-adjacency     GL32/GL_LINE_STRIP_ADJACENCY
+   :lines-adjacency          GL32/GL_LINES_ADJACENCY
+   :triangle-strip           GL11/GL_TRIANGLE_STRIP
+   :triangle-fan             GL11/GL_TRIANGLE_FAN
+   :triangle-strip-adjacency GL32/GL_TRIANGLE_STRIP_ADJACENCY
+   :triangles-adjacency      GL32/GL_TRIANGLES_ADJACENCY
+   :patches                  GL40/GL_PATCHES})
 
 (defn attrib-offset
   "Given the index of an attrib in attribs collection,
@@ -174,12 +188,14 @@
   :gl/engine
   [_ config]
 
-  (apply merge-with into (for [{:keys [name layout pipeline]} (:programs config)]
+  (apply merge-with into (for [{:keys [name layout pipeline draw]
+                                :or   {draw :triangles}} (:programs config)]
 
     (let [{shaders :shader/ids
            :keys [attribs uniforms]} (compile-shaders pipeline)
           vao                        (compile-vao layout attribs)
-          prog-id                    (GL20/glCreateProgram)]
+          prog-id                    (GL20/glCreateProgram)
+          primitive                  (get DRAW-PRIMITIVES draw)]
 
       (doseq [shader-id shaders]
         (GL20/glAttachShader prog-id shader-id))
@@ -196,6 +212,7 @@
       {:vao      {(:vao/layout vao) vao}
        :program  {name {:name name
                         :program/id prog-id
+                        :primitive  primitive
                         :layout     (-> vao :vao/layout vec)
                         :uniforms   (compile-uniforms prog-id uniforms)}}}))))
 

@@ -26,7 +26,8 @@
         (doseq [[program entities] programs]
           (let [{:as p
                  pid :program/id
-                 u-queue :uniforms} (get-in (:system r-context)
+                 u-queue :uniforms
+                 primitive :primitive} (get-in (:system r-context)
                                           [:gl/engine :program program])
                 p-context (-> r-context
                               (assoc :pid (GL20/glUseProgram pid))
@@ -42,7 +43,7 @@
                 ;;      - Instance rendering
                 ;;      - Indice drawing
                 (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
-                (GL11/glDrawArrays GL11/GL_TRIANGLES 0 (count (:vertices assets)))))))))))
+                (GL11/glDrawArrays primitive 0 (count (:vertices assets)))))))))))
 
 
 ;;    ;; Render context
