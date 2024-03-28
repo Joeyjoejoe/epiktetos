@@ -36,44 +36,10 @@
         (fn update-db! [new-db]
           (reset! state/db new-db)))
 
-;; TODO Mutate internal state, find a better alternative
-(reg-fx :system
-        (fn add-data-to-system [data]
-          (swap! state/system merge data)))
-
-(reg-fx :dispatch
+(reg-fx :event/dispatch
         (fn dispatch-event! [events]
           (doseq [e events]
             (event/dispatch e))))
-
-(reg-fx :render
-        (fn render!
-          ([entities]
-           (doseq [[id entity] entities]
-             (render! id entity)))
-
-          ([id {:as entity :keys [program]}]
-           ;; TODO Assets cache (VBO duplication prevention & instance rendering)
-           (let [{layout :layout} (get-in @state/system [:gl/engine :program program])
-                 vao              (get-in @state/system [:gl/engine :vao layout])]
-             (->> entity
-                  (vertices/gpu-load! vao)
-                  (textures/load-entity)
-                  (swap! state/entities assoc id))
-
-             (swap! state/rendering assoc-in [layout program id] true)))))
-
-(reg-fx :delete
-       (fn delete-entity!
-         [entity-keys]
-         ;; TODO update path must be obtainable from entity-key
-         ;;      - Refactor state/rendering to vaoID->programID->entityIDS
-         ;;      - Add a global registery for vaos, programs and entities data (integrant system)
-         (apply swap! state/rendering update-in [:vao/static :default] dissoc entity-keys)))
-
-(reg-fx :delete-all
-       (fn delete-all [_]
-         (reset! state/rendering {})))
 
 (reg-fx :loop/pause
         (fn pause-loop [_]

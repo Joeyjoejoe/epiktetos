@@ -94,7 +94,6 @@
   (GL20/glUseProgram p-id)
   (let [unif-with-locations (map #(conj % (u/locate-u p-id (name (first %))))
                                  u-seq)]
-    (println unif-with-locations)
     (GL20/glUseProgram 0)
     (apply conj clojure.lang.PersistentQueue/EMPTY unif-with-locations)))
 

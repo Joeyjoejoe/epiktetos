@@ -1,9 +1,7 @@
 (ns epictetus.coeffect
   (:require [epictetus.event :as event]
             [epictetus.state :as state]
-            [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
-            [clojure.edn :as edn]
             [epictetus.interceptors :refer [->interceptor]]))
 
 (defn reg-cofx
@@ -79,15 +77,3 @@
 (def inject-system (inject :inject-system))
 (def inject-db (inject :inject-db))
 (def error-logger (inject :error-logger))
-
-;; Utilities
-(reg-cofx :edn/load
-          (fn parse-at
-            [coeffects path]
-            (let [data (-> path
-                           io/resource
-                           slurp
-                           edn/read-string)]
-              (-> coeffects
-                  (assoc :edn/load data)))))
-
