@@ -1,4 +1,4 @@
-(ns epictetus.utils.buffer
+(ns epiktetos.utils.buffer
   (:import (org.lwjgl BufferUtils)))
 
 (defn float-buffer

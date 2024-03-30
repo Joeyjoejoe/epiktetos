@@ -1,8 +1,8 @@
-(ns epictetus.coeffect
-  (:require [epictetus.event :as event]
-            [epictetus.state :as state]
+(ns epiktetos.coeffect
+  (:require [epiktetos.event :as event]
+            [epiktetos.state :as state]
             [clojure.pprint :refer [pprint]]
-            [epictetus.interceptors :refer [->interceptor]]))
+            [epiktetos.interceptors :refer [->interceptor]]))
 
 (defn reg-cofx
   "A cofx is a function that takes the coeffects map and

@@ -1,16 +1,16 @@
-(ns epictetus.core
+(ns epiktetos.core
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
-            [epictetus.state :as state]
-            [epictetus.coeffect :as cofx]
-            [epictetus.effect :as fx]
-            [epictetus.loop :as game-loop]
-            [epictetus.event :as event]
-            [epictetus.uniform :as u]
-            [epictetus.entity :as entity]
-            [epictetus.interceptors :as interc :refer [->interceptor]]
-            [epictetus.window]
-            [epictetus.program])
+            [epiktetos.state :as state]
+            [epiktetos.coeffect :as cofx]
+            [epiktetos.effect :as fx]
+            [epiktetos.loop :as game-loop]
+            [epiktetos.event :as event]
+            [epiktetos.uniform :as u]
+            [epiktetos.entity :as entity]
+            [epiktetos.interceptors :as interc :refer [->interceptor]]
+            [epiktetos.window]
+            [epiktetos.program])
   (:import (org.lwjgl.glfw GLFW)))
 
 (def db state/db)

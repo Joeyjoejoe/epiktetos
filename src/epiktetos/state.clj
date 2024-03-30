@@ -1,7 +1,7 @@
 ;; TODO Re-think state structure.
 ;;      - What are the pros of a global index for
 ;;        programs, vao, vbo etc...
-(ns epictetus.state)
+(ns epiktetos.state)
 
 ;; User managed state map
 ;; keys in :core namespace denote data automaticaly merged
@@ -22,7 +22,7 @@
 ;; integrant (https://github.com/weavejester/integrant).
 ;;
 ;; Have a look to the engine default config at :
-;; https://github.com/Joeyjoejoe/epictetus/blob/master/resources/engine-default.edn.
+;; https://github.com/Joeyjoejoe/epiktetos/blob/master/resources/engine-default.edn.
 ;;
 ;; These are the core systems used in the engine :
 ;;

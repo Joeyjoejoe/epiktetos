@@ -1,8 +1,8 @@
-(ns epictetus.loop
+(ns epiktetos.loop
   (:require
-    [epictetus.event :as event]
-    [epictetus.state :as state]
-    [epictetus.rendering :as rendering]
+    [epiktetos.event :as event]
+    [epiktetos.state :as state]
+    [epiktetos.rendering :as rendering]
     [clojure.pprint :refer [pprint]])
 
   (:import (org.lwjgl.glfw GLFW)
@@ -22,10 +22,10 @@
       (swap! lag #(+ % delta))
       (swap! state/db assoc :core/loop loop-iter)
 
-      ;; Bind :epictetus.event/loop.iter, a user definable event.
+      ;; Bind :epiktetos.event/loop.iter, a user definable event.
       ;; It is guaranteed to run once per loop iterations
       ;; user/cognitive-load
-      (event/execute [:epictetus.event/loop.iter loop-iter])
+      (event/execute [:epiktetos.event/loop.iter loop-iter])
 
       ;; TODO apply entities transformations that can be multi threaded:
       ;; like motions, animations ?

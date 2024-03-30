@@ -1,9 +1,9 @@
-(ns epictetus.window
+(ns epiktetos.window
   (:require [clojure.string :as s]
             [integrant.core :as ig]
-            [epictetus.controls :as controls]
-            [epictetus.utils.buffer :as b]
-            [epictetus.lang.glfw :as glfw])
+            [epiktetos.controls :as controls]
+            [epiktetos.utils.buffer :as b]
+            [epiktetos.lang.glfw :as glfw])
   (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback)
            (org.lwjgl.system MemoryUtil)
            (org.lwjgl.opengl GL11 GL)))

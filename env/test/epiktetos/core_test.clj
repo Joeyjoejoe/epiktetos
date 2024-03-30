@@ -1,6 +1,6 @@
-(ns epictetus.core-test
+(ns epiktetos.core-test
   (:require [clojure.test :as t]
-            [epictetus.core :as core]))
+            [epiktetos.core :as core]))
 
 (t/deftest start
   (t/testing "Testing start function"

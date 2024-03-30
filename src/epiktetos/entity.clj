@@ -1,9 +1,9 @@
-(ns epictetus.entity
-  (:require [epictetus.effect :refer [reg-fx]]
-            [epictetus.coeffect :refer [reg-cofx cofx-error]]
-            [epictetus.state  :as state]
-            [epictetus.texture :as textures]
-            [epictetus.vertices :as vertices]))
+(ns epiktetos.entity
+  (:require [epiktetos.effect :refer [reg-fx]]
+            [epiktetos.coeffect :refer [reg-cofx cofx-error]]
+            [epiktetos.state  :as state]
+            [epiktetos.texture :as textures]
+            [epiktetos.vertices :as vertices]))
 
 
 (defonce GET-ALL-IDS #{:all :* "*"})

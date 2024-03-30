@@ -1,9 +1,9 @@
-(ns epictetus.dev
+(ns epiktetos.dev
   (:require [integrant.core :as ig]
             [integrant.repl :as ig-repl] ;; :refer [clear go halt prep init reset reset-all]]
             [integrant.repl.state :refer [system config]]
             [clojure.java.io :as io]
-            [epictetus.core :as core]))
+            [epiktetos.core :as core]))
 
 ;; https://github.com/weavejester/integrant-repl
 ;; Provides worflow function (prep) (init) (go) (reset) (halt)

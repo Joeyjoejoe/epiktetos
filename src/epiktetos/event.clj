@@ -1,5 +1,5 @@
-(ns epictetus.event
-  (:require [epictetus.interceptors :as interc]))
+(ns epiktetos.event
+  (:require [epiktetos.interceptors :as interc]))
 
 (def queue (atom clojure.lang.PersistentQueue/EMPTY))
 

@@ -1,4 +1,4 @@
-(ns epictetus.utils.keyword)
+(ns epiktetos.utils.keyword)
 
 (defn derivev
   ([tags parent]

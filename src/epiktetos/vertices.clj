@@ -1,5 +1,5 @@
-(ns epictetus.vertices
-  (:require [epictetus.utils.buffer :as buffer]
+(ns epiktetos.vertices
+  (:require [epiktetos.utils.buffer :as buffer]
             [clojure.string :refer [replace]])
   (:import  (org.lwjgl.opengl GL44 GL45)))
 

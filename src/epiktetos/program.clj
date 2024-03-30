@@ -1,11 +1,11 @@
-(ns epictetus.program
+(ns epiktetos.program
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
-            [epictetus.texture :as texture]
-            [epictetus.state :as state]
-            [epictetus.uniform :as u]
-            [epictetus.utils.glsl-parser :as glsl]
-            [epictetus.lang.opengl :as opengl])
+            [epiktetos.texture :as texture]
+            [epiktetos.state :as state]
+            [epiktetos.uniform :as u]
+            [epiktetos.utils.glsl-parser :as glsl]
+            [epiktetos.lang.opengl :as opengl])
   (:import  (org.lwjgl.glfw GLFW)
             (org.lwjgl.opengl GL11 GL15 GL20 GL32 GL40 GL45)))
 

@@ -1,11 +1,11 @@
 (ns user
-  (:require [epictetus.core :refer [reg-event reg-u reg-eu]]
+  (:require [epiktetos.core :refer [reg-event reg-u reg-eu]]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
-            [epictetus.coeffect :as cofx :refer [reg-cofx]]
-            [epictetus.utils.buffer :as util]
-            [epictetus.state :as state]
-            [epictetus.dev :refer [start stop resume reset]])
+            [epiktetos.coeffect :as cofx :refer [reg-cofx]]
+            [epiktetos.utils.buffer :as util]
+            [epiktetos.state :as state]
+            [epiktetos.dev :refer [start stop resume reset]])
 
 
   (:import (org.lwjgl.glfw GLFW)

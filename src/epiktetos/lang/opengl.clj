@@ -1,5 +1,5 @@
-(ns epictetus.lang.opengl
-  (:require [epictetus.utils.keyword :as k])
+(ns epiktetos.lang.opengl
+  (:require [epiktetos.utils.keyword :as k])
   (:import (org.lwjgl.opengl GL20 GL32 GL40 GL43)))
 
 (defonce DICTIONARY

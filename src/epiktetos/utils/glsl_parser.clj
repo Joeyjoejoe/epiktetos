@@ -1,4 +1,4 @@
-(ns epictetus.utils.glsl-parser
+(ns epiktetos.utils.glsl-parser
   (:require [clojure.java.io :as io]))
 
 

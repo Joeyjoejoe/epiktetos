@@ -1,5 +1,5 @@
-(ns epictetus.controls
-  (:require [epictetus.event :as event])
+(ns epiktetos.controls
+  (:require [epiktetos.event :as event])
   (:import (org.lwjgl.glfw GLFW
                            GLFWKeyCallback
                            GLFWCursorPosCallback

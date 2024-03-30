@@ -1,6 +1,6 @@
 ;; A copy of https://github.com/day8/re-frame/blob/master/src/re_frame/interceptor.cljc
 
-(ns epictetus.interceptors
+(ns epiktetos.interceptors
   (:require [clojure.set :as set]))
 
 ;; Must be a pure function !

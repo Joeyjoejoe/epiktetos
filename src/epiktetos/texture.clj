@@ -1,4 +1,4 @@
-(ns epictetus.texture
+(ns epiktetos.texture
   (:require [clojure.java.io :as io])
   (:import (org.lwjgl.stb STBImage)
            (org.lwjgl BufferUtils)

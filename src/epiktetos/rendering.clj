@@ -1,7 +1,7 @@
-(ns epictetus.rendering
-  (:require [epictetus.state :as state]
-            [epictetus.uniform :as u]
-            [epictetus.event :as event])
+(ns epiktetos.rendering
+  (:require [epiktetos.state :as state]
+            [epiktetos.uniform :as u]
+            [epiktetos.event :as event])
   (:import (org.joml Matrix4f)
            (org.lwjgl BufferUtils)
            (org.lwjgl.glfw GLFW)

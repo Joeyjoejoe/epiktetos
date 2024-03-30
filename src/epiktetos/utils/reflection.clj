@@ -1,4 +1,4 @@
-(ns epictetus.utils.reflection)
+(ns epiktetos.utils.reflection)
 
 (defn arity-eql?
   [f n]

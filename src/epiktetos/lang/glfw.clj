@@ -1,5 +1,5 @@
-(ns epictetus.lang.glfw
-  (:require [epictetus.utils.keyword :as k])
+(ns epiktetos.lang.glfw
+  (:require [epiktetos.utils.keyword :as k])
   (:import (org.lwjgl.glfw GLFW)))
 
 (defonce DICTIONARY

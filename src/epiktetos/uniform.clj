@@ -1,6 +1,6 @@
-(ns epictetus.uniform
-  (:require [epictetus.event :as event]
-            [epictetus.utils.reflection :refer [arity-eql?]])
+(ns epiktetos.uniform
+  (:require [epiktetos.event :as event]
+            [epiktetos.utils.reflection :refer [arity-eql?]])
 
   (:import  (org.lwjgl.opengl GL20 GL21 GL30 GL45)))
 
