@@ -19,10 +19,11 @@
 (defn delete-entity!
   "Remove an entity from rendering entities"
   [id]
-  (let [{:keys [program]} (get @state/entities id)
-        {layout :layout}  (get-in @state/system [:gl/engine :program program])]
-    (swap! state/rendering update-in [layout program] dissoc id)
-    (swap! state/entities dissoc id)))
+  (if-let [entity (get @state/entities id)]
+    (let [{:keys [program]} entity
+          {layout :layout}  (get-in @state/system [:gl/engine :program program])]
+      (swap! state/rendering update-in [layout program] dissoc id)
+      (swap! state/entities dissoc id))))
 
 (defn update-entity!
   "Update an entity map by providing a new one"
