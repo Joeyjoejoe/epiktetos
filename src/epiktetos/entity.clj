@@ -31,6 +31,13 @@
   (let [id (:id entity)]
     (swap! state/entities assoc id entity)))
 
+(defn update-entities!
+  "Update an entity map by providing a new one"
+  [entities]
+  (->> entities
+      (merge @state/entities)
+      (reset! state/entities)))
+
 (defn reset-all!
   "Update an entity map by providing a new one"
   [entities]
@@ -60,6 +67,7 @@
 
 (reg-fx :entity/render render-entity!)
 (reg-fx :entity/update update-entity!)
+(reg-fx :entities/update update-entities!)
 (reg-fx :entity/delete delete-entity!)
 (reg-fx :entity/delete-all delete-all!)
 (reg-fx :entity/reset-all reset-all!)
