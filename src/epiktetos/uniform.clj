@@ -23,7 +23,17 @@
    :float       (m->f GL20/glUniform1f 2)
    :bool        (m->f GL20/glUniform1i 2)
    :sampler2D   (m->f GL20/glUniform1i 2)
-   :samplerCube (m->f GL20/glUniform1i 2)})
+   :samplerCube (m->f GL20/glUniform1i 2)
+
+   :vec2  (m->f GL20/glUniform2f 3)
+   :vec3  (m->f GL20/glUniform3f 4)
+   :vec4  (m->f GL20/glUniform4f 5)
+   :ivec2 (m->f GL20/glUniform2i 3)
+   :ivec3 (m->f GL20/glUniform3i 4)
+   :ivec4 (m->f GL20/glUniform4i 5)
+   :bvec2 (m->f GL20/glUniform2i 3)
+   :bvec3 (m->f GL20/glUniform3i 4)
+   :bvec4 (m->f GL20/glUniform4i 5)})
 
 (defonce TYPE-COLL-FN
   {;; Scalars types
@@ -131,16 +141,20 @@
                                     g-value)]
 
          ;; TODO Most of this could be cached on first uniform-handler execution
-         ;; TODO (coll? u-val) => u-val not supported (clojure data structure vs java)
          (let [f (if (or (instance? java.nio.Buffer u-val)
                          (-> u-val class .isArray))
                    (get TYPE-COLL-FN u-type)
                    (get TYPE-FN u-type))]
 
-            (if (matnxm? u-type)
-              (f u-loc false u-val) ;; Add transpose parameter (false) for matrix u-types
-              (f u-loc u-val))))
+            (cond
+              ;; Matrix use an extra transpose parameter (false)
+              (matnxm? u-type) (f u-loc false u-val)
+              ;; clojure vectors use regular glUniform method
+              (coll? u-val)    (apply f (flatten [u-loc u-val]))
+              ;; JAVA arrays or direct buffer (LWJGL implementation detail)
+              :else (f u-loc u-val))))
 
+       ;; function output
        (cond
          ;; All queue uniforms processed once.
          (= (dec i-max) 0) u-queue
