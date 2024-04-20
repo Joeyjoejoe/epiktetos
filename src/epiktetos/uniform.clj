@@ -16,6 +16,7 @@
 ;; TYPE-FN and TYPE-COLL-FN map GLSL types to
 ;; opengl method used to set values of uniforms
 ;; TODO - add struct support
+;; TODO - add arrays support, ex: uniform float foo[6]
 ;; TODO - add "modern" types: unsigned int, double
 (defonce TYPE-FN
   {:int         (m->f GL20/glUniform1i 2)
