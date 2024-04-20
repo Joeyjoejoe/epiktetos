@@ -10,7 +10,7 @@
 
 (defn get-entity
   [cofx id]
-   (if-let [entity (get @state/entities id)]
+   (if-let [entity (state/entity id)]
      (assoc cofx id entity)
      (if (get GET-ALL-IDS id)
        (assoc cofx :all (mapv val @state/entities))
@@ -19,9 +19,9 @@
 (defn delete-entity!
   "Remove an entity from rendering entities"
   [id]
-  (if-let [entity (get @state/entities id)]
+  (if-let [entity (state/entity id)]
     (let [{:keys [program]} entity
-          {layout :layout}  (get-in @state/system [:gl/engine :program program])]
+          {layout :layout}  (state/program program)]
       (swap! state/rendering update-in [layout program] dissoc id)
       (swap! state/entities dissoc id))))
 
@@ -54,9 +54,10 @@
    on next loop iteration."
   ([entity]
    ;; TODO Assets cache (VBO duplication prevention & instance rendering)
+   ;; TODO Handle nil id or program
    (let [{:keys [id program]} entity
-         {layout :layout}     (get-in @state/system [:gl/engine :program program])
-         vao                  (get-in @state/system [:gl/engine :vao layout])]
+         {layout :layout}     (state/program program)
+         vao                  (state/vao layout)]
 
      (->> entity
           (vertices/gpu-load! vao)

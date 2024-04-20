@@ -43,5 +43,5 @@
 
 (reg-fx :loop/pause
         (fn pause-loop [_]
-          (let [window  (get @state/system :glfw/window)]
+          (let [window  (state/window)]
             (GLFW/glfwSetWindowShouldClose window true))))
