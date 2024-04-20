@@ -54,6 +54,7 @@
    on next loop iteration."
   ([entity]
    ;; TODO Assets cache (VBO duplication prevention & instance rendering)
+   ;; TODO Handle nil id or program
    (let [{:keys [id program]} entity
          {layout :layout}     (get-in @state/system [:gl/engine :program program])
          vao                  (get-in @state/system [:gl/engine :vao layout])]

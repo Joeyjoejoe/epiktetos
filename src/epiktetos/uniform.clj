@@ -26,12 +26,12 @@
 
 ;; TODO Implement new types and map their arguments
 ;; TODO Create get-type fn to handle not implemented types
-(def types-fn {:float (method->fn GL20/glUniform1f 2)
-               :int   (method->fn GL20/glUniform1i 2)
-               :vec2  (method->fn GL20/glUniform2f 3)
-               :vec3  (method->fn GL20/glUniform3f 4)
-               :vec4  (method->fn GL20/glUniform4f 5)
-               :mat4  (method->fn GL20/glUniformMatrix4fv 3)
+(def types-fn {:float     (method->fn GL20/glUniform1f 2)
+               :int       (method->fn GL20/glUniform1i 2)
+               :vec2      (method->fn GL20/glUniform2fv 2)
+               :vec3      (method->fn GL20/glUniform3f 4)
+               :vec4      (method->fn GL20/glUniform4f 5)
+               :mat4      (method->fn GL20/glUniformMatrix4fv 3)
                :sampler2D (method->fn GL20/glUniform1i 2)})
 
 
@@ -95,8 +95,9 @@
        (when-let [u-val (if handler (apply handler handler-args)
                                     g-value)]
          (let [f    (get types-fn u-type)
-               args (cond (arity-eql? f 3) [u-loc false u-val] ;; (GL20/glUniformMatrix4fv location transpose? u-val))
-                          :else            (flatten [u-loc u-val]))]
+               args (cond (= u-type :mat4) [u-loc false u-val] ;; (GL20/glUniformMatrix4fv location transpose? u-val))
+                          (= u-type :vec2) [u-loc u-val]
+                         :else            (flatten [u-loc u-val]))]
             (apply f args)))
 
        (cond
