@@ -1,5 +1,6 @@
 (ns epiktetos.uniform
   (:require [epiktetos.event :as event]
+            [epiktetos.utils.interop :refer [m->f]]
             [epiktetos.utils.reflection :refer [arity-eql?]])
 
   (:import  (org.lwjgl.opengl GL20 GL21 GL30 GL45)))
@@ -12,29 +13,59 @@
                             :program [:db :entities]
                             :entity  [:db :entities :entity]})
 
-;; TODO move me to utils
-(defmacro method->fn
-  [meth arity]
-  (let [args (take arity (map symbol [:a :b :c :d
-                                      :e :f :g :h
-                                      :i :j :k :l]))
-        signature (vec args)
-        body (conj args meth)]
-    `(fn ~signature
-       ~body)))
+;; TYPE-FN and TYPE-COLL-FN map GLSL types to
+;; opengl method used to set values of uniforms
+;; TODO - add struct support
+;; TODO - add "modern" types: unsigned int, double
+(defonce TYPE-FN
+  {:int         (m->f GL20/glUniform1i 2)
+   :float       (m->f GL20/glUniform1f 2)
+   :bool        (m->f GL20/glUniform1i 2)
+   :sampler2D   (m->f GL20/glUniform1i 2)
+   :samplerCube (m->f GL20/glUniform1i 2)})
 
+(defonce TYPE-COLL-FN
+  {;; Scalars types
+   :int         (m->f GL20/glUniform1iv 2)
+   :float       (m->f GL20/glUniform1fv 2)
+   :bool        (m->f GL20/glUniform1iv 2)
 
-;; TODO Implement new types and map their arguments
-;; TODO Create get-type fn to handle not implemented types
-(def types-fn {:float (method->fn GL20/glUniform1f 2)
-               :int   (method->fn GL20/glUniform1i 2)
-               :vec2  (method->fn GL20/glUniform2f 3)
-               :vec3  (method->fn GL20/glUniform3f 4)
-               :vec4  (method->fn GL20/glUniform4f 5)
-               :mat4  (method->fn GL20/glUniformMatrix4fv 3)
-               :sampler2D (method->fn GL20/glUniform1i 2)})
+   ;; Opaque types
+   :sampler2D   (m->f GL20/glUniform1iv 2)
+   :samplerCube (m->f GL20/glUniform1iv 2)
 
+   ;; Vectors types
+   :vec2  (m->f GL20/glUniform2fv 2)
+   :vec3  (m->f GL20/glUniform3fv 2)
+   :vec4  (m->f GL20/glUniform4fv 2)
+   :ivec2 (m->f GL20/glUniform2iv 2)
+   :ivec3 (m->f GL20/glUniform3iv 2)
+   :ivec4 (m->f GL20/glUniform4iv 2)
+   :bvec2 (m->f GL20/glUniform2iv 2)
+   :bvec3 (m->f GL20/glUniform3iv 2)
+   :bvec4 (m->f GL20/glUniform4iv 2)
 
+   ;; Matrix types
+   :mat2   (m->f GL20/glUniformMatrix2fv 3)
+   :mat2x2 (m->f GL20/glUniformMatrix2fv 3)
+   :mat2x3 (m->f GL21/glUniformMatrix2x3fv 3)
+   :mat2x4 (m->f GL21/glUniformMatrix2x4fv 3)
+   :mat3   (m->f GL20/glUniformMatrix3fv 3)
+   :mat3x2 (m->f GL21/glUniformMatrix3x2fv 3)
+   :mat3x3 (m->f GL20/glUniformMatrix3fv 3)
+   :mat3x4 (m->f GL21/glUniformMatrix3x4fv 3)
+   :mat4   (m->f GL20/glUniformMatrix4fv 3)
+   :mat4x2 (m->f GL21/glUniformMatrix4x2fv 3)
+   :mat4x3 (m->f GL21/glUniformMatrix4x3fv 3)
+   :mat4x4 (m->f GL20/glUniformMatrix4fv 3)})
+
+(defn matnxm?
+  [typ]
+  (-> #{:mat2 :mat2x2 :mat2x3 :mat2x4
+        :mat3 :mat3x2 :mat3x3 :mat3x4
+        :mat4 :mat4x2 :mat4x3 :mat4x4}
+      typ
+      boolean))
 
 (defn register-uniform
   "Register a uniform whose value is the result of executing handler function,
@@ -78,7 +109,10 @@
   "Purge u-queue of its stage uniforms by setting their
    values and returns a new queue of remaining uniforms.
    Side effects occurs when setting a uniform value through
-   opengl, u-queue remains unchanged."
+   opengl, u-queue remains unchanged.
+
+  Returns a queue with remaining uniforms that were not set
+  during provided u-stage"
   ([u-queue u-stage r-context]
    (loop [u-queue  u-queue
           i-max    (-> u-queue count)]
@@ -94,10 +128,17 @@
        ;; Set uniform value
        (when-let [u-val (if handler (apply handler handler-args)
                                     g-value)]
-         (let [f    (get types-fn u-type)
-               args (cond (arity-eql? f 3) [u-loc false u-val] ;; (GL20/glUniformMatrix4fv location transpose? u-val))
-                          :else            (flatten [u-loc u-val]))]
-            (apply f args)))
+
+         ;; TODO Most of this could be cached on first uniform-handler execution
+         ;; TODO (coll? u-val) => u-val not supported (clojure data structure vs java)
+         (let [f (if (or (instance? java.nio.Buffer u-val)
+                         (-> u-val class .isArray))
+                   (get TYPE-COLL-FN u-type)
+                   (get TYPE-FN u-type))]
+
+            (if (matnxm? u-type)
+              (f u-loc false u-val) ;; Add transpose parameter (false) for matrix u-types
+              (f u-loc u-val))))
 
        (cond
          ;; All queue uniforms processed once.
@@ -109,55 +150,5 @@
               (nil? g-value)) (recur (conj (pop u-queue) u)
                                      (dec i-max))
 
-         ;; Set following uniform
+         ;; Handle next uniform
          :else (recur (pop u-queue) (dec i-max)))))))
-
-;; Uniform path hierarchy :
-;; :foo < [:program-name :foo] <
-
-
-;;      - texture uniforms have sampler type
-;;        (https://www.khronos.org/opengl/wiki/Sampler_(GLSL))
-
-;; parsed from shader at startup [::name ::location ::type]
-;; {::name     :default
-;;  ::location 1
-;;  ::type     :sampler2D
-;;  ::stage    :program ;; or :entity
-;;  ::get-fn   'foo ;; ran on each loop iteration
-;;  ::set-fn   GL20/glUniformMatrix4fv}
-;;
-;;
-;;
-;;  : (method->fn GL20/glUniform1fv 3)
-;; : (method->fn GL20/glUniform1i 2)
-;; : (method->fn GL20/glUniform1iv 3)
-;; : (method->fn GL30/glUniform1ui 2)
-;; : (method->fn GL30/glUniform1uiv 3)
-;; :
-;; : (method->fn GL20/glUniform2fv 3)
-;; : (method->fn GL20/glUniform2i 3)
-;; : (method->fn GL20/glUniform2iv 3)
-;;
-;; : (method->fn GL30/glUniform2uiv 3)
-;; :
-;; : (method->fn GL20/glUniform3fv 3)
-;; : (method->fn GL20/glUniform3i 4)
-;; : (method->fn GL20/glUniform3iv 3)
-;; : (method->fn GL30/glUniform3ui 4)
-;; : (method->fn GL30/glUniform3uiv 3)
-;; : (method->fn GL20/glUniform4f 5)
-;; : (method->fn GL20/glUniform4fv 3)
-;; : (method->fn GL20/glUniform4i 5)
-;; : (method->fn GL20/glUniform4iv 3)
-;; : (method->fn GL30/glUniform4ui 5)
-;; : (method->fn GL30/glUniform4uiv 3)
-;; : (method->fn GL20/glUniformMatrix2fv 4)
-;; : (method->fn GL21/glUniformMatrix2x3fv 4)
-;; : (method->fn GL21/glUniformMatrix2x4fv 4)
-;; : (method->fn GL20/glUniformMatrix3fv 4)
-;; : (method->fn GL21/glUniformMatrix3x2fv 4)
-;; : (method->fn GL21/glUniformMatrix3x4fv 4)
-;; : (method->fn GL20/glUniformMatrix4fv 3)
-;; : (method->fn GL21/glUniformMatrix4x2fv 4)
-;; : (method->fn GL21/glUniformMatrix4x3fv 4)

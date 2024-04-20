@@ -18,6 +18,24 @@
   :block/members      #"(?m)^\s*(\S+)\s+([^;\s]+);"
 })
 
+(defonce UNIFORM-TYPES
+  #{;; Scalars types
+    :int :float :bool
+
+    ;; Opaque types
+    :sampler2D :samplerCube
+
+    ;; Vectors types
+    :vec2 :vec3 :vec4
+    :ivec2 :ivec3 :ivec4
+    :bvec2 :bvec3 :bvec4
+
+    ;; Matrix types
+    :mat2 :mat2x2 :mat2x3 :mat2x4
+    :mat3 :mat3x2 :mat3x3 :mat3x4
+    :mat4 :mat4x2 :mat4x3 :mat4x4})
+
+
 (defn- block-members
   "Given a GLSL block content string `s`, return a map
    of its members"
@@ -45,6 +63,15 @@
        (reduce #(apply assoc %1 %2) {})
   ))
 
+;; TODO Move up error handling to add file path to to its message
+(defn- parse-uniform
+  [u-match]
+  (let [[_ u-typ u-name] u-match]
+    (if ((keyword u-typ) UNIFORM-TYPES)
+      (vector (keyword u-name)
+              (keyword u-typ))
+      (throw (java.lang.UnsupportedOperationException. (str "Uniform type: " u-typ " is not implemented"))))))
+
 (defn- map-uniforms
   "Return a map of uniform names and their types declared in a shader string,
    using the one-liner glsl syntax variations:
@@ -57,8 +84,7 @@
   (let [structs (map-structs shader-str)]
     (->> shader-str
          (re-seq (:uniform/one-liners glsl-regexps))
-         (mapv #(vector (keyword (last %))
-                        (keyword (second %)))))))
+         (mapv parse-uniform))))
 
 (defn- map-inputs [shader-str] nil)
 (defn- map-outputs [shader-str] nil)
