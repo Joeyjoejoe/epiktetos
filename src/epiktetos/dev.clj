@@ -8,11 +8,11 @@
 ;; https://github.com/weavejester/integrant-repl
 ;; Provides worflow function (prep) (init) (go) (reset) (halt)
 
-(if-let [config (io/resource "engine.edn")]
+(if-let [config (io/resource "epiktetos.edn")]
   (integrant.repl/set-prep! #(ig/prep (-> config
                                           slurp
                                           ig/read-string)))
-  (throw (Exception. "Missing config file: engine.edn")))
+  (throw (Exception. "Missing config file: epiktetos.edn")))
 
 (defn start
   "Start engine"
