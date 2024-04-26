@@ -128,42 +128,42 @@
    (loop [u-queue  u-queue
           i-max    (-> u-queue count)]
 
-     (let [[u-name u-type u-loc :as u]      (peek u-queue)
-           {:keys [program global-u]} r-context
-           handler      (or (event/get-handler u-stage [program u-name])
-                            (event/get-handler u-stage u-name))
-           g-value      (get global-u u-name)
-           stage-ks     (get UNIFORM-STAGES u-stage)
-           handler-args (mapv #(get r-context %) stage-ks)]
+     (when-let [[u-name u-type u-loc :as u] (peek u-queue)]
+       (let [{:keys [program global-u]} r-context
+             handler      (or (event/get-handler u-stage [program u-name])
+                              (event/get-handler u-stage u-name))
+             g-value      (get global-u u-name)
+             stage-ks     (get UNIFORM-STAGES u-stage)
+             handler-args (mapv #(get r-context %) stage-ks)]
 
-       ;; Set uniform value
-       (when-let [u-val (if handler (apply handler handler-args)
-                                    g-value)]
+         ;; Set uniform value
+         (when-let [u-val (if handler (apply handler handler-args)
+                            g-value)]
 
-         ;; TODO Most of this could be cached on first uniform-handler execution
-         (let [f (if (or (instance? java.nio.Buffer u-val)
-                         (-> u-val class .isArray))
-                   (get TYPE-COLL-FN u-type)
-                   (get TYPE-FN u-type))]
+           ;; TODO Most of this could be cached on first uniform-handler execution
+           (let [f (if (or (instance? java.nio.Buffer u-val)
+                           (-> u-val class .isArray))
+                     (get TYPE-COLL-FN u-type)
+                     (get TYPE-FN u-type))]
 
-            (cond
-              ;; Matrix use an extra transpose parameter (false)
-              (matnxm? u-type) (f u-loc false u-val)
-              ;; clojure vectors use regular glUniform method
-              (coll? u-val)    (apply f (flatten [u-loc u-val]))
-              ;; JAVA arrays or direct buffer (LWJGL implementation detail)
-              :else (f u-loc u-val))))
+             (cond
+               ;; Matrix use an extra transpose parameter (false)
+               (matnxm? u-type) (f u-loc false u-val)
+               ;; clojure vectors use regular glUniform method
+               (coll? u-val)    (apply f (flatten [u-loc u-val]))
+               ;; JAVA arrays or direct buffer (LWJGL implementation detail)
+               :else (f u-loc u-val))))
 
-       ;; function output
-       (cond
-         ;; All queue uniforms processed once.
-         (= (dec i-max) 0) u-queue
+         ;; function output
+         (cond
+           ;; All queue uniforms processed once.
+           (<= (dec i-max) 0) u-queue
 
-         ;; Not a global or a program uniform ?
-         ;; Re-enqueue it for last attempt in ::entity stage
-         (and (nil? handler)
-              (nil? g-value)) (recur (conj (pop u-queue) u)
-                                     (dec i-max))
+           ;; Not a global or a program uniform ?
+           ;; Re-enqueue it for last attempt in ::entity stage
+           (and (nil? handler)
+                (nil? g-value)) (recur (conj (pop u-queue) u)
+                                       (dec i-max))
 
-         ;; Handle next uniform
-         :else (recur (pop u-queue) (dec i-max)))))))
+           ;; Handle next uniform
+           :else (recur (pop u-queue) (dec i-max))))))))
