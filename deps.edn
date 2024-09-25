@@ -3,8 +3,6 @@
            integrant/integrant {:mvn/version "0.8.0"}
            integrant/repl {:mvn/version "0.3.2"}
 
-           org.joml/joml       {:mvn/version "1.10.5"}
-
            ;; Exclude SLF4J logging backends to ensure only logback is used
            org.clojure/tools.deps.alpha {:mvn/version "0.6.480", :exclusions [org.slf4j/slf4j-nop]}
            ch.qos.logback/logback-classic {:mvn/version "1.2.11"}
@@ -33,7 +31,8 @@
                   :extra-deps {lambdaisland/kaocha {:mvn/version "1.63.998"}}}
 
            :dev  {:extra-paths ["env/dev"]
-                  :extra-deps  {integrant/repl {:mvn/version "0.3.2"}}}
+                  :extra-deps  {integrant/repl {:mvn/version "0.3.2"}
+                                org.joml/joml  {:mvn/version "1.10.5"}}}
 
            :repl {:extra-deps {reply/reply {:mvn/version "0.5.0"}}
                   :main-opts ["-m" "reply.main" "--port" "34001"]}
