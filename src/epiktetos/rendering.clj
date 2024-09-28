@@ -16,8 +16,10 @@
                    :global-u  (u/compute-global-u @state/db)}]
 
     (doseq [[vao-layout programs] @state/rendering]
-      (let [{:keys [:vao/id :vao/stride]} (state/vao vao-layout)]
+      (when (nil? vao-layout)
+        (throw (Exception. (str "Shader programs not found " (keys programs)))))
 
+      (let [{:keys [:vao/id :vao/stride]} (state/vao vao-layout)]
         (GL30/glBindVertexArray id)
 
         (doseq [[program entities] programs]

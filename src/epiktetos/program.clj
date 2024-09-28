@@ -170,19 +170,24 @@
   (apply merge-with
          into
          (for [[stage path] pipeline]
-           (let [id       (-> stage opengl/DICTIONARY GL20/glCreateShader)
-                 source   (-> path (io/resource) (slurp))
-                 metadata (glsl/analyze-shader source)]
 
-             (when (= 0 id)
-               (throw (Exception. (str "Error creating shader of type: " stage))))
+           (do (when-not (io/resource path)
+                 (throw (java.io.FileNotFoundException.
+                          (str "Shader file not found at " path))))
 
-             (GL20/glShaderSource id source)
-             (GL20/glCompileShader id)
+               (let [id       (-> stage opengl/DICTIONARY GL20/glCreateShader)
+                     source   (-> path (io/resource) (slurp))
+                     metadata (glsl/analyze-shader source)]
 
-             (when (= 0 (GL20/glGetShaderi id GL20/GL_COMPILE_STATUS))
-               (throw (Exception. (str "shader compilation error: " [stage path] (GL20/glGetShaderInfoLog id 1024)))))
-             (assoc metadata :shader/ids [id])))))
+                 (when (= 0 id)
+                   (throw (Exception. (str "Error creating shader of type: " stage))))
+
+                 (GL20/glShaderSource id source)
+                 (GL20/glCompileShader id)
+
+                 (when (= 0 (GL20/glGetShaderi id GL20/GL_COMPILE_STATUS))
+                   (throw (Exception. (str "shader compilation error: " [stage path] (GL20/glGetShaderInfoLog id 1024)))))
+                 (assoc metadata :shader/ids [id]))))))
 
 (defmethod ig/init-key
   :gl/engine

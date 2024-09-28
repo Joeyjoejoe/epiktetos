@@ -14,6 +14,11 @@
   ([]
    (init-systems DEFAULT_CONFIG_PATH))
   ([config-path]
+
+   (when-not (io/resource config-path)
+     (throw (java.io.FileNotFoundException.
+              (str "Config file not found: " config-path))))
+
    (-> config-path
        io/resource
        slurp
