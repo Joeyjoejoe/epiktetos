@@ -1,0 +1,18 @@
+{:glfw/window {:title                          "Epiktectos"
+               :width                          800
+               :height                         600
+               :display                        :windowed
+               :mode/cursor                    :cursor/normal
+               :mode/sticky-keys               false
+               :hint.window/visible            false
+               :hint.window/resizable          true
+               :hint.context/version.maj       4
+               :hint.context/version.min       3
+               :hint.context/gl.profile        :gl.profile/core
+               :hint.context/gl.forward-compat true}
+
+ :gl/engine {:context #ig/ref :glfw/window
+             :programs [{:name     :epiktetos/default
+                         :layout   [:vec3f/coordinates :vec3f/color]
+                         :pipeline [[:vertex   "epiktetos/shaders/monochrome.vert"]
+                                    [:fragment "epiktetos/shaders/monochrome.frag"]]}]}}
