@@ -3,7 +3,7 @@
             [integrant.repl :as ig-repl] ;; :refer [clear go halt prep init reset reset-all]]
             [integrant.repl.state :refer [system config]]
             [clojure.java.io :as io]
-            [epiktetos.core :as core]))
+            [epiktetos.startup :as startup]))
 
 ;; https://github.com/weavejester/integrant-repl
 ;; Provides worflow function (prep) (init) (go) (reset) (halt)
@@ -18,12 +18,12 @@
   "Start engine"
   []
   (ig-repl/go)
-  (core/start nil system))
+  (startup/start-engine! system))
 
 (defn resume
   "Resume a paused loop"
   []
-  (core/start nil system))
+  (startup/start-engine! system))
 
 (defn reset
   "Restart engine (drop all states)"

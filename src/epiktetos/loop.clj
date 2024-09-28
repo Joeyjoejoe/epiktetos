@@ -11,40 +11,41 @@
 
 (def lag (atom 0.0))
 
-(defn start [{window :glfw/window}]
-
+(defn start
+  [{window :glfw/window} startup-events]
   (loop [{:as    loop-iter
           {:keys [curr delta]} :time} {:iter 1
-                                        :time {:curr (GLFW/glfwGetTime)
-                                               :prev 0
-                                               :delta 0}}]
+                                       :time {:curr (GLFW/glfwGetTime)
+                                              :prev 0
+                                              :delta 0}}
+         iter-events  (conj startup-events [:epiktetos.event/loop.iter loop-iter])]
 
-      (swap! lag #(+ % delta))
-      (swap! state/db assoc :core/loop loop-iter)
+    (swap! lag #(+ % delta))
+    (swap! state/db assoc :core/loop loop-iter)
 
-      ;; Bind :epiktetos.event/loop.iter, a user definable event.
-      ;; It is guaranteed to run once per loop iterations
-      ;; user/cognitive-load
-      (event/execute [:epiktetos.event/loop.iter loop-iter])
+    ;; Bind :epiktetos.event/loop.iter, a user definable event.
+    ;; It is guaranteed to run once per loop iterations
+    ;; user/cognitive-load
+    (doseq [e iter-events] (event/execute e))
 
-      ;; TODO apply entities transformations that can be multi threaded:
-      ;; like motions, animations ?
+    ;; TODO apply entities transformations that can be multi threaded:
+    ;; like motions, animations ?
 
 
-      (while (>= @lag 0.1)
+    (while (>= @lag 0.1)
 
-        ;; Consume events queue
-        (while (seq @event/queue)
-          (let [e (peek @event/queue)]
-            (event/execute e)
-            (swap! event/queue pop)))
+      ;; Consume events queue
+      (while (seq @event/queue)
+        (let [e (peek @event/queue)]
+          (event/execute e)
+          (swap! event/queue pop)))
 
-        (swap! lag #(- % 0.1)))
+      (swap! lag #(- % 0.1)))
 
-      (rendering/pipeline)
+    (rendering/pipeline)
 
-      (GLFW/glfwSwapBuffers window)
-      (GLFW/glfwPollEvents)
+    (GLFW/glfwSwapBuffers window)
+    (GLFW/glfwPollEvents)
 
     (when-not (GLFW/glfwWindowShouldClose window)
       (-> loop-iter
@@ -52,4 +53,6 @@
           (assoc-in [:time :prev]  curr)
           (assoc-in [:time :delta] (- (GLFW/glfwGetTime) curr))
           (update :iter inc)
-          recur))))
+          ;; TODO Explore utility of replacing empty vec by a
+          ;; user accessible location in state ?
+          (recur [])))))

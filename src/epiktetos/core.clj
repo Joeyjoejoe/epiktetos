@@ -5,6 +5,7 @@
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
             [epiktetos.loop :as game-loop]
+            [epiktetos.startup :as startup]
             [epiktetos.event :as event]
             [epiktetos.uniform :as u]
             [epiktetos.entity :as entity]
@@ -15,24 +16,15 @@
 
 (def db state/db)
 
-(defn start
-  ([]
-   (start "engine-default.edn"))
-
-  ([conf-path]
-   (let [system (-> conf-path
-                    io/resource
-                    slurp
-                    ig/read-string
-                    ig/prep
-                    ig/init)]
-     (start conf-path system)))
-
-  ([_ sys]
-
-     (GLFW/glfwSetWindowShouldClose (:glfw/window sys) false)
-     (reset! state/system sys)
-     (game-loop/start @state/system)))
+(defn run
+  "Run the engine.
+   - startup-events is a vector of events to dispatch
+   - config-path is a path to an edn configuration file"
+  ([startup-events]
+   (run startup/DEFAULT_CONFIG_PATH startup-events))
+  ([config-path startup-events]
+  (let [systems (startup/init-systems config-path)]
+    (startup/start-engine! systems startup-events))))
 
 (defn reg-event
   "Set the handler to an event id, with the option to add additional coeffects.
