@@ -5,7 +5,7 @@
             [epiktetos.loop :as game-loop])
   (:import (org.lwjgl.glfw GLFW)))
 
-(defonce DEFAULT_CONFIG_PATH "engine-default.edn")
+(defonce DEFAULT_CONFIG_PATH "epiktetos.edn")
 
 (defn init-systems
   "Start engine's systems as defined in integrant
