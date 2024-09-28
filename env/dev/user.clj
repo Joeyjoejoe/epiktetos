@@ -5,13 +5,15 @@
             [epiktetos.coeffect :as cofx :refer [reg-cofx]]
             [epiktetos.utils.buffer :as util]
             [epiktetos.state :as state]
-            [epiktetos.dev :refer [start stop resume reset]])
+            [epiktetos.dev :as dev :refer [start stop resume reset]])
 
 
   (:import (org.lwjgl.glfw GLFW)
            (org.joml Matrix4f Vector3f)
            (org.lwjgl BufferUtils)
            (org.lwjgl.opengl GL45)))
+
+(dev/set-config-path "epiktetos.edn")
 
 ;; (defn time-back-and-forth
 ;;   [t duration]

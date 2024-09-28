@@ -7,15 +7,24 @@
 
 ;; https://github.com/weavejester/integrant-repl
 ;; Provides worflow function (prep) (init) (go) (reset) (halt)
-(if-let [config (io/resource startup/DEFAULT_CONFIG_PATH)]
-  (integrant.repl/set-prep! #(ig/prep (-> config slurp ig/read-string)))
-  (throw (Exception. (str "Missing config file: " startup/DEFAULT_CONFIG_PATH))))
+
+
+(defn set-config-path
+  "Initialize engine systems"
+  ([]
+   (set-config-path startup/DEFAULT_CONFIG_PATH))
+  ([path]
+   (if-let [config (io/resource path)]
+     (integrant.repl/set-prep! #(ig/prep (-> config slurp ig/read-string)))
+     (throw (Exception. (str "Missing config file: " path))))))
 
 (defn start
   "Start engine"
-  []
-  (ig-repl/go)
-  (startup/start-engine! system))
+  ([]
+   (start []))
+  ([events]
+   (ig-repl/go)
+   (startup/start-engine! system events)))
 
 (defn resume
   "Resume a paused loop"
@@ -32,3 +41,11 @@
   "Stop engine"
   []
   (ig-repl/halt))
+
+;; Initialize default startup config
+(set-config-path)
+
+;; Call set-config-path again to overwrite
+;; the defaults in your development namespace :
+;;    (set-config-path "custom-config.edn")
+
