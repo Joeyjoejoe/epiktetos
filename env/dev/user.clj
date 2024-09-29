@@ -5,7 +5,7 @@
             [epiktetos.coeffect :as cofx :refer [reg-cofx]]
             [epiktetos.utils.buffer :as util]
             [epiktetos.state :as state]
-            [epiktetos.dev :as dev :refer [start stop resume reset]])
+            [epiktetos.dev :as dev :refer [start stop resume reset system config]])
 
 
   (:import (org.lwjgl.glfw GLFW)

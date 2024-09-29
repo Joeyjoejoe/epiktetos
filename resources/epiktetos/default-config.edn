@@ -1,4 +1,4 @@
-{:glfw/window {:title                          "Epiktectos"
+{:glfw/window {:title                          "Epiktetos"
                :width                          800
                :height                         600
                :display                        :windowed
