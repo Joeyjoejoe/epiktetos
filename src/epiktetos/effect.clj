@@ -7,10 +7,7 @@
             [clojure.pprint :refer [pprint]])
   (:import (org.lwjgl.glfw GLFW)))
 
-(defn reg-fx
-  "A fx is a function that takes the coeffects map and
-  an optional parameter, and return a modified version
-  of the coeffects map"
+(defn register
   [id fx-fn]
   (event/register :effect id fx-fn))
 
@@ -30,18 +27,4 @@
                    (effect-fn effect-value)
                    (println "no handler registered for effect:" effect-key ". Ignoring.")))))))
 
-;; CORE EFFECTS
 
-(reg-fx :db
-        (fn update-db! [new-db]
-          (reset! state/db new-db)))
-
-(reg-fx :event/dispatch
-        (fn dispatch-event! [events]
-          (doseq [e events]
-            (event/dispatch e))))
-
-(reg-fx :loop/pause
-        (fn pause-loop [_]
-          (let [window  (state/window)]
-            (GLFW/glfwSetWindowShouldClose window true))))

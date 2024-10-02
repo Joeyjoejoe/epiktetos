@@ -49,6 +49,13 @@
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
 
+(defn reg-fx
+  "An effect, aka fx, is a function that takes a coeffects map and
+   an optional parameter, and return a modified version
+   of the coeffects map"
+  [id f]
+  (fx/register id f))
+
 (defn reg-u
   "Register a uniform handler function ran at rendering time and returning
   uniform's value.
@@ -97,4 +104,29 @@
   (fn loop-infos [cofx fx]
     (let [{[_ loop-iter] :event} cofx]
       (assoc-in fx [:db :core/loop] loop-iter))))
+
+
+;; CORE EFFECTS
+
+(reg-fx :db
+        (fn update-db! [new-db]
+          (reset! state/db new-db)))
+
+(reg-fx :event/dispatch
+        (fn dispatch-event! [events]
+          (doseq [e events]
+            (event/dispatch e))))
+
+(reg-fx :loop/pause
+        (fn pause-loop [_]
+          (let [window  (state/window)]
+            (GLFW/glfwSetWindowShouldClose window true))))
+
+(reg-fx :entity/render       entity/render!)
+(reg-fx :entity/update       entity/update!)
+(reg-fx :entity/batch-update entity/batch-update!) ;
+(reg-fx :entity/delete       entity/delete!)
+(reg-fx :entity/delete-all   entity/delete-all!)
+(reg-fx :entity/reset-all    entity/reset-all!)
+
 

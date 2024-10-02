@@ -1,6 +1,5 @@
 (ns epiktetos.entity
-  (:require [epiktetos.effect :refer [reg-fx]]
-            [epiktetos.coeffect :refer [reg-cofx cofx-error]]
+  (:require [epiktetos.coeffect :refer [reg-cofx cofx-error]]
             [epiktetos.state  :as state]
             [epiktetos.texture :as textures]
             [epiktetos.vertices :as vertices]))
@@ -16,22 +15,22 @@
        (assoc cofx :all (mapv val @state/entities))
        (cofx-error cofx :entity/get id "Entity not found"))))
 
-(defn delete-entity!
+(defn delete!
   "Remove an entity from rendering entities"
-  [id]
+  ([id]
   (if-let [entity (state/entity id)]
     (let [{:keys [program]} entity
           {layout :layout}  (state/program program)]
       (swap! state/rendering update-in [layout program] dissoc id)
-      (swap! state/entities dissoc id))))
+      (swap! state/entities dissoc id)))))
 
-(defn update-entity!
+(defn update!
   "Update an entity map by providing a new one"
   [entity]
   (let [id (:id entity)]
     (swap! state/entities assoc id entity)))
 
-(defn update-entities!
+(defn batch-update!
   "Update an entity map by providing a new one"
   [entities]
   (->> entities
@@ -49,7 +48,7 @@
   (reset! state/entities {})
   (reset! state/rendering {}))
 
-(defn render-entity!
+(defn render!
   "Register an new entity in state/entities and load assets for rendering
    on next loop iteration."
   ([entity]
@@ -65,14 +64,6 @@
           (swap! state/entities assoc id))
 
      (swap! state/rendering assoc-in [layout program id] true))))
-
-(reg-fx :entity/render render-entity!)
-(reg-fx :entity/update update-entity!)
-(reg-fx :entities/update update-entities!)
-(reg-fx :entity/delete delete-entity!)
-(reg-fx :entity/delete-all delete-all!)
-(reg-fx :entity/reset-all reset-all!)
-
 
 (reg-cofx :entity/get get-entity)
 (reg-cofx :entity/get-all
