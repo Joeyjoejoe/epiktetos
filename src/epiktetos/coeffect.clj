@@ -57,7 +57,3 @@
                           #(cofx-error % id value (cons (.toString e) (.getStackTrace e))))))
                   (update context :coeffects
                           #(cofx-error % id value "cofx not registered")))))))
-
-(def inject-system (inject :inject-system))
-(def inject-db (inject :inject-db))
-(def error-logger (inject :error-logger))

@@ -1,11 +1,8 @@
 (ns epiktetos.core
-  (:require [integrant.core :as ig]
-            [clojure.java.io :as io]
-            [clojure.pprint :refer [pprint]]
+  (:require [clojure.pprint :refer [pprint]]
             [epiktetos.state :as state]
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
-            [epiktetos.loop :as game-loop]
             [epiktetos.startup :as startup]
             [epiktetos.event :as event]
             [epiktetos.uniform :as u]
@@ -27,28 +24,6 @@
   (let [systems (startup/init-systems config-path)]
     (startup/start-engine! systems startup-events))))
 
-(defn reg-event
-  "Set the handler to an event id, with the option to add additional coeffects.
-
-  Handler are pure functions that takes two arguments:
-  - a map of coeffects containing input data for the handler function.
-  - a map of effects that the handler function must return (modified or not).
-
-  Coeffects and effects can be registered with reg-cofx and reg-fx functions"
-  ([id handler-fn]
-   (reg-event id [] handler-fn))
-  ([id coeffects handler-fn]
-   (let [handler (->interceptor
-                   {:id     :event-fn
-                    :before (fn handler [context]
-                              (let [{:keys [db] :as cofx} (:coeffects context)
-                                    fx {:db db}]
-
-                                (->> (handler-fn cofx fx)
-                                     (assoc context :effects))))})
-         interceptors [fx/do-fx cofx/inject-db cofx/inject-system coeffects cofx/error-logger handler]
-         chain        (->> interceptors flatten (remove nil?))]
-     (event/register :event id chain))))
 
 (defn reg-u
   "Register a uniform handler function ran at rendering time and returning
@@ -87,51 +62,6 @@
   [upath f]
     (u/register-entity-uniform upath f))
 
-;; CORE EVENTS
-
-(reg-event
-  [:press :escape]
-  (fn quit-flag [_ fx]
-    (assoc fx :loop/pause true)))
-
-(reg-event ::event/loop.iter
-  (fn loop-infos [cofx fx]
-    (let [{[_ loop-iter] :event} cofx]
-      (assoc-in fx [:db :core/loop] loop-iter))))
-
-
-;; CORE EFFECTS
-
-(defn reg-fx
-  "An effect, aka fx, is a function that takes a coeffects map and
-   an optional parameter, and return a modified version
-   of the coeffects map"
-  [id fx-fn]
-  (fx/register id fx-fn))
-
-(reg-fx :db
-        (fn update-db! [new-db]
-          (reset! state/db new-db)))
-
-(reg-fx :event/dispatch
-        (fn dispatch-event! [events]
-          (doseq [e events]
-            (event/dispatch e))))
-
-(reg-fx :loop/pause
-        (fn pause-loop [_]
-          (let [window  (state/window)]
-            (GLFW/glfwSetWindowShouldClose window true))))
-
-(reg-fx :entity/render       entity/render!)
-(reg-fx :entity/update       entity/update!)
-(reg-fx :entity/batch-update entity/batch-update!) ;
-(reg-fx :entity/delete       entity/delete!)
-(reg-fx :entity/delete-all   entity/delete-all!)
-(reg-fx :entity/reset-all    entity/reset-all!)
-
-
-;; CORE COEFFECTS
 
 (defn reg-cofx
   "A cofx is a function that takes a coeffects map and
@@ -166,3 +96,71 @@
           (fn get-all-entities
             [coeffects]
             (assoc coeffects :entity @state/entities)))
+
+
+(defn reg-event
+  "Set the handler to an event id, with the option to add additional coeffects.
+
+  Handler are pure functions that takes two arguments:
+  - a map of coeffects containing input data for the handler function.
+  - a map of effects that the handler function must return (modified or not).
+
+  Coeffects and effects can be registered with reg-cofx and reg-fx functions"
+  ([id handler-fn]
+   (reg-event id [] handler-fn))
+  ([id coeffects handler-fn]
+   (let [handler (->interceptor
+                   {:id     :event-fn
+                    :before (fn handler [context]
+                              (let [{:keys [db] :as cofx} (:coeffects context)
+                                    fx {:db db}]
+
+                                (->> (handler-fn cofx fx)
+                                     (assoc context :effects))))})
+         interceptors [fx/do-fx
+                       (inject-cofx :inject-db)
+                       (inject-cofx :inject-system)
+                       coeffects
+                       (inject-cofx :error-logger)
+                       handler]
+         chain        (->> interceptors flatten (remove nil?))]
+     (event/register :event id chain))))
+
+(reg-event
+  [:press :escape]
+  (fn quit-flag [_ fx]
+    (assoc fx :loop/pause true)))
+
+(reg-event ::event/loop.iter
+  (fn loop-infos [cofx fx]
+    (let [{[_ loop-iter] :event} cofx]
+      (assoc-in fx [:db :core/loop] loop-iter))))
+
+
+(defn reg-fx
+  "An effect, aka fx, is a function that takes a coeffects map and
+   an optional parameter, and return a modified version
+   of the coeffects map"
+  [id fx-fn]
+  (fx/register id fx-fn))
+
+(reg-fx :db
+        (fn update-db! [new-db]
+          (reset! state/db new-db)))
+
+(reg-fx :event/dispatch
+        (fn dispatch-event! [events]
+          (doseq [e events]
+            (event/dispatch e))))
+
+(reg-fx :loop/pause
+        (fn pause-loop [_]
+          (let [window  (state/window)]
+            (GLFW/glfwSetWindowShouldClose window true))))
+
+(reg-fx :entity/render       entity/render!)
+(reg-fx :entity/update       entity/update!)
+(reg-fx :entity/batch-update entity/batch-update!) ;
+(reg-fx :entity/delete       entity/delete!)
+(reg-fx :entity/delete-all   entity/delete-all!)
+(reg-fx :entity/reset-all    entity/reset-all!)

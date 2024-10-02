@@ -19,11 +19,11 @@
            :type  GL11/GL_FLOAT
            :count 3}
 
-   :vec3i {:bytes (* 3 java.lang.Float/BYTES)
+   :vec3i {:bytes (* 3 java.lang.Integer/BYTES)
            :type  GL11/GL_INT
            :count 3}
 
-   :vec3b {:bytes (* 3 java.lang.Float/BYTES)
+   :vec3b {:bytes (* 3 java.lang.Byte/BYTES)
            :type  GL11/GL_BYTE
            :count 3}
 
