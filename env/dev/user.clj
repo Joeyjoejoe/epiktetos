@@ -1,8 +1,7 @@
 (ns user
-  (:require [epiktetos.core :refer [reg-event reg-u reg-eu]]
+  (:require [epiktetos.core :refer [reg-event reg-cofx inject-cofx reg-fx reg-u reg-eu]]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
-            [epiktetos.coeffect :as cofx :refer [reg-cofx]]
             [epiktetos.utils.buffer :as util]
             [epiktetos.state :as state]
             [epiktetos.dev :as dev :refer [start stop resume reset system config]])
@@ -123,13 +122,13 @@
 
 (reg-event
   [:press :space]
-  [(cofx/inject :edn/load "cube.edn")]
+  [(inject-cofx :edn/load "cube.edn")]
   (fn [{model :edn/load} fx]
     (assoc fx :entity/render (assoc model :id :cube))))
 
 (reg-event
   [:repeat :space]
-  [(cofx/inject :edn/load "cube.edn")]
+  [(inject-cofx :edn/load "cube.edn")]
   (fn render-random-cube [{model :edn/load} fx]
     (let [[min max] [-10 10]
           position  [(+ (rand min) (rand max))

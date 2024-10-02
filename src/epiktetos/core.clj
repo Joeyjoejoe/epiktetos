@@ -1,6 +1,7 @@
 (ns epiktetos.core
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
+            [clojure.pprint :refer [pprint]]
             [epiktetos.state :as state]
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
@@ -48,13 +49,6 @@
          interceptors [fx/do-fx cofx/inject-db cofx/inject-system coeffects cofx/error-logger handler]
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
-
-(defn reg-fx
-  "An effect, aka fx, is a function that takes a coeffects map and
-   an optional parameter, and return a modified version
-   of the coeffects map"
-  [id f]
-  (fx/register id f))
 
 (defn reg-u
   "Register a uniform handler function ran at rendering time and returning
@@ -108,6 +102,13 @@
 
 ;; CORE EFFECTS
 
+(defn reg-fx
+  "An effect, aka fx, is a function that takes a coeffects map and
+   an optional parameter, and return a modified version
+   of the coeffects map"
+  [id fx-fn]
+  (fx/register id fx-fn))
+
 (reg-fx :db
         (fn update-db! [new-db]
           (reset! state/db new-db)))
@@ -130,3 +131,38 @@
 (reg-fx :entity/reset-all    entity/reset-all!)
 
 
+;; CORE COEFFECTS
+
+(defn reg-cofx
+  "A cofx is a function that takes a coeffects map and
+   an optional parameter, and return a modified version
+   of the coeffects map"
+  [id cofx-fn]
+  (cofx/register id cofx-fn))
+
+(defn inject-cofx
+  "Add a cofx to an event registration"
+  ([id]
+  (cofx/inject id))
+  ([id value]
+   (cofx/inject id value)))
+
+(reg-cofx :inject-system
+          (fn [coeffects]
+            (assoc coeffects :system @state/system)))
+
+(reg-cofx :inject-db
+          (fn [coeffects]
+            (assoc coeffects :db @state/db)))
+
+(reg-cofx :error-logger
+          (fn [coeffects]
+            (when-let [errors (:errors coeffects)]
+              (doseq [err errors] (pprint err)))
+            coeffects))
+
+(reg-cofx :entity/get entity/get-entity)
+(reg-cofx :entity/get-all
+          (fn get-all-entities
+            [coeffects]
+            (assoc coeffects :entity @state/entities)))

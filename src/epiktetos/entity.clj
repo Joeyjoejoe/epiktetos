@@ -1,5 +1,5 @@
 (ns epiktetos.entity
-  (:require [epiktetos.coeffect :refer [reg-cofx cofx-error]]
+  (:require [epiktetos.coeffect :refer [cofx-error]]
             [epiktetos.state  :as state]
             [epiktetos.texture :as textures]
             [epiktetos.vertices :as vertices]))
@@ -64,18 +64,3 @@
           (swap! state/entities assoc id))
 
      (swap! state/rendering assoc-in [layout program id] true))))
-
-(reg-cofx :entity/get get-entity)
-(reg-cofx :entity/get-all
-          (fn get-all-entities
-            [coeffects]
-            (assoc coeffects :entity @state/entities)))
-
-
-
-
-
-
-
-
-

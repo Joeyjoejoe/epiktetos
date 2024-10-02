@@ -26,5 +26,3 @@
                  (if-let [effect-fn (event/get-handler :effect effect-key)]
                    (effect-fn effect-value)
                    (println "no handler registered for effect:" effect-key ". Ignoring.")))))))
-
-
