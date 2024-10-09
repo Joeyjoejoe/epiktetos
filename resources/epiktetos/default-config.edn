@@ -11,8 +11,4 @@
                :hint.context/gl.profile        :gl.profile/core
                :hint.context/gl.forward-compat true}
 
- :gl/engine {:context #ig/ref :glfw/window
-             :programs [{:name     :epiktetos/default
-                         :layout   [:vec3f/coordinates :vec3f/color]
-                         :pipeline [[:vertex   "epiktetos/shaders/monochrome.vert"]
-                                    [:fragment "epiktetos/shaders/monochrome.frag"]]}]}}
+ :gl/engine {:context #ig/ref :glfw/window}}

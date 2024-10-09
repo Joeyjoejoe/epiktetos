@@ -1,6 +1,7 @@
 (ns epiktetos.entity
   (:require [epiktetos.coeffect :refer [cofx-error]]
             [epiktetos.state  :as state]
+            [epiktetos.registrar :as register]
             [epiktetos.texture :as textures]
             [epiktetos.vertices :as vertices]))
 
@@ -20,7 +21,7 @@
   ([id]
   (if-let [entity (state/entity id)]
     (let [{:keys [program]} entity
-          {layout :layout}  (state/program program)]
+          {layout :layout}  (register/get-prog program)]
       (swap! state/rendering update-in [layout program] dissoc id)
       (swap! state/entities dissoc id)))))
 
@@ -55,8 +56,8 @@
    ;; TODO Assets cache (VBO duplication prevention & instance rendering)
    ;; TODO Handle nil id or program
    (let [{:keys [id program]} entity
-         {layout :layout}     (state/program program)
-         vao                  (state/vao layout)]
+         {layout :layout}     (register/get-prog program)
+         vao                  (register/get-vao layout)]
 
      (->> entity
           (vertices/gpu-load! vao)

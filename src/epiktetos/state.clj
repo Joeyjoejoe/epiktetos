@@ -51,14 +51,6 @@
 ;; internal state of entities data by id
 (def entities (atom {}))
 
-(defn vao
-  [layout]
-  (get-in @system [:gl/engine :vao layout]))
-
-(defn program
-  [id]
-  (get-in @system [:gl/engine :program id]))
-
 (defn entity
   [id]
   (get @entities id))

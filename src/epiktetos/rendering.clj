@@ -1,6 +1,7 @@
 (ns epiktetos.rendering
   (:require [epiktetos.state :as state]
             [epiktetos.uniform :as u]
+            [epiktetos.registrar :as register]
             [epiktetos.event :as event])
   (:import (org.lwjgl.opengl GL11 GL20 GL30 GL45)))
 
@@ -19,14 +20,14 @@
       (when (nil? vao-layout)
         (throw (Exception. (str "Shader programs not found " (keys programs)))))
 
-      (let [{:keys [:vao/id :vao/stride]} (state/vao vao-layout)]
+      (let [{:keys [:vao/id :vao/stride]} (register/get-vao vao-layout)]
         (GL30/glBindVertexArray id)
 
         (doseq [[program entities] programs]
           (let [{:as p
                  pid :program/id
                  u-queue :uniforms
-                 primitive :primitive} (state/program program)
+                 primitive :primitive} (register/get-prog program)
                 p-context (-> r-context
                               (assoc :pid (GL20/glUseProgram pid))
                               (assoc :program  program)

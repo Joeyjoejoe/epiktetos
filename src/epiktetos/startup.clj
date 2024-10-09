@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [integrant.core :as ig]
             [epiktetos.state :as state]
+            [epiktetos.event :as event]
             [epiktetos.loop :as game-loop])
   (:import (org.lwjgl.glfw GLFW)))
 
@@ -37,4 +38,6 @@
    ;; TODO may not be necessary
    (GLFW/glfwSetWindowShouldClose (:glfw/window systems) false)
    (reset! state/system systems)
-   (game-loop/start systems startup-events)))
+   (doseq [e startup-events]
+     (event/dispatch e))
+   (game-loop/start systems)))

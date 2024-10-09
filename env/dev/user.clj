@@ -1,5 +1,5 @@
 (ns user
-  (:require [epiktetos.core :refer [reg-event reg-cofx inject-cofx reg-fx reg-u reg-eu]]
+  (:require [epiktetos.core :refer [reg-event reg-cofx inject-cofx reg-fx reg-u reg-eu reg-p]]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
             [epiktetos.utils.buffer :as util]
@@ -13,6 +13,11 @@
            (org.lwjgl.opengl GL45)))
 
 (dev/set-config-path "epiktetos.edn")
+
+(reg-p :perspective
+       {:layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]
+        :pipeline [[:vertex "shaders/default.vert"]
+                   [:fragment "shaders/default.frag"]]})
 
 ;; (defn time-back-and-forth
 ;;   [t duration]

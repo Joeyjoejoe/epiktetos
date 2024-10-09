@@ -10,9 +10,4 @@
                :hint.context/version.min       3
                :hint.context/gl.profile        :gl.profile/core
                :hint.context/gl.forward-compat true}
-
- :gl/engine {:context #ig/ref :glfw/window
-             :programs [{:name     :perspective
-                         :layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]
-                         :pipeline [[:vertex "shaders/default.vert"]
-                                    [:fragment "shaders/default.frag"]]}]}}
+}

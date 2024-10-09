@@ -4,12 +4,13 @@
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
             [epiktetos.startup :as startup]
+            [epiktetos.registrar :as register]
             [epiktetos.event :as event]
             [epiktetos.uniform :as u]
             [epiktetos.entity :as entity]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
             [epiktetos.window]
-            [epiktetos.program])
+            [epiktetos.program :as prog])
   (:import (org.lwjgl.glfw GLFW)))
 
 (def db state/db)
@@ -23,7 +24,6 @@
   ([config-path startup-events]
   (let [systems (startup/init-systems config-path)]
     (startup/start-engine! systems startup-events))))
-
 
 (defn reg-u
   "Register a uniform handler function ran at rendering time and returning
@@ -164,3 +164,47 @@
 (reg-fx :entity/delete       entity/delete!)
 (reg-fx :entity/delete-all   entity/delete-all!)
 (reg-fx :entity/reset-all    entity/reset-all!)
+
+
+;; REFLECT
+;; It's still side effectfull, but the actual registration
+;; is done through an event and a fx.
+;; it's ok for programs, because they need post registration
+;; computation. Other registrable items like uniforms cofx
+;; and fx do not need extra
+;; computation
+(defn reg-p
+  ([id p]
+   (event/dispatch [::event/reg-p [id p]]))
+  ([fx id p]
+   (assoc-in fx [::fx/reg-p id] p)))
+
+(reg-fx ::fx/reg-p
+        (fn [m]
+          (doseq [[id p] m]
+            (-> p
+                (assoc :name id)
+                prog/set-shaders! ;; assoc-in [:shaders]
+                prog/set-vao!     ;; assoc-in [:shaders]
+                prog/create!
+                register/add-program!))))
+
+(reg-event ::event/reg-p
+           (fn [cofx fx]
+             (let [[id prog] (get-in cofx [:event 1])]
+               (reg-p fx id prog))))
+;; (reg-p :foo/bar
+;;        {:layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]
+;;         :pipeline [[:vertex "shaders/default.vert"]
+;;                    [:fragment "shaders/default.frag"]]})
+;;
+;; (reg-p fx
+;;        :foo/bar
+;;        {:layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]
+;;         :pipeline [[:vertex "shaders/default.vert"]
+;;                    [:fragment "shaders/default.frag"]]})
+;;
+;;
+;; (reg-p :my-prog p)
+;; (reg-p fx :my-prog p)
+;;

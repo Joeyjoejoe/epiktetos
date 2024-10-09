@@ -12,13 +12,12 @@
 (def lag (atom 0.0))
 
 (defn start
-  [{window :glfw/window} startup-events]
+  [{window :glfw/window}]
   (loop [{:as    loop-iter
           {:keys [curr delta]} :time} {:iter 1
                                        :time {:curr (GLFW/glfwGetTime)
                                               :prev 0
-                                              :delta 0}}
-         iter-events  (conj startup-events [:epiktetos.event/loop.iter loop-iter])]
+                                              :delta 0}}]
 
     (swap! lag #(+ % delta))
     (swap! state/db assoc :core/loop loop-iter)
@@ -26,11 +25,10 @@
     ;; Bind :epiktetos.event/loop.iter, a user definable event.
     ;; It is guaranteed to run once per loop iterations
     ;; user/cognitive-load
-    (doseq [e iter-events] (event/execute e))
+    ;; (event/execute [:epiktetos.event/loop.iter loop-iter])
 
     ;; TODO apply entities transformations that can be multi threaded:
     ;; like motions, animations ?
-
 
     (while (>= @lag 0.1)
 
@@ -55,4 +53,4 @@
           (update :iter inc)
           ;; TODO Explore utility of replacing empty vec by a
           ;; user accessible location in state ?
-          (recur [])))))
+          recur))))
