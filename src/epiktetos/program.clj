@@ -1,6 +1,7 @@
 (ns epiktetos.program
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
+            [epiktetos.registrar :as reg]
             [epiktetos.texture :as texture]
             [epiktetos.state :as state]
             [epiktetos.uniform :as u]
@@ -98,7 +99,7 @@
     (GL20/glUseProgram 0)
     (apply conj clojure.lang.PersistentQueue/EMPTY unif-with-locations)))
 
-(defn compile-vao
+(defn create-vao
   "Create or get a VAO (vertex array object)
 
   layout  [:float/coordinates :float/color]
@@ -187,7 +188,9 @@
 
                  (when (= 0 (GL20/glGetShaderi id GL20/GL_COMPILE_STATUS))
                    (throw (Exception. (str "shader compilation error: " [stage path] (GL20/glGetShaderInfoLog id 1024)))))
-                 (assoc metadata :shader/ids [id]))))))
+                 (-> metadata
+                     (assoc :ids [id])
+                     (assoc :path [path])))))))
 
 (defmethod ig/init-key
   :gl/engine
@@ -195,31 +198,38 @@
 
   (apply merge-with into (for [{:keys [name layout pipeline draw]
                                 :or   {draw :triangles}} (:programs config)]
+(let [  {:keys [attribs uniforms path ids]}
+        (compile-shaders pipeline)
 
-    (let [{shaders :shader/ids
-           :keys [attribs uniforms]} (compile-shaders pipeline)
-          vao                        (compile-vao layout attribs)
-          prog-id                    (GL20/glCreateProgram)
-          primitive                  (get DRAW-PRIMITIVES draw)]
+        vao       (or
+                    (reg/get-vao layout)
+                    (create-vao layout attribs))
 
-      (doseq [shader-id shaders]
-        (GL20/glAttachShader prog-id shader-id))
+        prog-id   (GL20/glCreateProgram)
 
-      (GL20/glLinkProgram prog-id)
-      (when (= 0 (GL20/glGetProgrami prog-id GL20/GL_LINK_STATUS))
-        (throw (Exception. (str
-                             "Error linking shader to program " name ": "
-                             (GL20/glGetProgramInfoLog prog-id 1024)))))
+        primitive (get DRAW-PRIMITIVES draw)]
 
-      (doseq [shader-id shaders]
-        (GL20/glDeleteShader shader-id))
+    (doseq [shader-id ids]
+      (GL20/glAttachShader prog-id shader-id))
 
-      {:vao      {(:vao/layout vao) vao}
-       :program  {name {:name name
-                        :program/id prog-id
-                        :primitive  primitive
-                        :layout     (-> vao :vao/layout vec)
-                        :uniforms   (compile-uniforms prog-id uniforms)}}}))))
+    (GL20/glLinkProgram prog-id)
+    (when (= 0 (GL20/glGetProgrami prog-id GL20/GL_LINK_STATUS))
+      (throw (Exception. (str
+                           "Error linking shader to program " name ": "
+                           (GL20/glGetProgramInfoLog prog-id 1024)))))
+
+    (doseq [shader-id ids]
+      (GL20/glDeleteShader shader-id))
+
+    {:vao      {(:vao/layout vao) vao}
+     :program  {name {:name name
+                      :program/id  prog-id
+                      :shader/ids  ids
+                      :shader/path path
+                      :primitive   primitive
+                      :layout      (-> vao :vao/layout vec)
+                      :uniforms    (compile-uniforms prog-id uniforms)}}})
+    )))
 
 (defmethod ig/halt-key!
   :gl/engine
@@ -235,3 +245,68 @@
     (reset! state/rendering {})
     (reset! state/system {})
     (reset! state/db {})))
+
+
+;; Programs are not configuration and not systems.
+;; At runtime, i want to :
+;;   - compile new programs
+;;   - remove programs
+;;   - recompile programs (dev)
+;;
+;; Use cases :
+;; - loading a new stage :
+;;   1) Remove previous stage programs
+;;   2) Compile new stage programs
+;;
+;; TODO Maybe create a set of fx for program management ?
+
+(defn reg-p
+  "Register a shader program"
+  [k config]
+  )
+
+(defmethod ig/init-key
+  :shader/program
+  [_ config]
+
+  (let [{:keys [name layout pipeline draw]
+         :or   {draw :triangles}}
+        config
+
+        {:keys [attribs uniforms path ids]}
+        (compile-shaders pipeline)
+
+        vao       (or
+                    (reg/get-vao layout)
+                    (create-vao layout attribs))
+
+        prog-id   (GL20/glCreateProgram)
+
+        primitive (get DRAW-PRIMITIVES draw)]
+
+    (doseq [shader-id ids]
+      (GL20/glAttachShader prog-id shader-id))
+
+    (GL20/glLinkProgram prog-id)
+    (when (= 0 (GL20/glGetProgrami prog-id GL20/GL_LINK_STATUS))
+      (throw (Exception. (str
+                           "Error linking shader to program " name ": "
+                           (GL20/glGetProgramInfoLog prog-id 1024)))))
+
+    (doseq [shader-id ids]
+      (GL20/glDeleteShader shader-id))
+
+    {:vao      {(:vao/layout vao) vao}
+     :program  {name {:name name
+                      :program/id  prog-id
+                      :shader/ids  ids
+                      :shader/path path
+                      :primitive   primitive
+                      :layout      (-> vao :vao/layout vec)
+                      :uniforms    (compile-uniforms prog-id uniforms)}}}))
+
+(defn create
+  ""
+  [config]
+
+  )

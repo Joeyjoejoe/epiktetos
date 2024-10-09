@@ -1,5 +1,6 @@
 (ns epiktetos.controls
-  (:require [epiktetos.event :as event])
+  (:require [epiktetos.event :as event]
+            [epiktetos.state :as state])
   (:import (org.lwjgl.glfw GLFW
                            GLFWKeyCallback
                            GLFWCursorPosCallback
@@ -172,8 +173,10 @@
 (def mouse-callback
   (proxy [GLFWCursorPosCallback] []
     (invoke [window x y]
-      (when (event/handler? :mouse/position)
-        (event/dispatch [:mouse/position [x y]])))))
+      (swap! state/db assoc :mouse/position [x y])
+      ;; (when (event/handler? :mouse/position)
+      ;;   (event/dispatch [:mouse/position [x y]]))
+      )))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#ga0184dcb59f6d85d735503dcaae809727
 (def mouse-button-callback

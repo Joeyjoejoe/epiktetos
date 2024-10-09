@@ -20,9 +20,13 @@
                    effects-without-db (dissoc effects :db)]
                ;; :db effect is guaranteed to be handled before all other effects.
                (when-let [new-db (:db effects)]
-                 ((event/get-handler :effect :db) new-db))
+                 (do
+                   (println "  " :fx :db)
+                   ((event/get-handler :effect :db) new-db)))
 
                (doseq [[effect-key effect-value] effects-without-db]
                  (if-let [effect-fn (event/get-handler :effect effect-key)]
-                   (effect-fn effect-value)
+                   (do
+                     (println "  " :fx effect-key)
+                     (effect-fn effect-value))
                    (println "no handler registered for effect:" effect-key ". Ignoring.")))))))

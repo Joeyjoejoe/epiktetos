@@ -32,12 +32,14 @@
   ([id handler]
    (register :event id handler))
   ([kind id handler]
+   (println "register " kind id)
    (swap! kind->id->handler assoc-in [kind id] handler)))
 
 (defn execute
   ([event]
    (execute :event event))
   ([kind event]
+   (println "@exec" :event event)
    (if-let [interceptors (get-handler kind (id event))]
      (interc/execute event interceptors)
      (println "event not registered" (id event)))))

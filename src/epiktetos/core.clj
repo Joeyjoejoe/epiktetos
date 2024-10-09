@@ -24,7 +24,6 @@
   (let [systems (startup/init-systems config-path)]
     (startup/start-engine! systems startup-events))))
 
-
 (defn reg-u
   "Register a uniform handler function ran at rendering time and returning
   uniform's value.
@@ -164,3 +163,27 @@
 (reg-fx :entity/delete       entity/delete!)
 (reg-fx :entity/delete-all   entity/delete-all!)
 (reg-fx :entity/reset-all    entity/reset-all!)
+
+
+
+(reg-fx :reg-p progam/create)
+
+(reg-event :core/register
+           (fn [cofx fx]
+             (let [entries (get-in cofx [:event 1])]
+              (assoc fx :reg-p))))
+
+;; REFLECT
+;; It's still side effectfull, but the actual registration
+;; is done through an event and a fx.
+;; it's ok for programs, because they need post registration
+;; computation. Other registrable items like uniforms cofx
+;; and fx do not need extra
+;; computation
+(defn reg-p
+  ([id config]
+   (event/dispatch [:core/reg-p [id config]]))
+  ([fx id config]
+   (update-in fx [:reg-p] conj config)))
+
+

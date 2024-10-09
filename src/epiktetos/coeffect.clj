@@ -34,6 +34,7 @@
      :id      :coeffects
      :before  (fn coeffects-before
                 [context]
+                (println "  " :cofx id)
                 (if-let [handler (event/get-handler :coeffect id)]
                   (try
                     (update context :coeffects handler)
@@ -47,6 +48,7 @@
      :id     :coeffects
      :before  (fn coeffects-before
                 [context]
+                (println "  " :cofx id)
                 (if-let [handler (event/get-handler :coeffect id)]
                   ;; TODO rescue handler execution errors and create
                   ;; proper cofx-error
