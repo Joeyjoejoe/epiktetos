@@ -103,6 +103,10 @@
             [coeffects]
             (assoc coeffects :entity @state/entities)))
 
+(defn send-event!
+  [e]
+  (event/dispatch e))
+
 
 (defn reg-event
   "Set the handler to an event id, with the option to add additional coeffects.
