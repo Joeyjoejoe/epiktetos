@@ -1,7 +1,8 @@
 {:paths   ["src" "resources"]
- :deps    {org.clojure/clojure {:mvn/version "1.11.1"}
-           integrant/integrant {:mvn/version "0.8.0"}
-           integrant/repl {:mvn/version "0.3.2"}
+ :deps    {org.clojure/clojure {:mvn/version "1.12.0"}
+           org.clojure/tools.namespace {:mvn/version "1.5.0"}
+           integrant/integrant {:mvn/version "0.12.0"}
+           djblue/portal {:mvn/version "0.57.3"}
 
            ;; Exclude SLF4J logging backends to ensure only logback is used
            org.clojure/tools.deps.alpha {:mvn/version "0.6.480", :exclusions [org.slf4j/slf4j-nop]}
@@ -28,13 +29,11 @@
            org.lwjgl/lwjgl-stb$natives-windows {:mvn/version "3.3.2", :native-prefix ""}}
 
  :aliases {:test {:extra-paths ["env/test"]
-                  :extra-deps {lambdaisland/kaocha {:mvn/version "1.63.998"}}}
+                  :extra-deps  {lambdaisland/kaocha {:mvn/version "1.63.998"}}}
 
-           :dev  {:extra-paths ["env/dev"]
-                  :extra-deps  {integrant/repl {:mvn/version "0.3.2"}
+           :dev  {:main-opts   ["-m" "nrepl.cmdline" "-i" "--port" "34001"]
+                  :extra-paths ["env/dev"]
+                  :extra-deps  {nrepl/nrepl {:mvn/version "1.3.0"}
                                 org.joml/joml  {:mvn/version "1.10.5"}}}
-
-           :repl {:extra-deps {reply/reply {:mvn/version "0.5.0"}}
-                  :main-opts ["-m" "reply.main" "--port" "34001"]}
 
            :bin/lwjgl-version {:main-opts ["bin/lwjgl-version.clj"]}}}

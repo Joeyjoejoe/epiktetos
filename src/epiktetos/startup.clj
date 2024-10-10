@@ -35,9 +35,10 @@
   ([systems]
    (start-engine! systems []))
   ([systems startup-events]
-   ;; TODO may not be necessary
-   (GLFW/glfwSetWindowShouldClose (:glfw/window systems) false)
+
    (reset! state/system systems)
+
    (doseq [e startup-events]
      (event/dispatch e))
+
    (game-loop/start systems)))

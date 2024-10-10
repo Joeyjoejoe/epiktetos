@@ -4,15 +4,13 @@
             [clojure.edn :as edn]
             [epiktetos.utils.buffer :as util]
             [epiktetos.state :as state]
-            [epiktetos.dev :as dev :refer [start stop resume reset system config]])
+            [epiktetos.dev :as dev :refer [start stop resume inspect]])
 
 
   (:import (org.lwjgl.glfw GLFW)
            (org.joml Matrix4f Vector3f)
            (org.lwjgl BufferUtils)
            (org.lwjgl.opengl GL45)))
-
-(dev/set-config-path "epiktetos.edn")
 
 (reg-p :perspective
        {:layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]

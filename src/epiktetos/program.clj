@@ -1,9 +1,10 @@
 (ns epiktetos.program
   (:require [integrant.core :as ig]
             [clojure.java.io :as io]
-            [epiktetos.registrar :as register]
+            [epiktetos.registrar :as registrar]
             [epiktetos.texture :as texture]
             [epiktetos.state :as state]
+            [epiktetos.event :as event]
             [epiktetos.uniform :as u]
             [epiktetos.utils.glsl-parser :as glsl]
             [epiktetos.lang.opengl :as opengl])
@@ -203,8 +204,12 @@
       (for [[entity-id {:keys [vbo]}] entities]
       (GL15/glDeleteBuffers vbo)))
 
+    (reset! registrar/register {})
+    (reset! event/kind->id->handler {})
+    (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
     (reset! texture/text-cache {})
     (reset! state/rendering {})
+    (reset! state/entities {})
     (reset! state/system {})
     (reset! state/db {})))
 
@@ -223,10 +228,10 @@
         attribs (get-in prog [:shaders :attribs])
         vao     (if overide?
                   (create-vao layout attribs)
-                  (or (register/get-vao layout)
+                  (or (registrar/get-vao layout)
                       (create-vao layout attribs)))]
 
-    (register/add-vao! vao)
+    (registrar/add-vao! vao)
     (assoc prog :layout (-> vao :vao/layout vec)))))
 
 (defn create!
@@ -234,7 +239,6 @@
   (let [{:keys [draw shaders]
          :or   {draw :triangles}}
         prog
-
 
         prog-id   (GL20/glCreateProgram)
         primitive (get DRAW-PRIMITIVES draw)

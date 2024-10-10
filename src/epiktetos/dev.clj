@@ -1,57 +1,43 @@
 (ns epiktetos.dev
-  (:require [clojure.java.io :as io]
-            [clojure.pprint :as pp]
+  (:require [portal.api :as p]
             [integrant.core :as ig]
-            [integrant.repl :as ig-repl] ;; :refer [clear go halt prep init reset reset-all]]
-            [integrant.repl.state :as ig-state]
-            [epiktetos.startup :as startup]))
-
-;; https://github.com/weavejester/integrant-repl
-;; Provides worflow function (prep) (init) (go) (reset) (halt)
-
-(defn system []
-  (pp/pprint ig-state/system))
-
-(defn config []
-  (pp/pprint ig-state/config))
-
-(defn set-config-path
-  "Initialize engine systems"
-  ([]
-   (set-config-path startup/DEFAULT_CONFIG_PATH))
-  ([path]
-   (if-let [config (io/resource path)]
-     (integrant.repl/set-prep! #(ig/prep (-> config slurp ig/read-string)))
-     (throw (Exception. (str "Missing config file: " path))))))
+            [clojure.tools.namespace.repl :refer (refresh-all)]
+            [epiktetos.core :as epiktet]
+            [epiktetos.loop :as epiktet-loop]
+            [epiktetos.state :as state]
+            [epiktetos.event :as event]
+            [epiktetos.registrar :as registrar]))
 
 (defn start
   "Start engine"
   ([]
-   (start []))
-  ([events]
-   (ig-repl/go)
-   (startup/start-engine! ig-state/system events)))
+   (epiktet/run []))
+  ([config-path]
+   (start config-path []))
+  ([config-path events]
+   (epiktet/run config-path events)))
 
 (defn resume
   "Resume a paused loop"
   []
-  (startup/start-engine! ig-state/system))
-
-(defn reset
-  "Restart engine (drop all states)"
-  []
-  (ig-repl/halt)
-  (start))
+  (epiktet-loop/start @state/system))
 
 (defn stop
   "Stop engine"
   []
-  (ig-repl/halt))
+  (ig/halt! @state/system)
+  (refresh-all))
 
-;; Initialize default startup config
-(set-config-path)
-
-;; Call set-config-path again to overwrite
-;; the defaults in your development namespace :
-;;    (set-config-path "custom-config.edn")
-
+(defn inspect
+  "Open portal with engine's current state (ready for inspection)"
+  []
+  (let [p (p/open)]
+    (add-tap #'p/submit)
+    (tap> {:register @registrar/register
+           :db @state/db
+           :rendering @state/rendering
+           :entities @state/entities
+           :system @state/system
+           :events @event/kind->id->handler
+           :events/queue @event/queue})
+    p))
