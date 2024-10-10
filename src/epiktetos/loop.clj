@@ -36,7 +36,6 @@
       (while (>= @lag 0.1)
         ;; Consume events queue
         (while (seq @event/queue)
-          (println @event/queue)
           (let [e (peek @event/queue)]
             (event/execute e)
             (swap! event/queue pop)))
