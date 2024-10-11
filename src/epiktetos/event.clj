@@ -36,11 +36,9 @@
 
 (defn execute
   ([event]
-   (execute :event event))
-  ([kind event]
-   (if-let [interceptors (get-handler kind (id event))]
-     (interc/execute event interceptors)
-     (println "event not registered" (id event)))))
-
-
-
+   (if-let [interceptors (get-handler :event (id event))]
+       (interc/execute event interceptors)
+       (println "event not registered" (id event))))
+  ([event & events]
+     (doseq [e (cons event events)]
+       (execute e))))
