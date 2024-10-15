@@ -3,6 +3,7 @@
             [epiktetos.state :as state]
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
+            [epiktetos.loop :as main-loop]
             [epiktetos.startup :as startup]
             [epiktetos.registrar :as register]
             [epiktetos.event :as event]
@@ -104,9 +105,10 @@
             (assoc coeffects :entity @state/entities)))
 
 (defn send-event!
-  [e]
-  (event/dispatch e))
-
+  "Dispatch an event"
+  [& events]
+  (doseq [e events]
+    (event/dispatch e)))
 
 (defn reg-event
   "Set the handler to an event id, with the option to add additional coeffects.
@@ -136,15 +138,16 @@
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
 
-(reg-event
-  [:press :escape]
-  (fn quit-flag [_ fx]
-    (assoc fx :loop/pause true)))
-
 (reg-event ::event/loop.iter
   (fn loop-infos [cofx fx]
     (let [{[_ loop-iter] :event} cofx]
-      (assoc-in fx [:db :core/loop] loop-iter))))
+      (println (:fps loop-iter))
+      (-> fx
+          (assoc-in [:db :core/loop] loop-iter)))))
+
+(doseq [e [::main-loop/before-events ::main-loop/after-events
+           ::main-loop/before-render ::main-loop/after-render]]
+  (reg-event e (fn do-nothing [_ fx] fx)))
 
 
 (defn reg-fx
@@ -163,10 +166,7 @@
           (doseq [e events]
             (event/dispatch e))))
 
-(reg-fx :loop/pause
-        (fn pause-loop [_]
-          (let [window  (state/window)]
-            (GLFW/glfwSetWindowShouldClose window true))))
+
 
 (reg-fx :entity/render       entity/render!)
 (reg-fx :entity/update       entity/update!)

@@ -42,3 +42,10 @@
   ([event & events]
      (doseq [e (cons event events)]
        (execute e))))
+
+(defn consume!
+  []
+  (while (seq @queue)
+    (let [e (peek @queue)]
+      (execute e)
+      (swap! queue pop))))
