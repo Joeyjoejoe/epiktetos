@@ -104,9 +104,10 @@
             (assoc coeffects :entity @state/entities)))
 
 (defn send-event!
-  [e]
-  (event/dispatch e))
-
+  "Dispatch an event"
+  [& events]
+  (doseq [e events]
+    (event/dispatch e)))
 
 (defn reg-event
   "Set the handler to an event id, with the option to add additional coeffects.
@@ -163,10 +164,7 @@
           (doseq [e events]
             (event/dispatch e))))
 
-(reg-fx :loop/pause
-        (fn pause-loop [_]
-          (let [window  (state/window)]
-            (GLFW/glfwSetWindowShouldClose window true))))
+
 
 (reg-fx :entity/render       entity/render!)
 (reg-fx :entity/update       entity/update!)

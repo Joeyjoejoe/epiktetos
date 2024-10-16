@@ -28,5 +28,5 @@ void main()
   textCoord = vertexTexCoords;
   gl_Position = projection * view * model * vec4(vLocal.x,
                                                  vLocal.y,
-                                                 vLocal.z, 1.0);  // + cos(2.0 / speed * t), 1.0);
+                                                 vLocal.z + speed * cos(t), 1.0);
 }

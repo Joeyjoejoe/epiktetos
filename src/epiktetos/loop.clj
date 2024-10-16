@@ -1,58 +1,65 @@
 (ns epiktetos.loop
-  (:require
-    [epiktetos.event :as event]
-    [epiktetos.state :as state]
-    [epiktetos.rendering :as rendering]
-    [clojure.pprint :refer [pprint]])
+  (:require [epiktetos.event :as event]
+            [epiktetos.state :as state]
+            [epiktetos.rendering :as rendering])
 
-  (:import (org.lwjgl.glfw GLFW)
-           (org.lwjgl.opengl GL11 GL20 GL30 GL45))
+  (:import (org.lwjgl.glfw GLFW))
   (:gen-class))
 
 
 (defn start
   [{window :glfw/window}]
 
-  (let [lag (atom 0.0)]
-    (GLFW/glfwSetWindowShouldClose window false)
+   (GLFW/glfwSetWindowShouldClose window false)
 
-    (loop [{:as    loop-iter
-            {:keys [curr delta]} :time} {:iter 1
-                                         :time {:curr (GLFW/glfwGetTime)
-                                                :prev 0
-                                                :delta 0}}]
+   (loop [{{:keys [curr delta]} :time
+           {:keys [value frames tick]} :fps
+           :as loop-iter}
+          {:iter 1
+           :runing? true
+           :time {:curr (GLFW/glfwGetTime) :prev 0 :delta 0}
+           :fps {:value 0 :frames 0 :tick 0.0}}
 
-      (swap! lag #(+ % delta))
-      (swap! state/db assoc :core/loop loop-iter)
+          lag (atom 0.0)]
 
-      ;; Bind :epiktetos.event/loop.iter, a user definable event.
-      ;; It is guaranteed to run once per loop iterations
-      ;; user/cognitive-load
-      ;; (event/execute [:epiktetos.event/loop.iter loop-iter])
+     (swap! lag #(+ % delta))
+     (swap! state/db assoc :core/loop loop-iter)
 
-      ;; TODO apply entities transformations that can be multi threaded:
-      ;; like motions, animations ?
+     ;; TODO apply entities transformations that can be multi threaded:
+     ;; like motions, animations ?
 
-      (while (>= @lag 0.1)
-        ;; Consume events queue
-        (while (seq @event/queue)
-          (let [e (peek @event/queue)]
-            (event/execute e)
-            (swap! event/queue pop)))
+     (event/execute [::event/loop.iter loop-iter])
 
-        (swap! lag #(- % 0.1)))
+     (while (>= @lag 0.1)
 
-      (rendering/pipeline)
+       (event/consume!)
 
-      (GLFW/glfwSwapBuffers window)
-      (GLFW/glfwPollEvents)
+       ;; On pause loop keep dispatching events
+       (while (not (get-in @state/db [:core/loop :runing?]))
+         (GLFW/glfwWaitEvents)
+         (event/consume!))
 
-      (when-not (GLFW/glfwWindowShouldClose window)
-        (-> loop-iter
-            (assoc-in [:time :curr]  (GLFW/glfwGetTime))
-            (assoc-in [:time :prev]  curr)
-            (assoc-in [:time :delta] (- (GLFW/glfwGetTime) curr))
-            (update :iter inc)
-            ;; TODO Explore utility of replacing empty vec by a
-            ;; user accessible location in state ?
-            recur)))))
+       (swap! lag #(- % 0.1)))
+
+     (rendering/pipeline)
+
+     (GLFW/glfwSwapBuffers window)
+     (GLFW/glfwPollEvents)
+
+     (event/execute [::after-render])
+
+     (when-not (GLFW/glfwWindowShouldClose window)
+       (let [iter-end      (GLFW/glfwGetTime)
+             iter-duration (- iter-end curr)
+             fps-tick (+ tick iter-duration)
+             fps-map  (if (> fps-tick 1.0)
+                           {:value frames :frames 0 :tick (- fps-tick 1.0)}
+                           {:value value :frames (inc frames) :tick fps-tick})]
+
+         (-> loop-iter
+             (assoc-in [:time :curr]  iter-end)
+             (assoc-in [:time :prev]  curr)
+             (assoc-in [:time :delta] iter-duration)
+             (assoc :fps fps-map)
+             (update :iter inc)
+             (recur lag))))))

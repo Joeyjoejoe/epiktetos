@@ -4,7 +4,7 @@
             [clojure.edn :as edn]
             [epiktetos.utils.buffer :as util]
             [epiktetos.state :as state]
-            [epiktetos.dev :as dev :refer [start stop resume inspect]])
+            [epiktetos.dev :as dev :refer [start stop resume]])
 
 
   (:import (org.lwjgl.glfw GLFW)
