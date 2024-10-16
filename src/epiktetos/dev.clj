@@ -9,25 +9,41 @@
             [epiktetos.registrar :as registrar])
   (:import (org.lwjgl.glfw GLFW)))
 
-(defn portal-reload-state
+(def inspector nil)
+
+(defn- portal-load-state
   "Open portal with engine's current state (ready for inspection)"
   []
     (p/clear)
-    (tap> {:register @registrar/register
-           :db @state/db
-           :rendering @state/rendering
-           :entities @state/entities
-           :system @state/system
-           :events @event/kind->id->handler
-           :events/queue @event/queue}))
+    (tap> {:register registrar/register
+           :db state/db
+           :rendering state/rendering
+           :entities state/entities
+           :system state/system
+           :events event/kind->id->handler
+           :events/queue event/queue}))
+
+(defn- open-inspector
+  []
+  (alter-var-root #'inspector (constantly (p/open {:window-title "Inspector"})))
+  (add-tap #'p/submit)
+  (portal-load-state))
+
+(defn- close-inspector
+  []
+  (p/clear)
+  (remove-tap #'p/submit)
+  (p/close))
 
 (defn start
   "Start engine"
   ([]
+   (open-inspector)
    (epiktet/run []))
   ([config-path]
    (start config-path []))
   ([config-path events]
+   (open-inspector)
    (epiktet/run config-path events)))
 
 (defn resume
@@ -38,16 +54,9 @@
 (defn stop
   "Stop engine"
   []
-  (remove-tap #'p/submit)
-  (p/close)
+  (close-inspector)
   (ig/halt! @state/system)
-  (refresh-all)
-  (portal-reload-state))
-
-
-(reg-fx :hot-reload/reload-state
-        (fn reload-state [_]
-          (portal-reload-state)))
+  (refresh-all))
 
 (reg-fx :loop/toggle
         (fn [_]
@@ -61,20 +70,10 @@
 
 (reg-event
   [:press :escape]
-  (fn quit [_ fx]
+  (fn loop-stop [_ fx]
     (assoc fx :loop/stop true)))
 
 (reg-event
   [:press :enter]
   (fn loop-play [_ fx]
-    (-> fx
-      (assoc :loop/toggle true)
-      (assoc :hot-reload/reload-state true))))
-
-(when (resolve 'p)
-  (remove-tap #'p/submit)
-  (p/close))
-
-
-(def p (p/open))
-(add-tap #'p/submit)
+    (assoc fx :loop/toggle true)))
