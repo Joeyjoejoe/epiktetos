@@ -46,8 +46,6 @@
      (GLFW/glfwSwapBuffers window)
      (GLFW/glfwPollEvents)
 
-     (event/execute [::after-render])
-
      (when-not (GLFW/glfwWindowShouldClose window)
        (let [iter-end      (GLFW/glfwGetTime)
              iter-duration (- iter-end curr)

@@ -10,8 +10,7 @@
             [epiktetos.entity :as entity]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
             [epiktetos.window]
-            [epiktetos.program :as prog])
-  (:import (org.lwjgl.glfw GLFW)))
+            [epiktetos.program :as prog]))
 
 (def db state/db)
 
