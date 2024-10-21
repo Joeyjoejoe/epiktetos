@@ -31,44 +31,6 @@
         (assoc-in [:gl/engine :startup-events] startup-events)
         (startup/start-engine! events)))))
 
-(defn reg-u
-  "Register a uniform handler function ran at rendering time and returning
-  uniform's value.
-
-  u-name is a uniform name keyword (varname in shader source). In order to
-         specify a handler for a specific uniform in a specific program,
-         you can provide a vector of 2 keywords:
-         [:program-name :uniform-name]
-
-  handler is a pure function
-
-  Examples:
-
-  ;; Register a global uniform whose value will be computed only once per Loop
-  ;; iteration.
-  ;; handler function takes one parameter: state/db
-
-  (reg-u :foo (fn [db] ...))
-
-  ;; Register a program uniform whose value is computed once at progam start.
-  ;; handler function takes 2 parameters: state/db and a a map of entities
-  ;; being rendered with uniform's program.
-
-  (reg-u [:program-name :foo] (fn [db entities] ...))"
-  [u-name handler]
-  (if (= clojure.lang.Keyword (type u-name))
-    (u/register-global-uniform u-name handler)
-    (u/register-uniform u-name handler)))
-
-(defn reg-eu
-  "Same as reg-u, but register a uniform whose value will be
-  computed for each entity rendered with uniform's program.
-  An entity uniform handler function take 2 parameters:
-  "
-  [upath f]
-    (u/register-entity-uniform upath f))
-
-
 (defn reg-cofx
   "A cofx is a function that takes a coeffects map and
    an optional parameter, and return a modified version
@@ -103,12 +65,6 @@
             [coeffects]
             (assoc coeffects :entity @state/entities)))
 
-(defn send-event!
-  "Dispatch an event"
-  [& events]
-  (doseq [e events]
-    (event/dispatch e)))
-
 (defn reg-event
   "Set the handler to an event id, with the option to add additional coeffects.
 
@@ -137,16 +93,11 @@
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :event id chain))))
 
-(reg-event
-  [:press :escape]
-  (fn quit-flag [_ fx]
-    (assoc fx :loop/pause true)))
-
 (reg-event ::event/loop.iter
   (fn loop-infos [cofx fx]
     (let [{[_ loop-iter] :event} cofx]
-      (assoc-in fx [:db :core/loop] loop-iter))))
-
+      (-> fx
+          (assoc-in [:db :core/loop] loop-iter)))))
 
 (defn reg-fx
   "An effect, aka fx, is a function that takes a coeffects map and
@@ -164,14 +115,82 @@
           (doseq [e events]
             (event/dispatch e))))
 
-
-
 (reg-fx :entity/render       entity/render!)
 (reg-fx :entity/update       entity/update!)
 (reg-fx :entity/batch-update entity/batch-update!) ;
 (reg-fx :entity/delete       entity/delete!)
 (reg-fx :entity/delete-all   entity/delete-all!)
 (reg-fx :entity/reset-all    entity/reset-all!)
+
+
+(defn reg-u
+  "Register a uniform handler function ran at rendering time and returning
+  uniform's value.
+
+  u-name is a uniform name keyword (varname in shader source). In order to
+         specify a handler for a specific uniform in a specific program,
+         you can provide a vector of 2 keywords:
+         [:program-name :uniform-name]
+
+  handler is a pure function
+
+  Examples:
+
+  ;; Register a global uniform whose value will be computed only once per Loop
+  ;; iteration.
+  ;; handler function takes one parameter: state/db
+
+  (reg-u :foo (fn [db] ...))
+
+  ;; Register a program uniform whose value is computed once at progam start.
+  ;; handler function takes 2 parameters: state/db and a a map of entities
+  ;; being rendered with uniform's program.
+
+  (reg-u [:program-name :foo] (fn [db entities] ...))"
+  ([u-name handler]
+   (event/dispatch [::event/reg-u [u-name handler]]))
+  ([fx u-name handler]
+   (assoc-in fx [::fx/reg-u u-name] handler)))
+
+(reg-event ::event/reg-u
+           (fn [cofx fx]
+             (let [[u-name handler] (get-in cofx [:event 1])]
+               (reg-u fx u-name handler))))
+
+(reg-fx ::fx/reg-u
+        (fn register-uniform-fx [u-map]
+          (doseq [[u-name handler] u-map]
+            (if (= clojure.lang.Keyword (type u-name))
+              (u/register-global-uniform u-name handler)
+              (u/register-uniform u-name handler)))))
+
+(defn reg-eu
+  "Same as reg-u, but register a uniform whose value will be
+  computed for each entity rendered with uniform's program.
+  An entity uniform handler function take 2 parameters:
+  "
+  ([u-name handler]
+   (event/dispatch [::event/reg-eu [u-name handler]]))
+  ([fx u-name handler]
+   (assoc-in fx [::fx/reg-eu u-name] handler)))
+
+(reg-event ::event/reg-eu
+           (fn [cofx fx]
+             (let [[u-name handler] (get-in cofx [:event 1])]
+               (reg-eu fx u-name handler))))
+
+
+(reg-fx ::fx/reg-eu
+        (fn register-entity-uniform-fx [u-map]
+          (doseq [[u-name handler] u-map]
+            (u/register-entity-uniform u-name handler))))
+
+
+(defn send-event!
+  "Dispatch an event"
+  [& events]
+  (doseq [e events]
+    (event/dispatch e)))
 
 
 ;; REFLECT
@@ -188,8 +207,8 @@
    (assoc-in fx [::fx/reg-p id] p)))
 
 (reg-fx ::fx/reg-p
-        (fn [m]
-          (doseq [[id p] m]
+        (fn [prog-map]
+          (doseq [[id p] prog-map]
             (-> p
                 (assoc :name id)
                 prog/set-shaders! ;; assoc-in [:shaders]
