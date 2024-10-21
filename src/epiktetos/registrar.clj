@@ -1,19 +1,6 @@
-(ns epiktetos.registrar)
+(ns epiktetos.registrar
+  (:import  (org.lwjgl.opengl GL20)))
 
-;; User must be able to manage shader programs at runtime.
-;;   - compile a new program
-;;   - recompile an existing program
-;;   - remove programs
-;;
-;; Use cases :
-;;   - Hot reload (re-compile programs)
-;;   - (un)Loading a full scene
-
-;; We use program names in entities :
-;; {:program :my-prog ...}
-
-;; Hot-reload will output a path to shader file
-;; should reload all dependent programs
 (def register
   (atom {}))
 
@@ -32,6 +19,9 @@
 (defn add-program!
   [prog]
   (let [k (:name prog)]
+
+    ;; Flag previous program for deletion to free up some memory
+    (when-let [old-prog (get-prog k)]
+      (GL20/glDeleteProgram (:program/id old-prog)))
+
     (swap! register assoc-in [:program k] prog)))
-
-

@@ -11,4 +11,5 @@
                :hint.context/gl.profile        :gl.profile/core
                :hint.context/gl.forward-compat true}
 
- :gl/engine {:context #ig/ref :glfw/window}}
+ :gl/engine {:context #ig/ref :glfw/window
+             :hot-reload ["resources/shaders/"]}}

@@ -1,10 +1,14 @@
 (ns epiktetos.startup
   (:require [clojure.java.io :as io]
             [integrant.core :as ig]
+            [nextjournal.beholder :as beholder]
+            [epiktetos.registrar :as registrar]
+            [epiktetos.texture :as texture]
             [epiktetos.state :as state]
             [epiktetos.event :as event]
             [epiktetos.loop :as game-loop])
-  (:import (org.lwjgl.glfw GLFW)))
+  (:import (org.lwjgl.glfw GLFW)
+           (org.lwjgl.opengl GL15)))
 
 (defonce DEFAULT_CONFIG_PATH "epiktetos/default-config.edn")
 
@@ -24,7 +28,6 @@
        io/resource
        slurp
        ig/read-string
-       ig/prep
        ig/init)))
 
 (defn start-engine!
@@ -42,3 +45,34 @@
      (event/dispatch e))
 
    (game-loop/start systems)))
+
+(defmethod ig/init-key
+  :gl/engine
+  [_ opts]
+  (let [{:keys [hot-reload]} opts]
+
+    (cond-> opts
+      hot-reload (assoc :hot-reload {:watcher (apply beholder/watch (fn [_] (doseq [[id prog] (:program @registrar/register)] (event/dispatch [::event/reg-p [id prog]]))) hot-reload)
+                                     :paths   hot-reload}))))
+
+(defmethod ig/halt-key!
+  :gl/engine
+  [_ system]
+  (let [{:keys [hot-reload]} system]
+    ;; reset state
+    (doseq [[layout programs] @state/rendering]
+      (doseq [[program-k entities] programs]
+        (for [[entity-id {:keys [vbo]}] entities]
+          (GL15/glDeleteBuffers vbo))))
+
+    (when hot-reload
+      (beholder/stop (:watcher hot-reload)))
+
+    (reset! registrar/register {})
+    (reset! event/kind->id->handler {})
+    (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
+    (reset! texture/text-cache {})
+    (reset! state/rendering {})
+    (reset! state/entities {})
+    (reset! state/system {})
+    (reset! state/db {})))

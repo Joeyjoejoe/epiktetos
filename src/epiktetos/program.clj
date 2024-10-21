@@ -1,15 +1,10 @@
 (ns epiktetos.program
-  (:require [integrant.core :as ig]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [epiktetos.registrar :as registrar]
-            [epiktetos.texture :as texture]
-            [epiktetos.state :as state]
-            [epiktetos.event :as event]
             [epiktetos.uniform :as u]
             [epiktetos.utils.glsl-parser :as glsl]
             [epiktetos.lang.opengl :as opengl])
-  (:import  (org.lwjgl.glfw GLFW)
-            (org.lwjgl.opengl GL11 GL15 GL20 GL32 GL40 GL45)))
+  (:import  (org.lwjgl.opengl GL11 GL20 GL32 GL40 GL45)))
 
 
 (defonce GL-TYPES
@@ -190,29 +185,6 @@
                  (when (= 0 (GL20/glGetShaderi id GL20/GL_COMPILE_STATUS))
                    (throw (Exception. (str "shader compilation error: " [stage path] (GL20/glGetShaderInfoLog id 1024)))))
                  (assoc metadata :ids [id]))))))
-
-
-(defmethod ig/init-key :gl/engine [_ opts] opts)
-
-(defmethod ig/halt-key!
-  :gl/engine
-  [_ system]
-
-  ;; reset state
-  (doseq [[layout programs] @state/rendering]
-    (doseq [[program-k entities] programs]
-      (for [[entity-id {:keys [vbo]}] entities]
-      (GL15/glDeleteBuffers vbo)))
-
-    (reset! registrar/register {})
-    (reset! event/kind->id->handler {})
-    (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
-    (reset! texture/text-cache {})
-    (reset! state/rendering {})
-    (reset! state/entities {})
-    (reset! state/system {})
-    (reset! state/db {})))
-
 
 (defn set-shaders!
   [prog]
