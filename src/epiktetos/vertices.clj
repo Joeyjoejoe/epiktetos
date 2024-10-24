@@ -24,9 +24,9 @@
     (assoc entity :vbo vbo-id)))
 
 (defn gpu-load!
-  [{id     :vao/id
-    layout :vao/layout :as vao}
-   {:keys [program]    :as entity}]
+  [{:keys [program]    :as entity}
+   {id     :vao/id
+    layout :vao/layout :as vao}]
   (let [schema  (map #(replace (name %)
                                #"\[.*\]" "")
                      layout)]

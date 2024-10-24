@@ -26,8 +26,7 @@
         (doseq [[program entities] programs]
           (let [{:as p
                  pid :program/id
-                 u-queue :uniforms
-                 primitive :primitive} (register/get-prog program)
+                 u-queue :uniforms} (register/get-prog program)
                 p-context (-> r-context
                               (assoc :pid (GL20/glUseProgram pid))
                               (assoc :program  program)
@@ -35,7 +34,7 @@
                 eu-queue (u/purge-u! u-queue ::u/program p-context)]
 
             (doseq [[entity-id draw?] entities]
-              (let [{:as entity :keys [position vbo assets]} (state/entity entity-id)
+              (let [{:as entity :keys [position vbo assets primitive]} (state/entity entity-id)
                     e-context (assoc p-context :entity entity)]
                 (u/purge-u! eu-queue ::u/entity e-context)
 

@@ -4,7 +4,7 @@
             [epiktetos.uniform :as u]
             [epiktetos.utils.glsl-parser :as glsl]
             [epiktetos.lang.opengl :as opengl])
-  (:import  (org.lwjgl.opengl GL11 GL20 GL32 GL40 GL45)))
+  (:import  (org.lwjgl.opengl GL11 GL20 GL45)))
 
 
 (defonce GL-TYPES
@@ -27,20 +27,6 @@
    :mat4f {:bytes (* 16 java.lang.Float/BYTES)
            :type  GL11/GL_FLOAT
            :count 16}})
-
-(defonce DRAW-PRIMITIVES
-  {:triangles                GL11/GL_TRIANGLES
-   :lines                    GL11/GL_LINES
-   :points                   GL11/GL_POINTS
-   :line-strip               GL11/GL_LINE_STRIP
-   :line-loop                GL11/GL_LINE_LOOP
-   :line-strip-adjacency     GL32/GL_LINE_STRIP_ADJACENCY
-   :lines-adjacency          GL32/GL_LINES_ADJACENCY
-   :triangle-strip           GL11/GL_TRIANGLE_STRIP
-   :triangle-fan             GL11/GL_TRIANGLE_FAN
-   :triangle-strip-adjacency GL32/GL_TRIANGLE_STRIP_ADJACENCY
-   :triangles-adjacency      GL32/GL_TRIANGLES_ADJACENCY
-   :patches                  GL40/GL_PATCHES})
 
 (defn attrib-offset
   "Given the index of an attrib in attribs collection,
@@ -208,12 +194,10 @@
 
 (defn create!
   [prog]
-  (let [{:keys [draw shaders]
-         :or   {draw :triangles}}
+  (let [{:keys [shaders]}
         prog
 
         prog-id   (GL20/glCreateProgram)
-        primitive (get DRAW-PRIMITIVES draw)
         uniforms  (get-in prog [:shaders :uniforms])]
 
     (doseq [shader-id (:ids shaders)]
@@ -231,5 +215,4 @@
 
     (-> prog
         (assoc :program/id prog-id)
-        (assoc :primitive primitive)
         (assoc :uniforms (compile-uniforms prog-id uniforms)))))

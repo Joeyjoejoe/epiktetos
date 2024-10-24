@@ -1,6 +1,7 @@
 (ns epiktetos.entity
   (:require [epiktetos.coeffect :refer [cofx-error]]
             [epiktetos.state  :as state]
+            [epiktetos.lang.opengl :as opengl]
             [epiktetos.registrar :as register]
             [epiktetos.texture :as textures]
             [epiktetos.vertices :as vertices]))
@@ -51,17 +52,20 @@
 
 (defn render!
   "Register an new entity in state/entities and load assets for rendering
-   on next loop iteration."
+  on next loop iteration."
   ([entity]
    ;; TODO Assets cache (VBO duplication prevention & instance rendering)
    ;; TODO Handle nil id or program
-   (let [{:keys [id program]} entity
+   (let [{:keys [id program primitive]
+          :or {primitive :triangles}}
+         entity
+
          {layout :layout}     (register/get-prog program)
-         vao                  (register/get-vao layout)]
+         vao                  (register/get-vao layout)
+         loaded-entity (-> entity
+                           (vertices/gpu-load! vao)
+                           (textures/load-entity)
+                           (assoc :primitive (get opengl/DRAW-PRIMITIVES primitive)))]
 
-     (->> entity
-          (vertices/gpu-load! vao)
-          (textures/load-entity)
-          (swap! state/entities assoc id))
-
+     (swap! state/entities assoc id loaded-entity)
      (swap! state/rendering assoc-in [layout program id] true))))
