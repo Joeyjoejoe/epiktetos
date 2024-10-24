@@ -14,14 +14,14 @@
 (defn- portal-load-state
   "Open portal with engine's current state (ready for inspection)"
   []
-    (p/clear)
-    (tap> {:register registrar/register
-           :db state/db
-           :rendering state/rendering
-           :entities state/entities
-           :system state/system
-           :events event/kind->id->handler
-           :events/queue event/queue}))
+  (p/clear)
+  (tap> {:register @registrar/register
+         :db @state/db
+         :rendering @state/rendering
+         :entities @state/entities
+         :system @state/system
+         :events @event/kind->id->handler
+         :events/queue @event/queue}))
 
 (defn- open-inspector
   []
@@ -59,14 +59,16 @@
   (refresh-all))
 
 (reg-fx :loop/toggle
-        (fn [_]
-         (swap! state/db update-in [:core/loop :runing?] not)))
+        (fn [db]
+          (portal-load-state)
+          (swap! state/db update-in [:core/loop :runing?] not)))
 
 (reg-fx :loop/stop
         (fn [_]
           ;; TODO Pass window as a parameter of the fx
-         (let [window (state/window)]
-           (GLFW/glfwSetWindowShouldClose window true))))
+          (portal-load-state)
+          (let [window (state/window)]
+            (GLFW/glfwSetWindowShouldClose window true))))
 
 (reg-event
   [:press :escape]
