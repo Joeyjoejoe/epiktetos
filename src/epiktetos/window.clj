@@ -6,7 +6,7 @@
             [epiktetos.lang.glfw :as glfw])
   (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback)
            (org.lwjgl.system MemoryUtil)
-           (org.lwjgl.opengl GL11 GL)))
+           (org.lwjgl.opengl GL GL11 GL20 GL32)))
 
 
 (defn get-size
@@ -84,7 +84,27 @@
   (GLFW/glfwSetCursorPos w (double (first (get-center w))) (double (last (get-center w))))
 
   (GL/createCapabilities)
+
+
+  ;; TODO server-side GL capabilities should be activable/disablable
+  ;; at render time on a per program/entity basis.
+  ;; It will necessitate some control over rendering order (just like with transparency)
+
+  ;; Enable Depth test
   (GL11/glEnable GL11/GL_DEPTH_TEST)
+
+  ;; Enable points primitive size
+  (GL11/glEnable GL20/GL_VERTEX_PROGRAM_POINT_SIZE) ;; gl_PointSize
+  (GL11/glEnable GL20/GL_POINT_SPRITE) ;; gl_PointCoord
+
+  ;; Enable lines primitive size & type
+  (GL11/glEnable GL11/GL_LINE_SMOOTH)
+  (GL11/glLineWidth 1.0)
+
+  ;; Enable transparancy support
+  (GL11/glEnable GL11/GL_BLEND)
+  (GL11/glBlendFunc GL11/GL_SRC_ALPHA GL11/GL_ONE_MINUS_SRC_ALPHA);
+
   w)
 
 
