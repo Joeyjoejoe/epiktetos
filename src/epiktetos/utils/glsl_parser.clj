@@ -10,7 +10,7 @@
 
 
 (def glsl-regexps {
-  :attr/layout        #"(?m)^layout.+location.+=\s*([^\s)]).+in\s*([^\s]+)\s*([^\s;\[]+)(?>\[(.*)\]|)"
+  :attr/layout        #"(?m)^layout.+location.+=\s*([^\s)]).+in\s+([^\s]+)\s*([^\s;\[]+)(?>\[(.*)\]|)"
   :uniform/one-liners #"(?m)^[^\/\n\r]*uniform\s+(\S+)\s+(\S+)(?:;|\s*=)"
   :unif/layout        #"(?m)^layout.+binding.+=\s*([^\s)]).+uniform\s*([^\s]+)"
   :uniform/blocks     #""
