@@ -6,6 +6,7 @@
   (:import (org.lwjgl.glfw GLFW))
   (:gen-class))
 
+(def FIXED_TIMESTEP (/ 1.0 120.0))
 
 (defn start
   [{window :glfw/window}]
@@ -30,7 +31,7 @@
 
      (event/execute [::event/loop.iter loop-iter])
 
-     (while (>= @lag 0.1)
+     (while (>= @lag FIXED_TIMESTEP)
 
        (event/consume!)
 
@@ -39,7 +40,7 @@
          (GLFW/glfwWaitEvents)
          (event/consume!))
 
-       (swap! lag #(- % 0.1)))
+       (swap! lag #(- % FIXED_TIMESTEP)))
 
      (rendering/pipeline)
 
