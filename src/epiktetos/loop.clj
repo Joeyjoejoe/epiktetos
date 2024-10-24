@@ -33,6 +33,7 @@
 
      (while (>= @lag FIXED_TIMESTEP)
 
+       (event/execute [::event/physics.update])
        (event/consume!)
 
        ;; On pause loop keep dispatching events
