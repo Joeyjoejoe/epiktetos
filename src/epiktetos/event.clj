@@ -9,7 +9,7 @@
 ;; - events are chain of interceptors
 (def kind->id->handler (atom {}))
 
-(defn id [event]
+(defn get-id [event]
   (get event 0))
 
 (defn get-handler
@@ -25,6 +25,14 @@
   ([kind event]
    (get-in @kind->id->handler [kind event])))
 
+(def PLACEHOLDER-EVENTS
+  #{::physics.update ::loop.iter})
+
+(defn log-missing-event!
+  [id]
+  (when-not (id PLACEHOLDER-EVENTS)
+    (println "event not registered" id)))
+
 (defn dispatch [event]
   (swap! queue conj event))
 
@@ -36,12 +44,12 @@
 
 (defn execute
   ([event]
-   (if-let [interceptors (get-handler :event (id event))]
-       (interc/execute event interceptors)
-       (println "event not registered" (id event))))
+   (if-let [interceptors (get-handler :event (get-id event))]
+     (interc/execute event interceptors)
+     (log-missing-event! (get-id event))))
   ([event & events]
-     (doseq [e (cons event events)]
-       (execute e))))
+   (doseq [e (cons event events)]
+     (execute e))))
 
 (defn consume!
   []
