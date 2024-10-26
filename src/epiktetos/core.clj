@@ -61,8 +61,10 @@
                               (let [cofx (:coeffects context)
                                     fx   {}]
 
-                                (->> (handler-fn cofx fx)
-                                     (assoc context :effects))))})
+                                (if (:errors cofx)
+                                  (assoc context :effects {})
+                                  (->> (handler-fn cofx fx)
+                                       (assoc context :effects)))))})
          interceptors [fx/do-fx
                        (inject-cofx :inject-db)
                        (inject-cofx :inject-system)
