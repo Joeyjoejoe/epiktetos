@@ -58,8 +58,8 @@
    (let [handler (->interceptor
                    {:id     :event-fn
                     :before (fn handler [context]
-                              (let [{:keys [db] :as cofx} (:coeffects context)
-                                    fx {:db db}]
+                              (let [cofx (:coeffects context)
+                                    fx   {}]
 
                                 (->> (handler-fn cofx fx)
                                      (assoc context :effects))))})
