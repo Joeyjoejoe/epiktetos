@@ -179,8 +179,10 @@
 
 (reg-fx :event/dispatch
         (fn dispatch-event! [events]
-          (doseq [e events]
-            (event/dispatch e))))
+          (if (keyword? (first events))
+            (event/dispatch events)
+            (doseq [e events]
+              (event/dispatch e)))))
 
 (reg-fx ::fx/reg-p
         (fn [prog-map]
