@@ -155,9 +155,12 @@
 
 (reg-event ::event/loop.iter
            (fn loop-infos [cofx fx]
-             (let [{[_ loop-iter] :event} cofx]
-               (-> fx
-                   (assoc-in [:db :core/loop] loop-iter)))))
+             (let [{[_ loop-iter] :event
+                    db :db}
+                   cofx
+
+                   new-db (assoc db :core/loop loop-iter)]
+               (assoc fx :db new-db))))
 
 (reg-event ::event/reg-p
            (fn [cofx fx]
