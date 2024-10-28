@@ -209,8 +209,12 @@
           (reset! state/db new-db)))
 
 (reg-fx :entity/render       entity/render!)
+(reg-fx :entity/batch-render entity/batch-render!)
 (reg-fx :entity/update       entity/update!)
 (reg-fx :entity/batch-update entity/batch-update!) ;
 (reg-fx :entity/delete       entity/delete!)
 (reg-fx :entity/delete-all   entity/delete-all!)
 (reg-fx :entity/reset-all    entity/reset-all!)
+
+
+;; TODO Add fx for "throwing" error from handler function without stoping the loop

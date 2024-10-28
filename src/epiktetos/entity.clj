@@ -69,3 +69,10 @@
 
      (swap! state/entities assoc id loaded-entity)
      (swap! state/rendering assoc-in [layout program id] true))))
+
+(defn batch-render!
+  "Render a list of entities"
+  [entities]
+  (doseq [entity entities]
+    (render! entity)))
+
