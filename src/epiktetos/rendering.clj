@@ -3,7 +3,9 @@
             [epiktetos.uniform :as u]
             [epiktetos.registrar :as register]
             [epiktetos.event :as event])
-  (:import (org.lwjgl.opengl GL11 GL20 GL30 GL45)))
+  (:import
+    (org.lwjgl BufferUtils)
+    (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL45)))
 
 ;; TODO Potencial performance opti :
 ;; - Uniform handler functions are pure and could all be computed in parallel,
@@ -34,7 +36,7 @@
                 eu-queue (u/purge-u! u-queue ::u/program p-context)]
 
             (doseq [[entity-id draw?] entities]
-              (let [{:as entity :keys [position vbo assets primitive]} (state/entity entity-id)
+              (let [{:as entity :keys [position vbo ibo ibo-length assets primitive]} (state/entity entity-id)
                     e-context (assoc p-context :entity entity)]
                 (u/purge-u! eu-queue ::u/entity e-context)
 
@@ -42,4 +44,9 @@
                 ;;      - Instance rendering
                 ;;      - Indice drawing
                 (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
-                (GL11/glDrawArrays primitive 0 (count (:vertices assets)))))))))))
+
+                (if ibo
+                  (do
+                    (GL45/glVertexArrayElementBuffer id ibo)
+                    (GL11/glDrawElements primitive ibo-length GL11/GL_UNSIGNED_INT 0))
+                  (GL11/glDrawArrays primitive 0 (count (:vertices assets))))))))))))

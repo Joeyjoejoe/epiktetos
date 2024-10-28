@@ -151,8 +151,73 @@
           random-cube (-> model
                           (assoc :id entity-id)
                           (assoc :position position)
-                          (assoc :scale (rand 1.0))
+                          (assoc :scale (rand 2.0))
                           (assoc :speed (* (rand 100) (rand-nth [-1 1])))
                           (assoc-in [:assets :textures] [(str "textures/" texture)])
                           (assoc-in [:assets :vertices] colored-vertices))]
       (assoc fx :entity/render random-cube))))
+
+
+
+(def cube-entity
+  {:id :test-indices
+   :program :3d/blank
+   :position [0.0 0.0 0.0]
+   :assets
+    {:vertices
+     [;; Face avant (z positif) - Front face, rouge
+      {:coordinates [-0.5 -0.5  0.5] :color [1.0 0.0 0.0] :normals [0.0 0.0 1.0]}  ;; 0 bas-gauche
+      {:coordinates [ 0.5 -0.5  0.5] :color [1.0 0.0 0.0] :normals [0.0 0.0 1.0]}  ;; 1 bas-droite
+      {:coordinates [-0.5  0.5  0.5] :color [1.0 0.0 0.0] :normals [0.0 0.0 1.0]}  ;; 2 haut-gauche
+      {:coordinates [ 0.5  0.5  0.5] :color [1.0 0.0 0.0] :normals [0.0 0.0 1.0]}  ;; 3 haut-droite
+
+      ;; Face arrière (z négatif) - Back face, vert
+      {:coordinates [-0.5 -0.5 -0.5] :color [0.0 1.0 0.0] :normals [0.0 0.0 -1.0]} ;; 4 bas-gauche
+      {:coordinates [ 0.5 -0.5 -0.5] :color [0.0 1.0 0.0] :normals [0.0 0.0 -1.0]} ;; 5 bas-droite
+      {:coordinates [-0.5  0.5 -0.5] :color [0.0 1.0 0.0] :normals [0.0 0.0 -1.0]} ;; 6 haut-gauche
+      {:coordinates [ 0.5  0.5 -0.5] :color [0.0 1.0 0.0] :normals [0.0 0.0 -1.0]} ;; 7 haut-droite
+
+      ;; Face supérieure (y positif) - Top face, bleu
+      {:coordinates [-0.5  0.5 -0.5] :color [0.0 0.0 1.0] :normals [0.0 1.0 0.0]}  ;; 8 arrière-gauche
+      {:coordinates [ 0.5  0.5 -0.5] :color [0.0 0.0 1.0] :normals [0.0 1.0 0.0]}  ;; 9 arrière-droite
+      {:coordinates [-0.5  0.5  0.5] :color [0.0 0.0 1.0] :normals [0.0 1.0 0.0]}  ;; 10 avant-gauche
+      {:coordinates [ 0.5  0.5  0.5] :color [0.0 0.0 1.0] :normals [0.0 1.0 0.0]}  ;; 11 avant-droite
+
+      ;; Face inférieure (y négatif) - Bottom face, jaune
+      {:coordinates [-0.5 -0.5 -0.5] :color [1.0 1.0 0.0] :normals [0.0 -1.0 0.0]} ;; 12 arrière-gauche
+      {:coordinates [ 0.5 -0.5 -0.5] :color [1.0 1.0 0.0] :normals [0.0 -1.0 0.0]} ;; 13 arrière-droite
+      {:coordinates [-0.5 -0.5  0.5] :color [1.0 1.0 0.0] :normals [0.0 -1.0 0.0]} ;; 14 avant-gauche
+      {:coordinates [ 0.5 -0.5  0.5] :color [1.0 1.0 0.0] :normals [0.0 -1.0 0.0]} ;; 15 avant-droite
+
+      ;; Face droite (x positif) - Right face, magenta
+      {:coordinates [ 0.5 -0.5 -0.5] :color [1.0 0.0 1.0] :normals [1.0 0.0 0.0]}  ;; 16 bas-arrière
+      {:coordinates [ 0.5  0.5 -0.5] :color [1.0 0.0 1.0] :normals [1.0 0.0 0.0]}  ;; 17 haut-arrière
+      {:coordinates [ 0.5 -0.5  0.5] :color [1.0 0.0 1.0] :normals [1.0 0.0 0.0]}  ;; 18 bas-avant
+      {:coordinates [ 0.5  0.5  0.5] :color [1.0 0.0 1.0] :normals [1.0 0.0 0.0]}  ;; 19 haut-avant
+
+      ;; Face gauche (x négatif) - Left face, cyan
+      {:coordinates [-0.5 -0.5 -0.5] :color [0.0 1.0 1.0] :normals [-1.0 0.0 0.0]} ;; 20 bas-arrière
+      {:coordinates [-0.5  0.5 -0.5] :color [0.0 1.0 1.0] :normals [-1.0 0.0 0.0]} ;; 21 haut-arrière
+      {:coordinates [-0.5 -0.5  0.5] :color [0.0 1.0 1.0] :normals [-1.0 0.0 0.0]} ;; 22 bas-avant
+      {:coordinates [-0.5  0.5  0.5] :color [0.0 1.0 1.0] :normals [-1.0 0.0 0.0]} ;; 23 haut-avant
+     ]
+
+     :indices
+     [ 0 2 3   0 3 1
+      4 6 7   4 7 5
+      8 10 11   8 11 9
+      12 14 15   12 15 13
+      16 18 19   16 19 17
+      20 22 23   20 23 21
+      ]
+    }})
+
+(reg-p :3d/blank
+       {:layout   [:vec3f/coordinates :vec3f/color :vec3f/normals]
+        :pipeline [[:vertex "shaders/blank.vert"]
+                   [:fragment "shaders/blank.frag"]]})
+
+(reg-event
+  [:press :k]
+  (fn [cofx fx]
+    (assoc fx :entity/render cube-entity)))

@@ -1,7 +1,7 @@
 (ns epiktetos.vertices
   (:require [epiktetos.utils.buffer :as buffer]
             [clojure.string :refer [replace]])
-  (:import  (org.lwjgl.opengl GL44 GL45)))
+  (:import  (org.lwjgl.opengl GL15 GL44 GL45)))
 
 (defn pack-vertex
   [vertex schema]
@@ -23,6 +23,20 @@
     (GL45/glNamedBufferStorage vbo-id vertices GL44/GL_DYNAMIC_STORAGE_BIT)
     (assoc entity :vbo vbo-id)))
 
+(defn create-ibo
+  [entity]
+  (if-let [indices (get-in entity [:assets :indices])]
+    (let [ibo-id   (GL45/glCreateBuffers)
+          ibo-data (buffer/int-buffer indices)
+          ibo-length (count indices)]
+
+      (GL45/glNamedBufferStorage ibo-id ibo-data GL44/GL_DYNAMIC_STORAGE_BIT)
+
+      (-> entity
+          (assoc :ibo ibo-id)
+          (assoc :ibo-length ibo-length)))
+    entity))
+
 (defn gpu-load!
   [{:keys [program]    :as entity}
    {id     :vao/id
@@ -32,6 +46,7 @@
                      layout)]
     (-> entity
         (create-vbo schema)
+        (create-ibo)
         (assoc :vao id))))
 
 
