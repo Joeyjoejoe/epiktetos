@@ -7,9 +7,10 @@
                :hint.window/visible            false
                :hint.window/resizable          true
                :hint.context/version.maj       4
-               :hint.context/version.min       3
+               :hint.context/version.min       6
                :hint.context/gl.profile        :gl.profile/core
-               :hint.context/gl.forward-compat true}
+               :hint.context/gl.forward-compat true
+               :hint.window/gl.debug-context   true}
 
  :gl/engine {:context #ig/ref :glfw/window
              :hot-reload ["resources/shaders/"]}}

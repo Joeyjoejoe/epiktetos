@@ -29,6 +29,7 @@
    :hint.context/version.min       GLFW/GLFW_CONTEXT_VERSION_MINOR
    :hint.context/gl.profile        GLFW/GLFW_OPENGL_PROFILE
    :hint.context/gl.forward-compat GLFW/GLFW_OPENGL_FORWARD_COMPAT
+   :hint.window/gl.debug-context   GLFW/GLFW_OPENGL_DEBUG_CONTEXT
 
    ;; Values
    :gl.profile/core   GLFW/GLFW_OPENGL_CORE_PROFILE
