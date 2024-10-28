@@ -18,7 +18,7 @@
 
     (doseq [[vao-layout programs] @state/rendering]
       (when (nil? vao-layout)
-        (throw (Exception. (str "Shader programs not found " (keys programs)))))
+        (throw (Exception. (str "VAO error - these programs have no or bad layout " (keys programs)))))
 
       (let [{:keys [:vao/id :vao/stride]} (register/get-vao vao-layout)]
         (GL30/glBindVertexArray id)
