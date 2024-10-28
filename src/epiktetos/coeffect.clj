@@ -16,7 +16,9 @@
   from executing, and display a warning."
 
   ([cofx err-map]
-   (update cofx :errors conj err-map))
+   (if (:errors cofx)
+     (update cofx :errors conj err-map)
+     (assoc cofx :errors [err-map])))
 
   ([cofx cofx-id msg]
    (let [event   (:event cofx)
