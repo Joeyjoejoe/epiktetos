@@ -34,7 +34,10 @@
     (println "event not registered" id)))
 
 (defn dispatch [event]
-  (swap! queue conj event))
+  (let [id (get-id event)]
+    (if (get-handler id)
+      (swap! queue conj event)
+      (log-missing-event! id))))
 
 (defn register
   ([id handler]
