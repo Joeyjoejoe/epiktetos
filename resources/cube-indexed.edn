@@ -1,0 +1,63 @@
+{:program :perspective
+ :position [0.0 0.0 0.0]
+ :assets {:textures ["textures/container.jpg"]
+          :indices [;; Face avant (-Z)
+                   0, 1, 2,
+                   2, 3, 0,
+
+                   ;; Face arrière (+Z)
+                   4, 5, 6,
+                   6, 7, 4,
+
+                   ;; Face gauche (-X)
+                   8, 9, 10,
+                   10, 11, 8,
+
+                   ;; Face droite (+X)
+                   12, 13, 14,
+                   14, 15, 12,
+
+                   ;; Face bas (-Y)
+                   16, 17, 18,
+                   18, 19, 16,
+
+                   ;; Face haut (+Y)
+                   20, 21, 22,
+                   22, 23, 20]
+
+          :vertices [;; Front vertices (-Z)
+                    {:coordinates [-0.5 -0.5 -0.5] :color [1.0 0.0 1.0] :texture [0.0 1.0]}  ;; 0
+                    {:coordinates [ 0.5 -0.5 -0.5] :color [1.0 0.0 0.0] :texture [1.0 1.0]}  ;; 1
+                    {:coordinates [ 0.5  0.5 -0.5] :color [1.0 1.0 0.0] :texture [1.0 0.0]}  ;; 2
+                    {:coordinates [-0.5  0.5 -0.5] :color [1.0 0.0 1.0] :texture [0.0 0.0]}  ;; 3
+
+                    ;; Back vertices (+Z)
+                    {:coordinates [-0.5 -0.5  0.5] :color [1.0 0.0 0.0] :texture [1.0 1.0]}  ;; 4
+                    {:coordinates [ 0.5 -0.5  0.5] :color [1.0 0.0 1.0] :texture [0.0 1.0]}  ;; 5
+                    {:coordinates [ 0.5  0.5  0.5] :color [1.0 0.0 1.0] :texture [0.0 0.0]}  ;; 6
+                    {:coordinates [-0.5  0.5  0.5] :color [1.0 0.5 0.0] :texture [1.0 0.0]}  ;; 7
+
+                    ;; Left vertices (-X)
+                    {:coordinates [-0.5 -0.5  0.5] :color [1.0 0.0 0.0] :texture [0.0 1.0]}  ;; 8
+                    {:coordinates [-0.5  0.5  0.5] :color [1.0 0.0 0.0] :texture [0.0 0.0]}  ;; 9
+                    {:coordinates [-0.5  0.5 -0.5] :color [1.0 0.0 0.0] :texture [1.0 0.0]}  ;; 10
+                    {:coordinates [-0.5 -0.5 -0.5] :color [1.0 0.5 0.0] :texture [1.0 1.0]}  ;; 11
+
+                    ;; Right vertices (+X)
+                    {:coordinates [ 0.5 -0.5  0.5] :color [1.0 0.5 1.0] :texture [1.0 1.0]}  ;; 12
+                    {:coordinates [ 0.5  0.5  0.5] :color [1.0 0.0 0.0] :texture [1.0 0.0]}  ;; 13
+                    {:coordinates [ 0.5  0.5 -0.5] :color [1.0 0.5 0.0] :texture [0.0 0.0]}  ;; 14
+                    {:coordinates [ 0.5 -0.5 -0.5] :color [1.0 0.0 1.0] :texture [0.0 1.0]}  ;; 15
+
+                    ;; Bottom vertices (-Y)
+                    {:coordinates [-0.5 -0.5  0.5] :color [1.0 0.0 0.0] :texture [0.0 0.0]}  ;; 16
+                    {:coordinates [ 0.5 -0.5  0.5] :color [1.0 0.0 0.0] :texture [1.0 0.0]}  ;; 17
+                    {:coordinates [ 0.5 -0.5 -0.5] :color [1.0 0.0 0.0] :texture [1.0 1.0]}  ;; 18
+                    {:coordinates [-0.5 -0.5 -0.5] :color [1.0 0.0 0.0] :texture [0.0 1.0]}  ;; 19
+
+                    ;; Top vertices (+Y)
+                    {:coordinates [-0.5  0.5  0.5] :color [1.0 0.0 0.0] :texture [0.0 1.0]}  ;; 20
+                    {:coordinates [ 0.5  0.5  0.5] :color [1.0 0.0 0.0] :texture [1.0 1.0]}  ;; 21
+                    {:coordinates [ 0.5  0.5 -0.5] :color [1.0 0.0 0.0] :texture [1.0 0.0]}  ;; 22
+                    {:coordinates [-0.5  0.5 -0.5] :color [1.0 0.0 0.0] :texture [0.0 0.0]}  ;; 23
+                   ]}}
