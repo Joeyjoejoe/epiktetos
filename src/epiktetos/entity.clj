@@ -4,7 +4,7 @@
             [epiktetos.lang.opengl :as opengl]
             [epiktetos.registrar :as register]
             [epiktetos.texture :as textures]
-            [epiktetos.vertices :as vertices]))
+            [epiktetos.vao.buffer :as vao-buffer]))
 
 
 (defonce GET-ALL-IDS #{:all :* "*"})
@@ -22,8 +22,8 @@
   ([id]
   (if-let [entity (state/entity id)]
     (let [{:keys [program]} entity
-          {layout :layout}  (register/get-prog program)]
-      (swap! state/rendering update-in [layout program] dissoc id)
+          {buffers :buffers}  (register/get-prog program)]
+      (swap! state/rendering update-in [buffers program] dissoc id)
       (swap! state/entities dissoc id)))))
 
 (defn update!
@@ -60,19 +60,18 @@
           :or {primitive :triangles}}
          entity
 
-         {layout :layout}     (register/get-prog program)
-         vao                  (register/get-vao layout)
+         {buffers :buffers}     (register/get-prog program)
+         vao                  (register/get-vao buffers)
          loaded-entity (-> entity
-                           (vertices/gpu-load! vao)
+                           (vao-buffer/gpu-load! vao)
                            (textures/load-entity)
                            (assoc :primitive (get opengl/DRAW-PRIMITIVES primitive)))]
 
      (swap! state/entities assoc id loaded-entity)
-     (swap! state/rendering assoc-in [layout program id] true))))
+     (swap! state/rendering assoc-in [buffers program id] true))))
 
 (defn batch-render!
   "Render a list of entities"
   [entities]
   (doseq [entity entities]
     (render! entity)))
-

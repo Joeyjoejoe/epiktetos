@@ -41,3 +41,53 @@
 (reg-custom-type :mat4f [:vec4f :vec4f :vec4f :vec4f])
 (reg-custom-type :someStruct [:mat2f :vec2f :mat4f])
 
+(defn get-offset
+  "Given the index of an attrib in attribs collection,
+  returns the bytes size sum of previous attribs"
+  [attr-layout location]
+  (let [prev-attribs (subvec (apply vector attr-layout) 0 location)]
+    (reduce #(+ %1 (::byte-size %2)) 0 prev-attribs)))
+
+(defn parse-key
+  "Parse attribute key"
+  ([attrib-key]
+   (let [attrib-name (name attrib-key)
+         attrib-type (-> attrib-key namespace keyword)]
+
+     (if-let [{:keys [bytes type count length]
+               :or   {length 1}}
+              (get @BASIC-TYPES attrib-type)]
+
+       ;; Basic type attrib
+       #::{:key        attrib-key
+           :type       attrib-type
+           :length     length
+           :data-type  type
+           :data-count count
+           :byte-size  bytes}
+
+       ;; Custom type attrib
+       (->> attrib-type
+            get-attrib-type
+            (map #(parse-key (keyword (name %) attrib-name)))))))
+
+  ([attrib-key & attribs]
+   (reduce #(conj %1 (parse-key %2)) [(parse-key attrib-key)] attribs)))
+
+(defn add-attrib
+  "Creates a new attribute to given vao"
+  [vao attrib]
+  (let [{::keys [location length
+                data-count data-type normalized?
+                byte-offset byte-size
+                binding-index divisor]
+         :or {length 1 binding-index 0 divisor 0 normalized? false}}
+        attrib]
+
+        (GL45/glVertexArrayAttribFormat vao location data-count data-type normalized? byte-offset)
+        (GL45/glEnableVertexArrayAttrib vao location)
+        (GL45/glVertexArrayAttribBinding vao location binding-index)
+
+        ;; TODO Might not need to declare that for every attributes of
+        ;; a buffer layout
+        (GL45/glVertexArrayBindingDivisor vao binding-index divisor)))

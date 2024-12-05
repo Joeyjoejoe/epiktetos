@@ -13,7 +13,9 @@
            (org.lwjgl.opengl GL45)))
 
 (reg-p :perspective
-       {:layout   [:vec3f/coordinates :vec3f/color :vec2f/texture]
+       {:buffers  [{:layout [:vec3f/coordinates :vec3f/color :vec2f/texture]
+                     :source [:assets :vertices]
+                     :storage :dynamic}]
         :pipeline [[:vertex "shaders/default.vert"]
                    [:fragment "shaders/default.frag"]]})
 
@@ -213,7 +215,8 @@
     }})
 
 (reg-p :3d/blank
-       {:layout   [:vec3f/coordinates :vec3f/color :vec3f/normals]
+       {:buffers   [{:layout [:vec3f/coordinates :vec3f/color :vec3f/normals]
+                    :source [:assets :vertices]}]
         :pipeline [[:vertex "shaders/blank.vert"]
                    [:fragment "shaders/blank.frag"]]})
 

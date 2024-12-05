@@ -62,8 +62,11 @@
     ;; reset state
     (doseq [[layout programs] @state/rendering]
       (doseq [[program-k entities] programs]
-        (for [[entity-id {:keys [vbo]}] entities]
-          (GL15/glDeleteBuffers vbo))))
+        (for [[entity-id {:keys [buffers ibo]}] entities]
+          (do
+            (when ibo
+              (GL15/glDeleteBuffers ibo))
+            (GL15/glDeleteBuffers (map :id buffers))))))
 
     (when hot-reload
       (beholder/stop (:watcher hot-reload)))

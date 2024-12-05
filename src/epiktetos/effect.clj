@@ -1,11 +1,6 @@
 (ns epiktetos.effect
   (:require [epiktetos.event :as event]
-            [epiktetos.state :as state]
-            [epiktetos.texture :as textures]
-            [epiktetos.vertices :as vertices]
-            [epiktetos.interceptors :refer [->interceptor]]
-            [clojure.pprint :refer [pprint]])
-  (:import (org.lwjgl.glfw GLFW)))
+            [epiktetos.interceptors :refer [->interceptor]]))
 
 (defn register
   [id fx-fn]
