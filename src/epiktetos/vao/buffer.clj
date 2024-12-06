@@ -97,8 +97,7 @@
 (defn parse-layout
   [layout binding-index]
   (let [attribs (->> layout
-                     (apply vao-attrib/parse-key)
-                     flatten
+                     (map vao-attrib/parse-key)
                      (mapv #(assoc % ::vao-attrib/binding-index binding-index)))]
 
     (map-indexed (fn [i attr]
