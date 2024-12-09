@@ -10,6 +10,7 @@
   [id cofx-fn]
   (event/register :coeffect id cofx-fn))
 
+;; TODO implement fx-error to prevent loop break
 (defn cofx-error
   "Register an error that occurred in a coeffect.
   Coeffect errors prevent events handler functions
