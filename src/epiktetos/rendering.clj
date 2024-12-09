@@ -37,18 +37,20 @@
                 eu-queue (u/purge-u! u-queue ::u/program p-context)]
 
             (doseq [[entity-id draw?] entities]
-              (let [{:as entity :keys [buffers ibo ibo-length assets primitive]} (state/entity entity-id)
+              ;; TODO Add control to entity keys and display meaningfull error messages
+              (let [{:as entity :keys [buffers ibo ibo-length assets primitive-id]} (state/entity entity-id)
                     e-context (assoc p-context :entity entity)]
                 (u/purge-u! eu-queue ::u/entity e-context)
 
                 ;; TODO Implement other rendering methods
                 ;;      - Instance rendering
-                ;;      - Indice drawing
+
+                ;; Attach program buffers
                 (doseq [buffer buffers]
                   (vao-buffer/attach-vao id buffer))
 
                 (if ibo
                   (do
                     (GL45/glVertexArrayElementBuffer id ibo)
-                    (GL11/glDrawElements primitive ibo-length GL11/GL_UNSIGNED_INT 0))
-                  (GL11/glDrawArrays primitive 0 (count (:vertices assets))))))))))))
+                    (GL11/glDrawElements primitive-id ibo-length GL11/GL_UNSIGNED_INT 0))
+                  (GL11/glDrawArrays primitive-id 0 (count (:vertices assets))))))))))))

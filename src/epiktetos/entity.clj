@@ -65,7 +65,7 @@
          loaded-entity (-> entity
                            (vao-buffer/gpu-load! vao)
                            (textures/load-entity)
-                           (assoc :primitive (get opengl/DRAW-PRIMITIVES primitive)))]
+                           (assoc :primitive-id (get opengl/DRAW-PRIMITIVES primitive)))]
 
      (swap! state/entities assoc id loaded-entity)
      (swap! state/rendering assoc-in [buffers program id] true))))
