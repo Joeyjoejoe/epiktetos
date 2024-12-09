@@ -52,8 +52,12 @@
   (let [{:keys [hot-reload]} opts]
 
     (cond-> opts
-      hot-reload (assoc :hot-reload {:watcher (apply beholder/watch (fn [_] (doseq [[id prog] (:program @registrar/register)] (event/dispatch [::event/reg-p [id prog]]))) hot-reload)
-                                     :paths   hot-reload}))))
+      hot-reload (assoc :hot-reload {:watcher (apply beholder/watch
+                                                     (fn [_]
+                                                       (doseq [[id prog] (:program @registrar/register)]
+                                                         (event/dispatch [::event/reg-p [id prog]])))
+                                                     hot-reload)
+                                     :paths hot-reload}))))
 
 (defmethod ig/halt-key!
   :gl/engine
@@ -62,8 +66,11 @@
     ;; reset state
     (doseq [[layout programs] @state/rendering]
       (doseq [[program-k entities] programs]
-        (for [[entity-id {:keys [vbo]}] entities]
-          (GL15/glDeleteBuffers vbo))))
+        (for [[entity-id {:keys [buffers ibo]}] entities]
+          (do
+            (when ibo
+              (GL15/glDeleteBuffers ibo))
+            (GL15/glDeleteBuffers (map :id buffers))))))
 
     (when hot-reload
       (beholder/stop (:watcher hot-reload)))

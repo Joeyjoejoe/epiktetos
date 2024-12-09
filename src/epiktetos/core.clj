@@ -185,13 +185,11 @@
               (event/dispatch e)))))
 
 (reg-fx ::fx/reg-p
-        (fn [prog-map]
-          (doseq [[id p] prog-map]
+        (fn [progs-map]
+          (doseq [[id p] progs-map]
             (-> p
                 (assoc :name id)
-                prog/set-shaders!
-                prog/set-vao!
-                prog/create!
+                prog/create
                 register/add-program!))))
 
 (reg-fx ::fx/reg-eu

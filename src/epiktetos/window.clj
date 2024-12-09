@@ -132,6 +132,8 @@
 
 (defn configure [w opts]
   (GLFW/glfwMakeContextCurrent w)
+
+  ;; Enable (1) vsync
   (GLFW/glfwSwapInterval 1)
 
   (controls/set-callbacks w)

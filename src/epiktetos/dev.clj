@@ -26,8 +26,7 @@
 (defn- open-inspector
   []
   (alter-var-root #'inspector (constantly (p/open {:window-title "Inspector"})))
-  (add-tap #'p/submit)
-  (portal-load-state))
+  (add-tap #'p/submit))
 
 (defn- close-inspector
   []
@@ -38,44 +37,39 @@
 (defn start
   "Start engine"
   ([]
-   (open-inspector)
-   (epiktet/run []))
+   (if-not (empty? @state/system)
+     (do (ig/halt! (dissoc @state/system :glfw/window))
+         (refresh-all :after (symbol "epiktetos.dev" "start")))
+     (epiktet/run [])))
   ([config-path]
    (start config-path []))
   ([config-path events]
-   (open-inspector)
    (epiktet/run config-path events)))
 
-(defn resume
-  "Resume a paused loop"
-  []
-  (epiktet-loop/start @state/system))
-
-(defn stop
-  "Stop engine"
-  []
-  (close-inspector)
-  (ig/halt! @state/system)
-  (refresh-all))
-
-(reg-fx :loop/toggle
+(reg-fx :loop/pause-toggle
         (fn [db]
-          (portal-load-state)
-          (swap! state/db update-in [:core/loop :runing?] not)))
+          (let [paused (get-in @state/db [:core/loop :paused?])]
 
-(reg-fx :loop/stop
+            (if-not paused
+              (open-inspector)
+              (close-inspector))
+
+            (swap! state/db update-in [:core/loop :paused?] not)
+
+            (when-not paused
+              (portal-load-state)))))
+
+(reg-fx :engine/stop
         (fn [_]
-          ;; TODO Pass window as a parameter of the fx
-          (portal-load-state)
           (let [window (state/window)]
             (GLFW/glfwSetWindowShouldClose window true))))
 
 (reg-event
   [:press :escape]
   (fn loop-stop [_ fx]
-    (assoc fx :loop/stop true)))
+    (assoc fx :engine/stop true)))
 
 (reg-event
   [:press :enter]
   (fn loop-play [_ fx]
-    (assoc fx :loop/toggle true)))
+    (assoc fx :loop/pause-toggle true)))

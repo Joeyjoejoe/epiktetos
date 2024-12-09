@@ -22,6 +22,6 @@
 
     ;; Flag previous program for deletion to free up some memory
     (when-let [old-prog (get-prog k)]
-      (GL20/glDeleteProgram (:program/id old-prog)))
+      (GL20/glDeleteProgram (:id old-prog)))
 
     (swap! register assoc-in [:program k] prog)))

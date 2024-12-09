@@ -1,6 +1,7 @@
 (ns epiktetos.loop
   (:require [epiktetos.event :as event]
             [epiktetos.state :as state]
+            [integrant.core :as ig]
             [epiktetos.rendering :as rendering])
 
   (:import (org.lwjgl.glfw GLFW))
@@ -11,13 +12,14 @@
 (defn start
   [{window :glfw/window}]
 
+   (println :engine/start)
    (GLFW/glfwSetWindowShouldClose window false)
 
    (loop [{{:keys [curr delta]} :time
            {:keys [value frames tick]} :fps
            :as loop-iter}
           {:iter 1
-           :runing? true
+           :paused? false
            :time {:curr (GLFW/glfwGetTime) :prev 0 :delta 0}
            :fps {:value 0 :frames 0 :tick 0.0}}
 
@@ -36,25 +38,28 @@
        (event/execute [::event/physics.update])
        (event/consume!)
 
-       ;; On pause loop keep dispatching events
-       (while (not (get-in @state/db [:core/loop :runing?]))
+       ;; TODO Improve paused loop commands :
+       ;; - Manual event loop consumption
+       ;; - Events redo/undo
+       ;; - Inspector controls
+       (while (get-in @state/db [:core/loop :paused?])
          (GLFW/glfwWaitEvents)
          (event/consume!))
 
        (swap! lag #(- % FIXED_TIMESTEP)))
 
-     (rendering/pipeline)
-
-     (GLFW/glfwSwapBuffers window)
-     (GLFW/glfwPollEvents)
-
      (when-not (GLFW/glfwWindowShouldClose window)
+       (rendering/pipeline)
+
+       (GLFW/glfwSwapBuffers window)
+       (GLFW/glfwPollEvents)
+
        (let [iter-end      (GLFW/glfwGetTime)
              iter-duration (- iter-end curr)
              fps-tick (+ tick iter-duration)
              fps-map  (if (> fps-tick 1.0)
-                           {:value frames :frames 0 :tick (- fps-tick 1.0)}
-                           {:value value :frames (inc frames) :tick fps-tick})]
+                        {:value frames :frames 0 :tick (- fps-tick 1.0)}
+                        {:value value :frames (inc frames) :tick fps-tick})]
 
          (-> loop-iter
              (assoc-in [:time :curr]  iter-end)
@@ -62,4 +67,10 @@
              (assoc-in [:time :delta] iter-duration)
              (assoc :fps fps-map)
              (update :iter inc)
-             (recur lag))))))
+             (recur lag)))))
+
+   ;; Stop window system
+   (-> @state/system
+       (select-keys [:glfw/window])
+       ig/halt!)
+   :engine/stop)

@@ -2,10 +2,34 @@
   (:require [epiktetos.state :as state]
             [epiktetos.uniform :as u]
             [epiktetos.registrar :as register]
+            [epiktetos.vao.buffer :as vao-buffer]
             [epiktetos.event :as event])
   (:import
     (org.lwjgl BufferUtils)
-    (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL45)))
+    (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL31 GL45)))
+
+
+
+
+(defn draw
+  [entity]
+  (let [{:keys [vao-id primitive-id ibo ibo-length assets]} entity
+        vertex-count (count (:vertices assets))]
+
+    (if ibo
+      (GL11/glDrawElements primitive-id ibo-length GL11/GL_UNSIGNED_INT 0)
+      (GL11/glDrawArrays primitive-id 0 vertex-count))))
+
+(defn draw-instances
+  [entity]
+  (let [{:keys [primitive-id ibo ibo-length assets]} entity
+        instances-count (count (get-in entity [:assets :instances]))
+        vertex-count (count (:vertices assets))
+        indices-count (count (:indices assets))]
+
+    (if ibo
+      (GL31/glDrawElementsInstanced primitive-id indices-count GL11/GL_UNSIGNED_INT 0 instances-count)
+      (GL31/glDrawArraysInstanced primitive-id 0 vertex-count instances-count))))
 
 ;; TODO Potencial performance opti :
 ;; - Uniform handler functions are pure and could all be computed in parallel,
@@ -27,7 +51,7 @@
 
         (doseq [[program entities] programs]
           (let [{:as p
-                 pid :program/id
+                 pid :id
                  u-queue :uniforms} (register/get-prog program)
                 p-context (-> r-context
                               (assoc :pid (GL20/glUseProgram pid))
@@ -36,17 +60,29 @@
                 eu-queue (u/purge-u! u-queue ::u/program p-context)]
 
             (doseq [[entity-id draw?] entities]
-              (let [{:as entity :keys [position vbo ibo ibo-length assets primitive]} (state/entity entity-id)
+              ;; TODO Add control to entity keys and display meaningfull error messages
+              (let [{:as entity :keys [buffers ibo ibo-length assets primitive-id]} (state/entity entity-id)
                     e-context (assoc p-context :entity entity)]
                 (u/purge-u! eu-queue ::u/entity e-context)
 
                 ;; TODO Implement other rendering methods
                 ;;      - Instance rendering
-                ;;      - Indice drawing
-                (GL45/glVertexArrayVertexBuffer id 0 vbo 0 stride)
 
-                (if ibo
-                  (do
-                    (GL45/glVertexArrayElementBuffer id ibo)
-                    (GL11/glDrawElements primitive ibo-length GL11/GL_UNSIGNED_INT 0))
-                  (GL11/glDrawArrays primitive 0 (count (:vertices assets))))))))))))
+                ;; Attach program buffers
+                (doseq [buffer buffers]
+                  (vao-buffer/attach-vao id buffer))
+
+                (when ibo
+                  (GL45/glVertexArrayElementBuffer id ibo))
+
+                (if (get-in entity [:assets :instances])
+                  (draw-instances entity)
+                  (draw entity))
+
+                ))))))))
+
+
+
+
+
+
