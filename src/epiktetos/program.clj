@@ -126,8 +126,10 @@
 
 (defn create
   [prog-map]
-  (-> prog-map
-      parse-shaders   ;; add shaders infos
-      parse-buffers
-      create-attributes
-      create-program))
+  (let [prog-conf  (or (:orig-prog prog-map) prog-map)]
+    (-> prog-conf
+        (assoc :orig-prog prog-conf)
+        parse-shaders
+        parse-buffers
+        create-attributes
+        create-program)))

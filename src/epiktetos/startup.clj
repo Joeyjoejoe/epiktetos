@@ -52,8 +52,12 @@
   (let [{:keys [hot-reload]} opts]
 
     (cond-> opts
-      hot-reload (assoc :hot-reload {:watcher (apply beholder/watch (fn [_] (doseq [[id prog] (:program @registrar/register)] (event/dispatch [::event/reg-p [id prog]]))) hot-reload)
-                                     :paths   hot-reload}))))
+      hot-reload (assoc :hot-reload {:watcher (apply beholder/watch
+                                                     (fn [_]
+                                                       (doseq [[id prog] (:program @registrar/register)]
+                                                         (event/dispatch [::event/reg-p [id prog]])))
+                                                     hot-reload)
+                                     :paths hot-reload}))))
 
 (defmethod ig/halt-key!
   :gl/engine
