@@ -16,10 +16,16 @@
    :coherent   GL44/GL_MAP_COHERENT_BIT
    :client     GL44/GL_CLIENT_STORAGE_BIT})
 
-(defn read-data
+(defn read-key
+  [data-src k]
+  (if-let [data (get data-src k)]
+    data
+    (throw (Exception. (str k " is empty in entity")))))
+
+(defn read-keys
   [data-src src-ks]
   (->> src-ks
-       (map #(get data-src %))
+       (map #(read-key data-src %))
        flatten))
 
 ;; TODO Update to new buffer management
@@ -30,8 +36,8 @@
         src-ks (mapv #(-> % name keyword) layout)]
 
     (cond
-      (map? data-src) (read-data data-src src-ks)
-      (sequential? data-src) (flatten (mapcat #(read-data % src-ks) data-src)))))
+      (map? data-src) (read-keys data-src src-ks)
+      (sequential? data-src) (flatten (mapcat #(read-keys % src-ks) data-src)))))
 
 ;; TODO Update to new buffer management
  (defn pack-vertices

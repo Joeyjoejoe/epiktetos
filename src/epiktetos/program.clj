@@ -111,7 +111,11 @@
 (defn create-attributes
   [prog-map]
   (let [{:keys [buffers]} prog-map
-        attribs (mapcat #(:attribs %) buffers)
+        attribs (mapcat (fn [buffer]
+                          (let [attribs (:attribs buffer)
+                                divisor (:divisor buffer)]
+                            (map #(assoc % ::vao-attrib/divisor divisor) attribs)))
+                        buffers)
 
         {vao-id :vao/id :as vao}
         (or (registrar/get-vao buffers)
