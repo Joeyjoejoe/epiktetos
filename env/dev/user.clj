@@ -125,11 +125,17 @@
   (fn remove-cube [_ fx]
     (assoc fx :entity/delete :cube)))
 
-(reg-event
-  [:press :space]
-  [(inject-cofx :edn/load "cube.edn")]
-  (fn [{model :edn/load} fx]
-    (assoc fx :entity/render (assoc model :id :cube))))
+(defn random-position
+  ([] (random-position -1.0 1.0))
+  ([_] (random-position -1.0 1.0))
+  ([min max]
+  (let [x (+ (rand min) (rand max))
+        y (+ (rand min) (rand max))
+        z (+ (rand min) (rand max))
+        w (+ (rand min) (rand max))]
+    (vector x y z 1.0))))
+
+
 
 (reg-event
   [:repeat :space]
@@ -224,3 +230,55 @@
   [:press :k]
   (fn [cofx fx]
     (assoc fx :entity/render cube-entity)))
+
+(reg-event
+  [:press :n]
+  (fn [cofx fx]
+    (let [instances (take 20000 (repeatedly #(hash-map :position (random-position -20.0 20.0)
+                                                    :speed (subvec (random-position -10.0 10.0) 0 3)
+                                                    :color (subvec (random-position 0.0 1.0) 0 3))))
+
+          colored-vertices (mapv #(assoc % :color (subvec (random-position 0.0 1.0) 0 3))
+                                  (get-in cube-entity [:assets :vertices]))
+
+          _ (println colored-vertices)
+
+          entity (-> cube-entity
+                     (assoc :id :cubes-instanced :program :perspective-instanced-indices :scale 0.09)
+                     (assoc-in [:assets :vertices] colored-vertices)
+                     (assoc-in [:assets :instances] instances))]
+
+      (assoc fx :entity/render entity))))
+
+(reg-event
+  [:press :space]
+  [(inject-cofx :edn/load "cube.edn")]
+  (fn [{model :edn/load} fx]
+    (let [instances (pmap (fn [_] (hash-map :position (random-position -40.0 40.0)
+                                     :color (random-position 0.0 1.0)
+                                     :speed (random-position -15.0 15.0)))
+                          (range 10000))
+                    entity (-> model
+                     (assoc :id :cubes :program :perspective-instanced :scale 0.08)
+                     (assoc-in [:assets :instances] instances))]
+
+      (assoc fx :entity/render entity))))
+
+(reg-p :perspective-instanced
+       {:buffers  [{:layout [:vec3f/coordinates :vec3f/color :vec2f/texture]
+                    :source [:assets :vertices]}
+                   {:layout [:vec4f/position :vec4f/color :vec4f/speed]
+                    :source [:assets :instances]
+                    :divisor 1}]
+        :pipeline [[:vertex "shaders/instanced.vert"]
+                   [:fragment "shaders/instanced.frag"]]})
+
+
+(reg-p :perspective-instanced-indices
+       {:buffers  [{:layout [:vec3f/coordinates :vec3f/color :vec3f/normals]
+                    :source [:assets :vertices]}
+                   {:layout [:vec4f/position :vec3f/color :vec4f/speed]
+                    :source [:assets :instances]
+                    :divisor 1}]
+        :pipeline [[:vertex "shaders/instanced-indices.vert"]
+                   [:fragment "shaders/blank.frag"]]})
