@@ -1,0 +1,279 @@
+#version 450 core
+
+// ============================================================================
+// Shader de test pour les déclarations de structures et typedefs en GLSL
+// Ce shader contient toutes les variantes syntaxiques possibles
+// ============================================================================
+
+// ----------------------------------------------------------------------
+// 1. Structures basiques
+// ----------------------------------------------------------------------
+
+// Structure simple avec différents types de base
+struct BasicStruct {
+    float floatVar;
+    int intVar;
+    bool boolVar;
+    vec2 vec2Var;
+    vec3 vec3Var;
+    vec4 vec4Var;
+    mat3 mat3Var;
+    mat4 mat4Var;
+};
+
+// Structure sur une seule ligne
+struct SingleLineStruct { float x; float y; float z; };
+
+// Structure avec différents espacements
+struct    SpacedStruct   {
+    float     value1;
+    vec3      value2    ;
+int          value3 ;
+} ;
+
+// Structure avec commentaires intégrés
+struct CommentedStruct {
+    float value1;  // Commentaire en ligne
+    /* Commentaire
+       multi-ligne */
+    vec3 value2;
+    // Autre commentaire
+    int value3;
+};
+
+// ----------------------------------------------------------------------
+// 2. Structures avec tableaux
+// ----------------------------------------------------------------------
+
+// Structure avec membres tableaux à taille fixe
+struct ArrayStruct {
+    float values[4];
+    vec3 positions[8];
+    mat4 transforms[2];
+};
+
+// Structure avec tableaux non-dimensionnés
+struct UnsizedArrayStruct {
+    float values[];
+    vec3 positions[];
+};
+
+// ----------------------------------------------------------------------
+// 3. Structures avec déclarations multiples
+// ----------------------------------------------------------------------
+
+// Structure avec déclarations multiples sur la même ligne
+struct MultiDeclStruct {
+    float x, y, z;
+    vec2 uv1, uv2;
+    int id, type, flags;
+};
+
+// Structure avec combinaison de déclarations simples et multiples
+struct MixedDeclStruct {
+    float x, y, z;
+    vec4 color;
+    int count;
+    vec2 uv1, uv2, uv3;
+};
+
+// ----------------------------------------------------------------------
+// 4. Structures imbriquées
+// ----------------------------------------------------------------------
+
+// Structure simple pour imbriquer
+struct Vector3 {
+    float x, y, z;
+};
+
+// Structure imbriquant une autre structure
+struct NestedStruct {
+    Vector3 position;
+    Vector3 velocity;
+    float mass;
+};
+
+// Structure avec imbrication multiple
+struct Transform {
+    Vector3 position;
+    Vector3 rotation;
+    Vector3 scale;
+};
+
+struct Entity {
+    Transform transform;
+    BasicStruct properties;
+    int id;
+};
+
+// Structure avec imbrication et tableaux
+struct ComplexEntity {
+    Transform transform;
+    Vector3 controlPoints[4];
+    BasicStruct properties;
+    int childIds[];
+};
+
+// ----------------------------------------------------------------------
+// 5. Déclarations d'instances
+// ----------------------------------------------------------------------
+
+// Structure avec instance immédiate
+struct Particle {
+    vec3 position;
+    vec3 velocity;
+    float lifetime;
+    float size;
+} particleInstance;
+
+// Structure avec instances multiples
+struct Light {
+    vec3 position;
+    vec3 color;
+    float intensity;
+    float radius;
+} mainLight, fillLight, backLight;
+
+// Structure avec instance de tableau
+struct Material {
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    float shininess;
+} materials[10];
+
+// Structure avec instance et initialisation (uniquement possible pour les variables uniform)
+struct DefaultValues {
+    float scale;
+    vec3 offset;
+};
+uniform DefaultValues defaultValues = DefaultValues(1.0, vec3(0.0));
+
+// ----------------------------------------------------------------------
+// 6. Structures avec qualificateurs supplémentaires
+// ----------------------------------------------------------------------
+
+// Structure avec précision spécifiée pour certains membres
+struct PrecisionStruct {
+    highp float highPrecisionValue;
+    mediump vec3 mediumPrecisionVector;
+    lowp vec4 lowPrecisionColor;
+};
+
+// Structure avec qualificateurs de layout pour membres (utilisé dans SSBO/UBO)
+struct LayoutStruct {
+    layout(offset = 0) vec4 alignedVector;
+    layout(offset = 16) float alignedFloat;
+};
+
+// ----------------------------------------------------------------------
+// 7. Typedefs
+// ----------------------------------------------------------------------
+
+// Typedefs de types primitifs
+typedef float Real;
+typedef int Integer;
+typedef uint UnsignedInt;
+typedef bool Boolean;
+
+// Typedefs de types vectoriels et matriciels
+typedef vec2 TextureCoord;
+typedef vec3 Position;
+typedef vec3 Normal;
+typedef vec4 Color;
+typedef mat3 RotationMatrix;
+typedef mat4 TransformMatrix;
+
+// Typedefs de structures
+typedef BasicStruct Properties;
+typedef Particle ParticleElement;
+typedef Light LightSource;
+
+// Typedefs avec tableaux
+typedef float FloatArray[4];
+typedef vec3 PositionArray[8];
+typedef Light LightArray[4];
+
+// Typedef de type simple
+typedef float Real;
+
+// Typedef d'un tableau
+typedef vec3 PositionArray[4];
+
+// Typedef d'une structure anonyme
+typedef struct {
+    float x, y, z;
+} Vector3;
+
+// Typedef d'une structure nommée
+typedef struct Point {
+    float x, y;
+} Point2D;
+
+// Typedef avec espaces irréguliers
+typedef   struct   {
+   float   value1 ;
+   vec3    value2 ;
+}   SpacedType  ;
+
+// ----------------------------------------------------------------------
+// 8. Combinaisons spéciales
+// ----------------------------------------------------------------------
+
+// Structure anonyme avec instances (si votre implémentation le supporte)
+struct {
+    float x, y, z;
+    vec4 color;
+} anonymousInstance;
+
+// Structure avec préfixe de type (peu commun mais possible)
+struct vec3_container {
+    vec3 value;
+};
+
+// Structure avec noms de membres identiques aux types GLSL (légal mais déconseillé)
+struct BadPracticeStruct {
+    float vec3;  // Même nom qu'un type
+    vec3 float;  // Nom de type utilisé comme nom de variable
+};
+
+// Structure avec type ayant le même nom qu'un type GLSL prédéfini (légal mais risqué)
+struct vec3 {
+    float x, y, z;
+};
+
+// Structure avec nom similaire à une déclaration de variable
+struct uniform_data {
+    float value;
+};
+
+// ----------------------------------------------------------------------
+// 9. Cas particuliers
+// ----------------------------------------------------------------------
+
+// Structure suivie d'une autre déclaration sur la même ligne
+struct VerySimple { float x; }; uniform VerySimple simpleVar;
+
+// Structure sans espace après le nom
+struct NoSpace{float x; float y;};
+
+// Typedef compliqué avec structure interne (GLSL les supporte-t-il?)
+typedef struct {
+    float x, y, z;
+} InlineVector3;
+
+void main() {
+    // Code fictif pour utiliser certaines des structures définies
+    BasicStruct basic;
+    basic.floatVar = 1.0;
+    basic.vec3Var = vec3(1.0, 2.0, 3.0);
+
+    particleInstance.position = vec3(0.0);
+    particleInstance.velocity = vec3(0.0, 9.8, 0.0);
+
+    // Utilisation de typedefs
+    Real r = 1.0;
+    Position pos = vec3(1.0);
+    TextureCoord uv = vec2(0.5);
+}
+

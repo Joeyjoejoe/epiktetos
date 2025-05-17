@@ -1,0 +1,149 @@
+#version 450 core
+
+// ============================================================================
+// Shader de test pour les déclarations Transform Feedback
+// Ce shader contient toutes les variantes syntaxiques possibles
+// ============================================================================
+
+// Structures utiles pour les exemples
+struct Particle {
+    vec3 position;
+    vec3 velocity;
+    float lifetime;
+};
+
+struct VertexData {
+    vec4 position;
+    vec4 normal;
+    vec2 texCoord;
+};
+
+// ----------------------------------------------------------------------
+// 1. Déclarations de variables simples avec Transform Feedback
+// ----------------------------------------------------------------------
+
+// Variable simple avec xfb_buffer et xfb_offset
+layout(xfb_buffer = 0, xfb_offset = 0) out vec4 tfPosition;
+
+// Variable simple avec juste xfb_offset
+layout(xfb_offset = 16) out vec3 tfVelocity;
+
+// Variable simple avec uniquement xfb_buffer
+layout(xfb_buffer = 1) out vec4 tfColor;
+
+// Variable simple avec location et xfb qualificateurs combinés
+layout(location = 0, xfb_buffer = 0, xfb_offset = 32) out vec2 tfTexCoord;
+
+// Variable avec tous les qualificateurs Transform Feedback
+layout(xfb_buffer = 2, xfb_offset = 0, xfb_stride = 32) out vec4 tfCompleteVar;
+
+// Variable tableau avec Transform Feedback
+layout(xfb_buffer = 3, xfb_offset = 0) out vec4 tfArrayVar[4];
+
+// Ordre différent des qualificateurs
+layout(xfb_offset = 0, xfb_buffer = 4) out float tfScalar;
+
+// Type struct avec Transform Feedback
+layout(xfb_buffer = 5, xfb_offset = 0) out Particle tfParticle;
+
+// Avec qualificateurs additionnels (comme flat)
+layout(xfb_buffer = 0, xfb_offset = 64) flat out int tfVertexID;
+
+// Avec précision spécifiée
+layout(xfb_buffer = 0, xfb_offset = 68) out highp vec4 tfHighPrecision;
+
+// ----------------------------------------------------------------------
+// 2. Blocs d'interface avec Transform Feedback
+// ----------------------------------------------------------------------
+
+// Bloc simple avec qualificateurs Transform Feedback au niveau du bloc
+layout(xfb_buffer = 1, xfb_stride = 48) out TFBlock1 {
+    vec4 position;
+    vec4 velocity;
+    vec4 color;
+} tfOut1;
+
+// Bloc avec qualificateurs Transform Feedback pour chaque membre
+layout(xfb_buffer = 2) out TFBlock2 {
+    layout(xfb_offset = 0) vec4 position;
+    layout(xfb_offset = 16) vec4 velocity;
+    layout(xfb_offset = 32) vec4 acceleration;
+} tfOut2;
+
+// Bloc avec qualificateurs au niveau du bloc et des membres
+layout(xfb_buffer = 3, xfb_stride = 64) out TFBlock3 {
+    layout(xfb_offset = 0) vec4 position;
+    layout(xfb_offset = 16) vec3 normal;
+    layout(xfb_offset = 32) vec2 texCoord;
+    layout(xfb_offset = 40) float depth;
+} tfOut3;
+
+// Bloc avec déclarations multiples dans le bloc
+layout(xfb_buffer = 4) out TFBlock4 {
+    layout(xfb_offset = 0) vec3 position, velocity;   // Déclaration multiple
+    layout(xfb_offset = 24) float mass, lifetime;     // Déclaration multiple
+} tfOut4;
+
+// Bloc sans nom d'instance (rare mais possible dans certains contextes)
+layout(xfb_buffer = 5) out TFBlock5 {
+    layout(xfb_offset = 0) vec4 position;
+    layout(xfb_offset = 16) vec4 velocity;
+};
+
+// Bloc avec tableau d'instances
+layout(xfb_buffer = 6) out TFBlock6 {
+    layout(xfb_offset = 0) vec4 data;
+} tfOut6[2];
+
+// ----------------------------------------------------------------------
+// 3. Combinaisons avec d'autres qualificateurs
+// ----------------------------------------------------------------------
+
+// Combinaison avec stream
+layout(stream = 0, xfb_buffer = 0, xfb_offset = 128) out vec4 tfStreamVar;
+
+// Combinaison avec location et stream
+layout(location = 5, stream = 1, xfb_buffer = 1, xfb_offset = 0) out vec3 tfMultiQualVar;
+
+// Combinaison avec des blocs
+layout(stream = 0, xfb_buffer = 7) out TFStreamBlock {
+    layout(xfb_offset = 0) vec4 position;
+    layout(xfb_offset = 16) vec4 velocity;
+} tfStreamOut;
+
+// Avec type struct complexe et offsets explicites pour garantir l'alignement
+layout(xfb_buffer = 8) out TFComplexBlock {
+    layout(xfb_offset = 0) mat4 transform;            // 64 bytes (4x4 floats)
+    layout(xfb_offset = 64) VertexData vertexData;    // struct complexe
+    layout(xfb_offset = 96) float factors[4];         // tableau
+} tfComplexOut;
+
+// ----------------------------------------------------------------------
+// 4. Cas spéciaux
+// ----------------------------------------------------------------------
+
+// Transform Feedback avec les bases du système gl_
+layout(xfb_buffer = 0, xfb_offset = 150) out gl_PerVertex {
+    vec4 gl_Position;
+    float gl_PointSize;
+};
+
+// Utilisation d'initialisation (rare mais possible)
+layout(xfb_buffer = 1, xfb_offset = 0) out vec4 tfInitVar = vec4(0.0);
+
+// Utilisation des invariants (pour la précision dans certains cas)
+layout(xfb_buffer = 2, xfb_offset = 0) invariant out vec4 tfInvariantVar;
+
+void main() {
+    // Code pour remplir les variables Transform Feedback
+    tfPosition = vec4(1.0, 2.0, 3.0, 1.0);
+    tfVelocity = vec3(0.0, 9.8, 0.0);
+    tfColor = vec4(1.0, 0.0, 0.0, 1.0);
+
+    tfOut1.position = vec4(0.0);
+    tfOut1.velocity = vec4(1.0);
+    tfOut1.color = vec4(0.5);
+
+    // Autres assignations...
+}
+

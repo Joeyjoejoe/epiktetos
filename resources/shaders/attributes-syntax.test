@@ -1,0 +1,88 @@
+// =====================================================
+// SHADER DE TEST - DÉCLARATIONS D'ATTRIBUTS EN GLSL
+// =====================================================
+#version 450 core
+
+// Section 1: Qualificateurs de stockage basiques
+in vec3 position;                     // Forme moderne standard
+attribute vec3 oldPosition;           // Forme ancienne (compatible)
+
+// Section 2: Types de base
+in float height;                      // Scalaire float
+in int vertexID;                      // Entier
+in uint index;                        // Entier non-signé
+in bool enabled;                      // Booléen
+
+// Section 3: Vecteurs
+in vec2 texCoord;                     // Vecteur à 2 composantes
+in vec3 normal;                       // Vecteur à 3 composantes
+in vec4 color;                        // Vecteur à 4 composantes
+in ivec2 gridPos;                     // Vecteur d'entiers
+in uvec3 instanceData;                // Vecteur d'entiers non-signés
+in bvec4 toggles;                     // Vecteur de booléens
+
+// Section 4: Matrices
+in mat2 rotation2D;                   // Matrice 2x2
+in mat3 normalMatrix;                 // Matrice 3x3
+in mat4 modelMatrix;                  // Matrice 4x4
+in mat2x3 projection2D;               // Matrice rectangulaire
+in mat3x4 transformation;             // Autre matrice rectangulaire
+
+// Section 5: Qualificateurs de layout
+layout(location = 0) in vec3 vertexPosition;
+layout(location = 1) in vec3 vertexNormal;
+layout(location = 2) in vec2 vertexTexCoord;
+layout(location = 3) in vec4 vertexColor;
+layout(location = 4, component = 0) in vec4 instancePos;
+
+// Section 6: Qualificateurs d'interpolation
+flat in int vertexIndex;              // Pas d'interpolation
+smooth in vec3 smoothNormal;          // Interpolation perspective (défaut)
+noperspective in vec2 screenCoord;    // Interpolation linéaire à l'écran
+centroid in vec4 centroidColor;       // Échantillonnage centroïde
+sample in vec4 sampleColor;           // Échantillonnage multi
+patch in float tessLevel;             // Pour les tessellation control shaders
+
+// Section 7: Qualificateurs de précision
+in highp vec4 highPosition;           // Haute précision
+in mediump vec3 medNormal;            // Précision moyenne
+in lowp vec4 lowColor;                // Précision basse
+
+// Section 8: Tableaux
+in vec4 colors[4];                    // Tableau de vecteurs
+in mat4 transforms[8];                // Tableau de matrices
+in float weights[];                   // Tableau à taille implicite
+\
+// Section 9: Combinaisons de qualificateurs
+layout(location = 10) flat in int instanceID;
+layout(location = 11) noperspective in vec2 depthCoord;
+layout(location = 12) smooth in highp vec3 viewDir;
+layout(location = 13) flat in mediump ivec2 gridCoord;
+layout(location = 14) centroid in lowp vec4 fragColor;
+layout(location = 15) flat in uint materialIDs[10];
+
+// Section 10: Cas particuliers et variations syntaxiques
+layout(location = 20) in vec4 position20;             // Redéfinir location
+layout(location = 21, component = 1) in vec2 offset;  // Composante spécifique
+layout(location = 22, component = 0) flat in int primitiveID;  // Multiples qualificateurs
+
+// Combinaisons avec le mot-clé attribute (ancien)
+attribute vec3 legacyPosition;
+attribute vec4 legacyColor;
+layout(location = 30) attribute vec2 legacyTexCoord;
+layout(location = 31) flat attribute int legacyID;
+attribute highp vec3 legacyNormal;
+attribute mediump vec2 legacyUV;
+
+in VertexData {
+    vec3 position;
+    vec2 texCoord;
+    vec3 normal;
+} vertex;
+
+in vec2 aTexCoord1, aTexCoord2;
+
+void main() {
+    // Corps vide pour ce shader de test
+}
+

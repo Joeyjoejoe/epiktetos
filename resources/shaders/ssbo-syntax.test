@@ -1,0 +1,190 @@
+#version 450 core
+
+// ===========================================================
+// Shader test pour les Shader Storage Buffer Objects (SSBO)
+// Inclut toutes les variantes syntaxiques possibles
+// ===========================================================
+
+// Structures nécessaires pour les exemples
+struct Particle {
+    vec3 position;
+    vec3 velocity;
+    float mass;
+    float lifetime;
+};
+
+struct Light {
+    vec3 position;
+    vec3 color;
+    float intensity;
+    int type;
+};
+
+// SSBO basique avec instance
+layout(std430, binding = 0) buffer BasicBuffer {
+    float data[];
+} basicInstance;
+
+// SSBO avec qualificateur mémoire readonly
+layout(std430, binding = 1) readonly buffer ReadOnlyBuffer {
+    vec4 colors[1024];
+} readOnlyInstance;
+
+// SSBO avec qualificateur mémoire writeonly
+layout(std430, binding = 2) writeonly buffer WriteOnlyBuffer {
+    uint counters[];
+} writeOnlyInstance;
+
+// SSBO avec qualificateur mémoire coherent
+layout(std430, binding = 3) coherent buffer CoherentBuffer {
+    int atomicCounter;
+    vec4 data[];
+} coherentInstance;
+
+// SSBO avec qualificateur mémoire volatile
+layout(std430, binding = 4) volatile buffer VolatileBuffer {
+    mat4 transforms[100];
+} volatileInstance;
+
+// SSBO avec qualificateur mémoire restrict
+layout(std430, binding = 5) restrict buffer RestrictBuffer {
+    Particle particles[];
+} restrictInstance;
+
+// SSBO avec layout std140 (moins commun, mais possible)
+layout(std140, binding = 6) buffer Std140Buffer {
+    vec4 alignedData[256];
+} std140Instance;
+
+// SSBO avec plusieurs qualificateurs mémoire combinés
+layout(std430, binding = 7) coherent volatile buffer MultiQualBuffer {
+    int counter;
+    vec4 sharedData[];
+} multiQualInstance;
+
+// SSBO avec layoute packed (rarement utilisé, dépendant de l'extension)
+layout(packed, binding = 8) buffer PackedBuffer {
+    uint compactData[];
+} packedInstance;
+
+// SSBO sans instance nommée (possible dans certaines implémentations)
+layout(std430, binding = 9) buffer UnnamedBuffer {
+    Light lights[];
+    int lightCount;
+};
+
+// SSBO avec tableau d'instances
+layout(std430, binding = 10) buffer ArrayInstanceBuffer {
+    vec4 value;
+    float factor;
+} arrayInstances[4];
+
+// SSBO avec différents types de membres
+layout(std430, binding = 11) buffer MixedTypesBuffer {
+    // Types scalaires
+    int intValue;
+    uint uintValue;
+    float floatValue;
+    bool boolValue;
+    double doubleValue;
+
+    // Vecteurs
+    ivec2 ivec2Value;
+    uvec3 uvec3Value;
+    vec4 vec4Value;
+    bvec2 bvec2Value;
+    dvec3 dvec3Value;
+
+    // Matrices
+    mat2 mat2Value;
+    mat3x4 mat3x4Value;
+    dmat4 dmat4Value;
+
+    // Tableaux
+    float floatArray[16];
+    vec3 vec3Array[];  // Tableau à taille non spécifiée
+
+    // Structures
+    Particle particleData;
+    Light lightData[8];
+} mixedInstance;
+
+// SSBO avec layout specifiant le offset des membres (utilisé pour interop avec le CPU)
+layout(std430, binding = 12) buffer OffsetBuffer {
+    layout(offset = 0) int header;
+    layout(offset = 4) float value;
+    layout(offset = 8) vec4 color;
+} offsetInstance;
+
+// SSBO avec des structures imbriquées
+struct NestedData {
+    int value;
+    float factor;
+    vec3 position;
+};
+
+struct Container {
+    NestedData data;
+    mat4 transform;
+};
+
+layout(std430, binding = 13) buffer NestedStructBuffer {
+    Container containers[];
+} nestedInstance;
+
+// SSBO avec le layout shared (moins commun)
+layout(shared, binding = 14) buffer SharedBuffer {
+    uint sharedCounter;
+    vec4 sharedData[];
+} sharedInstance;
+
+// SSBO avec le layout binding_point_index
+layout(binding_point_index = 15) buffer BindingPointBuffer {
+    uvec4 indices[];
+} bindingPointInstance;
+
+// Combinaison de configurations multiples
+layout(std430, binding = 16, row_major) coherent restrict buffer ComplexBuffer {
+    layout(row_major) mat4 transforms[];
+    layout(column_major) mat3 rotations[];
+    Particle activeParticles[128];
+} complexInstance;
+
+// Exemple 1: SSBO avec déclarations multiples de variables du même type
+layout(std430, binding = 0) buffer MultiVarBuffer {
+    vec4 position, velocity, acceleration;  // 3 variables de type vec4
+    float mass, charge, lifetime;           // 3 variables de type float
+    int id, type, flags;                    // 3 variables de type int
+} multiVarInstance;
+
+// Exemple 2: SSBO sans nom d'instance (l'accès se fait directement par les membres)
+layout(std430, binding = 1) buffer GlobalData {
+    int counter;
+    vec4 positions[];
+    mat4 transform;
+};
+
+// Exemple 3: SSBO en lecture seule sans instance nommée
+layout(std140, binding = 2) readonly buffer InputData {
+    int count;
+    vec4 inputColors[];
+    vec4 inputPositions[];
+};
+
+// Exemple 4: SSBO avec cohérence mémoire et déclarations multiples
+layout(std430, binding = 3) coherent buffer SharedData {
+    atomic_uint counter;
+    vec4 position, color, normal;  // Déclaration multiple
+    float mass, size;              // Déclaration multiple
+} sharedInstance;
+
+// Exemple 5: SSBO avec types atomiques et déclarations multiples
+layout(std430, binding = 4) buffer CounterBuffer {
+    atomic_uint vertexCounter, fragmentCounter, drawCounter;
+    int indices[], counts[];
+} counterData;
+
+void main() {
+    // Code fictif pour utiliser les SSBOs
+}
+

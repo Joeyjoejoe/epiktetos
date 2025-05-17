@@ -1,0 +1,304 @@
+#version 460 core
+
+// ----------------- UNIFORMES SCALAIRES -----------------
+// Déclarations basiques
+uniform bool uBool;
+uniform int uInt;
+uniform uint uUint;
+uniform float uFloat;
+uniform double uDouble;
+
+// Avec qualificateurs layout location
+layout(location = 0) uniform bool uBoolWithLocation;
+layout(location = 1) uniform int uIntWithLocation;
+
+// Avec précision
+precision highp float;
+uniform highp int uHighpInt;
+uniform mediump float uMediumpFloat;
+uniform lowp uint uLowpUint;
+
+// ----------------- UNIFORMES VECTORIELS -----------------
+// Vecteurs booléens
+uniform bvec2 uBVec2;
+uniform bvec3 uBVec3;
+uniform bvec4 uBVec4;
+
+// Vecteurs entiers
+uniform ivec2 uIVec2;
+uniform ivec3 uIVec3;
+uniform ivec4 uIVec4;
+
+// Vecteurs entiers non signés
+uniform uvec2 uUVec2;
+uniform uvec3 uUVec3;
+uniform uvec4 uUVec4;
+
+// Vecteurs flottants
+uniform vec2 uVec2;
+uniform vec3 uVec3;
+uniform vec4 uVec4;
+
+// Vecteurs double précision
+uniform dvec2 uDVec2;
+uniform dvec3 uDVec3;
+uniform dvec4 uDVec4;
+
+// ----------------- UNIFORMES MATRICIELS -----------------
+// Matrices flottantes carrées
+uniform mat2 uMat2;
+uniform mat3 uMat3;
+uniform mat4 uMat4;
+
+// Matrices flottantes rectangulaires
+uniform mat2x3 uMat2x3;
+uniform mat2x4 uMat2x4;
+uniform mat3x2 uMat3x2;
+uniform mat3x4 uMat3x4;
+uniform mat4x2 uMat4x2;
+uniform mat4x3 uMat4x3;
+
+// Matrices double précision
+uniform dmat2 uDMat2;
+uniform dmat3 uDMat3;
+uniform dmat4 uDMat4;
+uniform dmat2x3 uDMat2x3;
+uniform dmat3x4 uDMat3x4;
+
+// ----------------- TABLEAUX UNIFORMES -----------------
+// Tableaux à taille fixe
+uniform float uFloatArray[4];
+uniform vec3 uVec3Array[8];
+uniform mat4 uMat4Array[3];
+
+// Tableaux à taille variable
+uniform float uFloatUnsizedArray[];
+layout(location = 10) uniform vec4 uVec4LocationArray[4];
+
+// ----------------- STRUCTURES -----------------
+// Structure simple
+struct SimpleStruct {
+    float value;
+    vec3 position;
+    bool flag;
+};
+uniform SimpleStruct uSimpleStruct;
+
+// Structure avec tableaux
+struct ComplexStruct {
+    int id;
+    vec4 colors[4];
+    mat3 transforms[2];
+};
+uniform ComplexStruct uComplexStruct;
+
+// Tableau de structures
+struct LightData {
+    vec3 position;
+    vec3 color;
+    float intensity;
+    bool enabled;
+};
+uniform LightData uLights[8];
+
+// Structure imbriquée
+struct MaterialProperties {
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    float shininess;
+};
+struct ObjectData {
+    vec3 position;
+    MaterialProperties material;
+    bool castShadow;
+};
+uniform ObjectData uObjects[4];
+
+// ----------------- UNIFORM BLOCKS -----------------
+// Uniform block basique
+uniform BasicBlock {
+    vec4 color;
+    float opacity;
+    bool enabled;
+} uBasicBlock;
+
+// Uniform block avec layout std140
+layout(std140) uniform TransformBlock {
+    mat4 model;
+    mat4 view;
+    mat4 projection;
+} uTransforms;
+
+// Uniform block avec binding
+layout(binding = 0, std140) uniform CameraBlock {
+    vec3 position;
+    vec3 direction;
+    float near;
+    float far;
+    mat4 viewProjection;
+} uCamera;
+
+// Uniform block avec tableau
+layout(binding = 1, std140) uniform MaterialBlock {
+    vec3 ambientColor;
+    vec3 diffuseColor;
+    vec3 specularColor;
+    float shininess;
+    vec4 textureWeights[4];
+} uMaterial;
+
+// Uniform block avec instance nommée et tableaux de structures
+layout(binding = 2, std140) uniform LightingBlock {
+    vec3 globalAmbient;
+    int lightCount;
+    struct Light {
+        vec3 position;
+        vec3 color;
+        float intensity;
+        float range;
+    } lights[16];
+} uLighting;
+
+// ----------------- TYPES OPAQUES (SAMPLERS) -----------------
+// Samplers 1D
+layout(binding = 0) uniform sampler1D uSampler1D;
+layout(binding = 1) uniform isampler1D uISampler1D;
+layout(binding = 2) uniform usampler1D uUSampler1D;
+layout(binding = 3) uniform sampler1DShadow uSampler1DShadow;
+
+// Samplers 2D
+layout(binding = 4) uniform sampler2D uSampler2D;
+layout(binding = 5) uniform isampler2D uISampler2D;
+layout(binding = 6) uniform usampler2D uUSampler2D;
+layout(binding = 7) uniform sampler2DShadow uSampler2DShadow;
+
+// Samplers 3D
+layout(binding = 8) uniform sampler3D uSampler3D;
+layout(binding = 9) uniform isampler3D uISampler3D;
+layout(binding = 10) uniform usampler3D uUSampler3D;
+
+// Samplers Cube
+layout(binding = 11) uniform samplerCube uSamplerCube;
+layout(binding = 12) uniform isamplerCube uISamplerCube;
+layout(binding = 13) uniform usamplerCube uUSamplerCube;
+layout(binding = 14) uniform samplerCubeShadow uSamplerCubeShadow;
+
+// Samplers Rect
+layout(binding = 15) uniform sampler2DRect uSampler2DRect;
+layout(binding = 16) uniform isampler2DRect uISampler2DRect;
+layout(binding = 17) uniform usampler2DRect uUSampler2DRect;
+layout(binding = 18) uniform sampler2DRectShadow uSampler2DRectShadow;
+
+// Samplers Buffer
+layout(binding = 19) uniform samplerBuffer uSamplerBuffer;
+layout(binding = 20) uniform isamplerBuffer uISamplerBuffer;
+layout(binding = 21) uniform usamplerBuffer uUSamplerBuffer;
+
+// Samplers Multisample
+layout(binding = 22) uniform sampler2DMS uSampler2DMS;
+layout(binding = 23) uniform isampler2DMS uISampler2DMS;
+layout(binding = 24) uniform usampler2DMS uUSampler2DMS;
+
+// Samplers Array
+layout(binding = 25) uniform sampler1DArray uSampler1DArray;
+layout(binding = 26) uniform sampler2DArray uSampler2DArray;
+layout(binding = 27) uniform isampler2DArray uISampler2DArray;
+layout(binding = 28) uniform usampler2DArray uUSampler2DArray;
+layout(binding = 29) uniform sampler2DArrayShadow uSampler2DArrayShadow;
+layout(binding = 30) uniform samplerCubeArray uSamplerCubeArray;
+
+// Samplers Multisample Array
+layout(binding = 31) uniform sampler2DMSArray uSampler2DMSArray;
+layout(binding = 32) uniform isampler2DMSArray uISampler2DMSArray;
+layout(binding = 33) uniform usampler2DMSArray uUSampler2DMSArray;
+
+// Tableaux de samplers
+layout(binding = 34) uniform sampler2D uSampler2DArray1[4];
+layout(binding = 38) uniform samplerCube uSamplerCubeArray1[3];
+
+// ----------------- TYPES OPAQUES (IMAGES) -----------------
+// Images 1D
+layout(binding = 41, r32f) uniform image1D uImage1D;
+layout(binding = 42, r32i) uniform iimage1D uIImage1D;
+layout(binding = 43, r32ui) uniform uimage1D uUImage1D;
+
+// Images 2D
+layout(binding = 44, rgba8) uniform image2D uImage2D;
+layout(binding = 45, rgba8i) uniform iimage2D uIImage2D;
+layout(binding = 46, rgba8ui) uniform uimage2D uUImage2D;
+
+// Images 3D
+layout(binding = 47, rgba16f) uniform image3D uImage3D;
+layout(binding = 48, rgba16i) uniform iimage3D uIImage3D;
+layout(binding = 49, rgba16ui) uniform uimage3D uUImage3D;
+
+// Images Cube
+layout(binding = 50, rgba32f) uniform imageCube uImageCube;
+layout(binding = 51, rgba32i) uniform iimageCube uIImageCube;
+layout(binding = 52, rgba32ui) uniform uimageCube uUImageCube;
+
+// Images Buffer
+layout(binding = 53, r11f_g11f_b10f) uniform imageBuffer uImageBuffer;
+layout(binding = 54, r8i) uniform iimageBuffer uIImageBuffer;
+layout(binding = 55, r8ui) uniform uimageBuffer uUImageBuffer;
+
+// Images 2D Array
+layout(binding = 56, rgba8) uniform image2DArray uImage2DArray;
+layout(binding = 57, rgba8i) uniform iimage2DArray uIImage2DArray;
+layout(binding = 58, rgba8ui) uniform uimage2DArray uUImage2DArray;
+
+uniform float varName1, varName2, varName3;
+// ----------------- VARIABLES D'ENTRÉE/SORTIE -----------------
+in vec2 vTexCoord;
+out vec4 FragColor;
+
+void main() {
+    // Corps simple pour tester le shader
+    FragColor = texture(uSampler2D, vTexCoord) * uVec4 * uBasicBlock.color;
+
+    // Accès à d'autres types pour démontrer l'usage
+    if (uBool) {
+        FragColor += vec4(uVec3, 1.0);
+    }
+
+    // Accès aux structures
+    if (uLights[0].enabled) {
+        FragColor += vec4(uLights[0].color * uLights[0].intensity, 1.0);
+    }
+
+    // Accès aux blocs uniformes
+    FragColor = uCamera.viewProjection * vec4(FragColor.xyz, 1.0);
+
+    // Utilisation d'une image
+    imageStore(uImage2D, ivec2(gl_FragCoord.xy), vec4(1.0, 0.0, 0.0, 1.0));
+}
+
+
+
+
+
+
+#version 330 core
+
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+layout (location = 2) in vec2 aTexCoord;
+layout (location = 3) in vec3 aNormal;
+layout (location = 4) in mat4 aWorldPos;
+
+out vec3 vertexColor;
+out vec2 TexCoord;
+out vec3 Normal;
+out vec3 FragPos;
+
+void main()
+{
+    mat4 worldPosTransformation = aWorldPos * positionTransformation;
+    FragPos = vec3(worldPosTransformation * vec4(aPos, 1.0));
+    vertexColor = aColor;
+    TexCoord = aTexCoord;
+    Normal = mat3(transpose(inverse(worldPosTransformation))) * aNormal;
+    gl_Position = projection * view * vec4(FragPos, 1.0);
+}
+
