@@ -1,0 +1,179 @@
+{:meta {:glsl-version "4.60"
+        :opengl-version "4.6"
+        :description "Types GLSL supportés pour les variables externes (CPU vers GPU)"}
+
+ :scalar-types {"float" {:size 4 :alignment 4 :components 1 :qualifier ["uniform" "in" "out" "buffer"]}
+                "double" {:size 8 :alignment 8 :components 1 :qualifier ["uniform" "in" "out" "buffer"]}
+                "int" {:size 4 :alignment 4 :components 1 :qualifier ["uniform" "in" "out" "buffer"]}
+                "uint" {:size 4 :alignment 4 :components 1 :qualifier ["uniform" "in" "out" "buffer"]}
+                "bool" {:size 1 :alignment 4 :components 1 :qualifier ["uniform" "in" "out" "buffer"]}}
+
+ :vector-types {"vec2" {:base-type "float" :components 2 :size 8 :alignment 8 :qualifier ["uniform" "in" "out" "buffer"]}
+                "vec3" {:base-type "float" :components 3 :size 12 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "vec4" {:base-type "float" :components 4 :size 16 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dvec2" {:base-type "double" :components 2 :size 16 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dvec3" {:base-type "double" :components 3 :size 24 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dvec4" {:base-type "double" :components 4 :size 32 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "ivec2" {:base-type "int" :components 2 :size 8 :alignment 8 :qualifier ["uniform" "in" "out" "buffer"]}
+                "ivec3" {:base-type "int" :components 3 :size 12 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "ivec4" {:base-type "int" :components 4 :size 16 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "uvec2" {:base-type "uint" :components 2 :size 8 :alignment 8 :qualifier ["uniform" "in" "out" "buffer"]}
+                "uvec3" {:base-type "uint" :components 3 :size 12 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "uvec4" {:base-type "uint" :components 4 :size 16 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "bvec2" {:base-type "bool" :components 2 :size 8 :alignment 8 :qualifier ["uniform" "in" "out" "buffer"]}
+                "bvec3" {:base-type "bool" :components 3 :size 12 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "bvec4" {:base-type "bool" :components 4 :size 16 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}}
+
+ :matrix-types {"mat2" {:base-type "float" :dimensions [2 2] :size 16 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "mat3" {:base-type "float" :dimensions [3 3] :size 48 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "mat4" {:base-type "float" :dimensions [4 4] :size 64 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "mat2x3" {:base-type "float" :dimensions [2 3] :size 32 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "mat2x4" {:base-type "float" :dimensions [2 4] :size 32 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "mat3x2" {:base-type "float" :dimensions [3 2] :size 24 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "mat3x4" {:base-type "float" :dimensions [3 4] :size 48 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "mat4x2" {:base-type "float" :dimensions [4 2] :size 32 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "mat4x3" {:base-type "float" :dimensions [4 3] :size 48 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat2" {:base-type "double" :dimensions [2 2] :size 32 :alignment 16 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat3" {:base-type "double" :dimensions [3 3] :size 96 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat4" {:base-type "double" :dimensions [4 4] :size 128 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat2x3" {:base-type "double" :dimensions [2 3] :size 64 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat2x4" {:base-type "double" :dimensions [2 4] :size 64 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat3x2" {:base-type "double" :dimensions [3 2] :size 48 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat3x4" {:base-type "double" :dimensions [3 4] :size 96 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat4x2" {:base-type "double" :dimensions [4 2] :size 64 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}
+                "dmat4x3" {:base-type "double" :dimensions [4 3] :size 96 :alignment 32 :qualifier ["uniform" "in" "out" "buffer"]}}
+
+ :sampler-types {"sampler1D" {:dimension 1 :qualifier ["uniform"]}
+                 "sampler2D" {:dimension 2 :qualifier ["uniform"]}
+                 "sampler3D" {:dimension 3 :qualifier ["uniform"]}
+                 "samplerCube" {:dimension "cube" :qualifier ["uniform"]}
+                 "sampler2DRect" {:dimension "rect" :qualifier ["uniform"]}
+                 "sampler1DArray" {:dimension "1d-array" :qualifier ["uniform"]}
+                 "sampler2DArray" {:dimension "2d-array" :qualifier ["uniform"]}
+                 "samplerCubeArray" {:dimension "cube-array" :qualifier ["uniform"]}
+                 "samplerBuffer" {:dimension "buffer" :qualifier ["uniform"]}
+                 "sampler2DMS" {:dimension "2d-ms" :qualifier ["uniform"]}
+                 "sampler2DMSArray" {:dimension "2d-ms-array" :qualifier ["uniform"]}
+                 "sampler1DShadow" {:dimension "1d-shadow" :qualifier ["uniform"]}
+                 "sampler2DShadow" {:dimension "2d-shadow" :qualifier ["uniform"]}
+                 "samplerCubeShadow" {:dimension "cube-shadow" :qualifier ["uniform"]}
+                 "sampler2DRectShadow" {:dimension "rect-shadow" :qualifier ["uniform"]}
+                 "sampler1DArrayShadow" {:dimension "1d-array-shadow" :qualifier ["uniform"]}
+                 "sampler2DArrayShadow" {:dimension "2d-array-shadow" :qualifier ["uniform"]}
+                 "samplerCubeArrayShadow" {:dimension "cube-array-shadow" :qualifier ["uniform"]}
+                 "isampler1D" {:dimension 1 :data-type "int" :qualifier ["uniform"]}
+                 "isampler2D" {:dimension 2 :data-type "int" :qualifier ["uniform"]}
+                 "isampler3D" {:dimension 3 :data-type "int" :qualifier ["uniform"]}
+                 "isamplerCube" {:dimension "cube" :data-type "int" :qualifier ["uniform"]}
+                 "isampler2DRect" {:dimension "rect" :data-type "int" :qualifier ["uniform"]}
+                 "isampler1DArray" {:dimension "1d-array" :data-type "int" :qualifier ["uniform"]}
+                 "isampler2DArray" {:dimension "2d-array" :data-type "int" :qualifier ["uniform"]}
+                 "isamplerCubeArray" {:dimension "cube-array" :data-type "int" :qualifier ["uniform"]}
+                 "isamplerBuffer" {:dimension "buffer" :data-type "int" :qualifier ["uniform"]}
+                 "isampler2DMS" {:dimension "2d-ms" :data-type "int" :qualifier ["uniform"]}
+                 "isampler2DMSArray" {:dimension "2d-ms-array" :data-type "int" :qualifier ["uniform"]}
+                 "usampler1D" {:dimension 1 :data-type "uint" :qualifier ["uniform"]}
+                 "usampler2D" {:dimension 2 :data-type "uint" :qualifier ["uniform"]}
+                 "usampler3D" {:dimension 3 :data-type "uint" :qualifier ["uniform"]}
+                 "usamplerCube" {:dimension "cube" :data-type "uint" :qualifier ["uniform"]}
+                 "usampler2DRect" {:dimension "rect" :data-type "uint" :qualifier ["uniform"]}
+                 "usampler1DArray" {:dimension "1d-array" :data-type "uint" :qualifier ["uniform"]}
+                 "usampler2DArray" {:dimension "2d-array" :data-type "uint" :qualifier ["uniform"]}
+                 "usamplerCubeArray" {:dimension "cube-array" :data-type "uint" :qualifier ["uniform"]}
+                 "usamplerBuffer" {:dimension "buffer" :data-type "uint" :qualifier ["uniform"]}
+                 "usampler2DMS" {:dimension "2d-ms" :data-type "uint" :qualifier ["uniform"]}
+                 "usampler2DMSArray" {:dimension "2d-ms-array" :data-type "uint" :qualifier ["uniform"]}}
+
+ :image-types {"image1D" {:dimension 1 :qualifier ["uniform"]}
+               "image2D" {:dimension 2 :qualifier ["uniform"]}
+               "image3D" {:dimension 3 :qualifier ["uniform"]}
+               "imageCube" {:dimension "cube" :qualifier ["uniform"]}
+               "image2DRect" {:dimension "rect" :qualifier ["uniform"]}
+               "image1DArray" {:dimension "1d-array" :qualifier ["uniform"]}
+               "image2DArray" {:dimension "2d-array" :qualifier ["uniform"]}
+               "imageCubeArray" {:dimension "cube-array" :qualifier ["uniform"]}
+               "imageBuffer" {:dimension "buffer" :qualifier ["uniform"]}
+               "image2DMS" {:dimension "2d-ms" :qualifier ["uniform"]}
+               "image2DMSArray" {:dimension "2d-ms-array" :qualifier ["uniform"]}
+               "iimage1D" {:dimension 1 :data-type "int" :qualifier ["uniform"]}
+               "iimage2D" {:dimension 2 :data-type "int" :qualifier ["uniform"]}
+               "iimage3D" {:dimension 3 :data-type "int" :qualifier ["uniform"]}
+               "iimageCube" {:dimension "cube" :data-type "int" :qualifier ["uniform"]}
+               "iimage2DRect" {:dimension "rect" :data-type "int" :qualifier ["uniform"]}
+               "iimage1DArray" {:dimension "1d-array" :data-type "int" :qualifier ["uniform"]}
+               "iimage2DArray" {:dimension "2d-array" :data-type "int" :qualifier ["uniform"]}
+               "iimageCubeArray" {:dimension "cube-array" :data-type "int" :qualifier ["uniform"]}
+               "iimageBuffer" {:dimension "buffer" :data-type "int" :qualifier ["uniform"]}
+               "iimage2DMS" {:dimension "2d-ms" :data-type "int" :qualifier ["uniform"]}
+               "iimage2DMSArray" {:dimension "2d-ms-array" :data-type "int" :qualifier ["uniform"]}
+               "uimage1D" {:dimension 1 :data-type "uint" :qualifier ["uniform"]}
+               "uimage2D" {:dimension 2 :data-type "uint" :qualifier ["uniform"]}
+               "uimage3D" {:dimension 3 :data-type "uint" :qualifier ["uniform"]}
+               "uimageCube" {:dimension "cube" :data-type "uint" :qualifier ["uniform"]}
+               "uimage2DRect" {:dimension "rect" :data-type "uint" :qualifier ["uniform"]}
+               "uimage1DArray" {:dimension "1d-array" :data-type "uint" :qualifier ["uniform"]}
+               "uimage2DArray" {:dimension "2d-array" :data-type "uint" :qualifier ["uniform"]}
+               "uimageCubeArray" {:dimension "cube-array" :data-type "uint" :qualifier ["uniform"]}
+               "uimageBuffer" {:dimension "buffer" :data-type "uint" :qualifier ["uniform"]}
+               "uimage2DMS" {:dimension "2d-ms" :data-type "uint" :qualifier ["uniform"]}
+               "uimage2DMSArray" {:dimension "2d-ms-array" :data-type "uint" :qualifier ["uniform"]}}
+
+ :special-types {"atomic_uint" {:qualifier ["uniform"]}}
+
+ :interface-block-types {:buffer {:description "Shader Storage Buffer Objects (SSBOs)"
+                                 :qualifier ["buffer"]
+                                 :layout-qualifiers ["std140" "std430" "packed" "shared"]
+                                 :alignment-rules "std430"}
+                        :uniform-block {:description "Uniform Buffer Objects (UBOs)"
+                                       :qualifier ["uniform"]
+                                       :layout-qualifiers ["std140" "std430" "packed" "shared"]
+                                       :alignment-rules "std140"}}
+
+ :array-support {:supported true
+                :qualifier ["uniform" "in" "out" "buffer"]
+                :restrictions ["Cannot be used as function parameters"]}
+
+ :struct-support {:supported true
+                 :qualifier ["uniform" "in" "out" "buffer"]
+                 :restrictions ["Cannot contain samplers in interface blocks"]
+                 :alignment-rules {:std140 "Base alignment of the structure is the alignment of the largest member, rounded up to a multiple of 16 bytes"
+                                  :std430 "Base alignment of the structure is the alignment of the largest member"}}
+
+ :qualifiers {:uniform {:description "Variables that don't change across all vertices/fragments"
+                       :valid-contexts ["global" "interface-block"]
+                       :binding-methods ["layout(binding = N)" "glUniform*()" "glProgramUniform*()"]}
+             :in {:description "Input variables from previous shader stage"
+                 :valid-contexts ["global" "interface-block"]
+                 :binding-methods ["layout(location = N)"]}
+             :out {:description "Output variables to next shader stage"
+                  :valid-contexts ["global" "interface-block"]
+                  :binding-methods ["layout(location = N)"]}
+             :buffer {:description "Variables in shader storage buffer objects"
+                     :valid-contexts ["interface-block"]
+                     :binding-methods ["layout(binding = N)" "glBindBufferBase()" "glBindBufferRange()"]}}
+
+ :layout-qualifiers {:shared {:description "Layout is implementation-defined"}
+                    :packed {:description "No padding between members, may not be efficiently accessible"}
+                    :std140 {:description "Standard layout with predictable but conservative padding"
+                             :alignment-rules {:scalar "4-byte aligned"
+                                             :vec2 "8-byte aligned"
+                                             :vec3 "16-byte aligned"
+                                             :vec4 "16-byte aligned"
+                                             :arrays "Each element aligned to a multiple of 16 bytes"}}
+                    :std430 {:description "Relaxed layout with less padding, only for SSBOs"
+                             :alignment-rules {:scalar "4-byte aligned"
+                                             :vec2 "8-byte aligned"
+                                             :vec3 "16-byte aligned"
+                                             :vec4 "16-byte aligned"
+                                             :arrays "Each element aligned to base alignment of the type"}}}
+
+ :binding-methods {:uniform {:primary-methods ["glUniform*" "glProgramUniform*"]
+                           :location-methods ["layout(location = N)"]
+                           :block-methods ["layout(binding = N)" "glUniformBlockBinding()"]}
+                  :buffer {:primary-methods ["layout(binding = N)" "glShaderStorageBlockBinding()"]
+                          :binding-methods ["glBindBufferBase()" "glBindBufferRange()"]}
+                  :atomic {:primary-methods ["layout(binding = N)"]
+                          :binding-methods ["glBindBufferBase()" "glBindBufferRange()"]}
+                  :sampler {:primary-methods ["layout(binding = N)" "glUniform1i" "glProgramUniform1i"]}
+                  :image {:primary-methods ["layout(binding = N)" "glUniform1i" "glProgramUniform1i"]}}
+}
