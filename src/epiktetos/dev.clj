@@ -64,6 +64,15 @@
           (let [window (state/window)]
             (GLFW/glfwSetWindowShouldClose window true))))
 
+(reg-fx ::eval-in-onpengl-context
+        (fn [f]
+         (clojure.pprint/pprint (f))))
+
+;; Eval f in opengl context
+(reg-event :dev/eval
+  (fn [{[_ f] :event} fx]
+    (assoc fx ::eval-in-onpengl-context f)))
+
 (reg-event
   [:press :escape]
   (fn loop-stop [_ fx]
