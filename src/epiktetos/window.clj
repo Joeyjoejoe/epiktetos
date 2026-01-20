@@ -102,6 +102,12 @@
   "Create the game window and set the OpenGl context where everything will be draw"
   [params]
   (GLFW/glfwSetErrorCallback (GLFWErrorCallback/createPrint System/err))
+
+  ;; WORKAROUND after LWJGL update to 3.3.6 :
+  ;; https://github.com/glfw/glfw/issues/2793
+  ;; (May not be needed anymore)
+  (GLFW/glfwInitHint GLFW/GLFW_PLATFORM GLFW/GLFW_PLATFORM_X11)
+
   (when-not (GLFW/glfwInit)
     (throw (IllegalStateException. "Unable to initialize GLFW")))
 
