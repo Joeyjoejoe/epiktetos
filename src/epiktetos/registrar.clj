@@ -1,7 +1,7 @@
 (ns epiktetos.registrar
   (:import  (org.lwjgl.opengl GL20)))
 
-(def register
+(defonce register
   (atom {}))
 
 (defn get-vao
@@ -25,3 +25,16 @@
       (GL20/glDeleteProgram (:id old-prog)))
 
     (swap! register assoc-in [:program k] prog)))
+
+
+(defn get-vao-v2
+  [hash-k]
+  (get-in @register [::opengl ::vao hash-k]))
+
+(defn register-vao
+  [hash-k vao]
+  (swap! register assoc-in [::opengl ::vao hash-k] vao))
+
+(defn register-program
+  [hash-k vao]
+  (swap! register assoc-in [::opengl ::program hash-k] vao))
