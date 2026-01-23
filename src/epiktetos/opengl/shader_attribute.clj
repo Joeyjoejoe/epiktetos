@@ -55,7 +55,7 @@
                    :or   {total-locations 1}} type
                   normalize (-> normalize (get varname) boolean)]]
 
-      (dotimes [loc (dec (+ location total-locations))]
+      (doseq [loc (range location (+ location total-locations))]
         (cond
           double?  (GL45/glVertexArrayAttribLFormat vao-id loc size base-type offset)
           integer? (GL45/glVertexArrayAttribIFormat vao-id loc size base-type offset)
