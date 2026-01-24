@@ -30,7 +30,7 @@
   (let [{:keys [layout handler normalize storage divisor]
          :or   {storage :dynamic divisor 0 normalize #{}}} vb-map
 
-        prog-attribs    (introspect/program-resource-infos prog-id ::introspect/attribute)
+        prog-attribs    (introspect/attributes-infos prog-id)
         vb-attribs      (keep prog-attribs layout)
         attribs-offsets (reductions + 0 (keep #(get-in % [:type :bytes]) vb-attribs))
         stride          (last attribs-offsets)]

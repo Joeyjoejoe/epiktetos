@@ -2,8 +2,10 @@
   (:require [epiktetos.event :as event]
             [epiktetos.registrar :as registrar]
             [epiktetos.opengl.shader :as shader]
+            [epiktetos.opengl.shader-input :as input]
             [epiktetos.opengl.shader-attribute :as attribute])
-  (:import (org.lwjgl.opengl GL20 GL32 GL40 GL43)))
+  (:import (org.lwjgl.opengl GL20 GL30 GL11 GL43 GL45)
+           (org.lwjgl BufferUtils)))
 
 (defn link
   "Create a shader program from program map DSL"
@@ -31,7 +33,9 @@
   [prog-k prog-map]
   (let [program (-> prog-map
                     link
-                    attribute/setup)]
+                    attribute/setup
+                    input/setup-ubos
+                    )]
 
     (registrar/register-program prog-k program)
 
@@ -42,36 +46,26 @@
 
   (do
 
-  (def prog-map
-    #:p{:pipeline [[:vertex "shaders/default.vert"]
-                   [:fragment "shaders/default.frag"]]
-        :vertex-layout [{:layout ["vLocal" "vColor" "vertexTexCoords"]
-                         :handler #()
-                         :storage :dynamic
-                         :normalize #{"vColor"}
-                         :divisor 0}]})
+    (def prog-map
+      #:p{:pipeline [[:vertex "shaders/flat.vert"]
+                     [:fragment "shaders/blank.frag"]]
+          :vertex-layout [{:layout ["vLocal" "vColor"]
+                           :handler #()
+                           :storage :dynamic}]})
 
-  (def instanced
-    #:p{:pipeline [[:vertex "shaders/instanced.vert"]
-                   [:fragment "shaders/instanced.frag"]]
-        :vertex-layout [{:layout ["vLocal" "vertexTexCoords"]
-                         :handler #()
-                         :storage :persistent
-                         :divisor 0}
-                        {:layout ["instancePosition" "instanceColor" "instanceSpeed"]
-                         :handler #()
-                         :storage :dynamic
-                         :divisor 1}]})
+    (event/dispatch [:dev/eval #(setup :some-program prog-map)])
 
-  ;; Program registration :
-  ;;   1) init (interpret DSL)
-  ;;   2) intropspect :
-  ;;      - Attributes (lookup/reg vao)
-  ;;      - Location inputs (Uniforms lookup/reg)
-  ;;      - Binding inputs (ssbos, ubos, counter lookup/reg)
-  (event/dispatch [:dev/eval #(setup :some-program instanced)])
+    (def prog-map2
+      #:p{:pipeline [[:vertex "shaders/flat2.vert"]
+                     [:fragment "shaders/blank.frag"]]
+          :vertex-layout [{:layout ["vLocal" "vColor"]
+                           :handler #()
+                           :storage :dynamic}]})
+
+    (event/dispatch [:dev/eval #(setup :some-program prog-map2)])
+
+    )
+
 
 
   )
-
-)

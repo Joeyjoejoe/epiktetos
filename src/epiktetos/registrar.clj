@@ -36,5 +36,30 @@
   (swap! register assoc-in [::opengl ::vao hash-k] vao))
 
 (defn register-program
-  [hash-k vao]
-  (swap! register assoc-in [::opengl ::program hash-k] vao))
+  [hash-k program]
+  (swap! register assoc-in [::opengl ::program hash-k] program))
+
+(defn get-program
+  [program-k]
+  (get-in @register [::opengl ::program program-k]))
+
+(defn lookup-resource
+  [resource varname]
+  (get-in @register [::opengl resource varname]))
+
+(defn lookup-ubo
+  [varname]
+  (get-in @register [::opengl ::ubo varname]))
+
+(defn register-ubo!
+  [ubo]
+  (let [{:keys [varname program buffer-binding alloc]} ubo
+        ubo-map (or (lookup-ubo varname)
+                    {:varname varname
+                     :resource :ubo
+                     :alloc alloc
+                     :binding-point buffer-binding
+                     :programs #{}})]
+
+    (->> (update ubo-map :programs conj program)
+         (swap! register assoc-in [::opengl ::ubo varname]))))

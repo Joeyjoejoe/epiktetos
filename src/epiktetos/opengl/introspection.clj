@@ -165,24 +165,48 @@
 
     ;; Add detailled types data
     (-> props-map
-        (assoc :varname varname)
+        (assoc :varname varname
+               :block-index interface-index
+               :program program-id)
         (update :type #(get glsl/TRANSPARENT-TYPE %)))))
 
 (defn program-resource-infos
   [program-id resource-k]
-
   (let [resource (get PROGRAM-INTERFACES resource-k)
         indexes  (shader-interface-indexes program-id resource)]
-    (reduce #(assoc %1 (shader-interface-name program-id resource %2)
-                       (shader-interface-props program-id resource %2))
-            {}
-            indexes)))
+;;    (reduce #(assoc %1 (shader-interface-name program-id resource %2)
+;;                    (shader-interface-props program-id resource %2))
+;;            {}
+;;            indexes)
+    (map #(shader-interface-props program-id resource %) indexes)
 
+    ))
 
+(defn attributes-infos
+  [program-id]
+  (let [attribs-coll (program-resource-infos program-id ::attribute)]
+    (into {} (map (juxt :varname identity) attribs-coll))))
 
+(defn ubo-infos
+  [program-id]
+  (program-resource-infos program-id ::uniform-block))
+
+(defn ubo-block-infos
+  [program-id]
+  (->> (program-resource-infos program-id ::uniform)
+       (filter (fn [[_ v]] (>= (:block-index v) 0)))
+       (into {})))
+
+(defn uniform-infos
+  [program-id]
+  (->> (program-resource-infos program-id ::uniform)
+       (filter (fn [[_ v]] (< (:block-index v) 0)))
+       (into {})))
 (comment
 
-    (event/dispatch [:dev/eval #(program-resource-infos 3 ::attribute)])
+    (event/dispatch [:dev/eval #(program-resource-infos 4 ::uniform-block)])
+    (event/dispatch [:dev/eval #(ubo-infos 4)])
+    (event/dispatch [:dev/eval #(uniform-infos 4)])
   ;;    // OpenGL 4.3+ constants
   ;;  GL_PROGRAM_INPUT              // Vertex attributes
   ;;  GL_UNIFORM                    // Uniforms simples (uniform float, vec3, mat4, etc)
