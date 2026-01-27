@@ -44,8 +44,10 @@
   (get-in @register [::opengl ::program program-k]))
 
 (defn lookup-resource
-  [resource varname]
-  (get-in @register [::opengl resource varname]))
+  ([resource]
+   (get-in @register [::opengl resource]))
+  ([resource varname]
+   (get-in @register [::opengl resource varname])))
 
 (defn lookup-ubo
   [varname]

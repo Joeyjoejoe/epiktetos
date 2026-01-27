@@ -70,7 +70,12 @@
 (defn alloc-new-bindings
   [resource resources-infos]
   (let [bindings (resource-binding-set resource)
-        allocated-bindings (keep :buffer-binding resources-infos)
+
+        allocated-bindings (->> resource
+                                registrar/lookup-resource
+                                vals
+                                (map :binding-point))
+
         free-bindings (sort (remove (set allocated-bindings) bindings))]
 
     (first
