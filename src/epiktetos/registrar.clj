@@ -49,19 +49,32 @@
   ([resource varname]
    (get-in @register [::opengl resource varname])))
 
-(defn lookup-ubo
-  [varname]
-  (get-in @register [::opengl ::ubo varname]))
-
 (defn register-ubo!
   [ubo]
-  (let [{:keys [varname program buffer-binding alloc]} ubo
-        ubo-map (or (lookup-ubo varname)
+  (let [{:keys [varname program buffer-binding alloc members buffer-data-size]} ubo
+        ubo-map (or (lookup-resource ::ubo varname)
                     {:varname varname
                      :resource :ubo
+                     :buffer-data-size buffer-data-size
+                     :members members
                      :alloc alloc
                      :binding-point buffer-binding
                      :programs #{}})]
 
     (->> (update ubo-map :programs conj program)
          (swap! register assoc-in [::opengl ::ubo varname]))))
+
+(defn register-ssbo!
+  [ssbo]
+  (let [{:keys [varname program buffer-binding alloc members buffer-data-size]} ssbo
+        ssbo-map (or (lookup-resource ::ssbo varname)
+                    {:varname varname
+                     :resource :ssbo
+                     :buffer-data-size buffer-data-size
+                     :members members
+                     :alloc alloc
+                     :binding-point buffer-binding
+                     :programs #{}})]
+
+    (->> (update ssbo-map :programs conj program)
+         (swap! register assoc-in [::opengl ::ssbo varname]))))

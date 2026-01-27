@@ -35,6 +35,7 @@
                     link
                     attribute/setup
                     input/setup-ubos
+                    input/setup-ssbos
                     )]
 
     (registrar/register-program prog-k program)

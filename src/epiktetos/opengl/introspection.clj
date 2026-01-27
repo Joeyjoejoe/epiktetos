@@ -33,8 +33,6 @@
    :buffer-data-size                     GL43/GL_BUFFER_DATA_SIZE
    :num-active-variables                 GL43/GL_NUM_ACTIVE_VARIABLES
 
-   ;; FIXME This property return an array of indice, not a single int
-   ;; but we are storing properties value in a int-array.
    :active-variables                     GL43/GL_ACTIVE_VARIABLES
 
    :top-level-array-size                 GL43/GL_TOP_LEVEL_ARRAY_SIZE
@@ -50,100 +48,118 @@
    :referenced-by-fragment-shader        GL43/GL_REFERENCED_BY_FRAGMENT_SHADER
    :referenced-by-compute-shader         GL43/GL_REFERENCED_BY_COMPUTE_SHADER})
 
+
 (def INTERFACE-PROPERTIES
   {GL43/GL_UNIFORM
-   [:name-length :type :array-size :offset :block-index :array-stride
-    :matrix-stride :is-row-major :atomic-counter-buffer-index :location
-    :referenced-by-vertex-shader :referenced-by-tess-control-shader
-    :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
-    :referenced-by-fragment-shader :referenced-by-compute-shader]
+   #{:type :array-size :offset :block-index :location
+     ;; :name-length
+     ;; :array-stride :matrix-stride :is-row-major
+     ;; :atomic-counter-buffer-index
+     ;; :referenced-by-vertex-shader :referenced-by-tess-control-shader
+     ;; :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
+     ;; :referenced-by-fragment-shader :referenced-by-compute-shader
+     }
 
    GL43/GL_UNIFORM_BLOCK
-   [:name-length :buffer-binding :buffer-data-size :num-active-variables
-    :active-variables :referenced-by-vertex-shader :referenced-by-tess-control-shader
-    :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
-    :referenced-by-fragment-shader :referenced-by-compute-shader]
+   #{:buffer-binding :buffer-data-size :num-active-variables
+     ;; :name-length :active-variables
+     ;; :referenced-by-vertex-shader :referenced-by-tess-control-shader
+     ;; :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
+     ;; :referenced-by-fragment-shader :referenced-by-compute-shader
+     }
 
    GL42/GL_ATOMIC_COUNTER_BUFFER
-   [:buffer-binding :buffer-data-size :num-active-variables :active-variables
-    :referenced-by-vertex-shader :referenced-by-tess-control-shader
-    :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
-    :referenced-by-fragment-shader :referenced-by-compute-shader]
+   #{:buffer-binding :buffer-data-size :num-active-variables
+     ;; :active-variables
+     ;; :referenced-by-vertex-shader :referenced-by-tess-control-shader
+     ;; :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
+     ;; :referenced-by-fragment-shader :referenced-by-compute-shader
+     }
 
    GL43/GL_SHADER_STORAGE_BLOCK
-   [:name-length :buffer-binding :buffer-data-size :num-active-variables
-    :active-variables :referenced-by-vertex-shader :referenced-by-tess-control-shader
-    :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
-    :referenced-by-fragment-shader :referenced-by-compute-shader]
+   #{:buffer-binding :buffer-data-size :num-active-variables
+     ;; :name-length :active-variables
+     ;; :referenced-by-vertex-shader :referenced-by-tess-control-shader
+     ;; :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
+     ;; :referenced-by-fragment-shader :referenced-by-compute-shader
+     }
 
    GL43/GL_BUFFER_VARIABLE
-   [:name-length :type :array-size :offset :block-index :array-stride
-    :matrix-stride :is-row-major :top-level-array-size :top-level-array-stride
-    :referenced-by-vertex-shader :referenced-by-tess-control-shader
-    :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
-    :referenced-by-fragment-shader :referenced-by-compute-shader]
+   #{:type :array-size :offset :block-index :array-stride
+     ;; :name-length
+     ;; :matrix-stride :is-row-major
+     ;; :top-level-array-size :top-level-array-stride
+     ;; :referenced-by-vertex-shader :referenced-by-tess-control-shader
+     ;; :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
+     ;; :referenced-by-fragment-shader :referenced-by-compute-shader
+     }
 
    GL43/GL_PROGRAM_INPUT
-   [:name-length :type :array-size :location :is-per-patch :location-component
-    :referenced-by-vertex-shader :referenced-by-tess-control-shader
-    :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
-    :referenced-by-fragment-shader :referenced-by-compute-shader]
+   #{:name-length :type :array-size :location :is-per-patch :location-component
+     :referenced-by-vertex-shader :referenced-by-tess-control-shader
+     :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
+     :referenced-by-fragment-shader :referenced-by-compute-shader}
 
    GL43/GL_PROGRAM_OUTPUT
-   [:name-length :type :array-size :location :location-index :is-per-patch
-    :location-component :referenced-by-vertex-shader :referenced-by-tess-control-shader
-    :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
-    :referenced-by-fragment-shader :referenced-by-compute-shader]
+   #{:name-length :type :array-size :location :location-index :is-per-patch
+     :location-component :referenced-by-vertex-shader :referenced-by-tess-control-shader
+     :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
+     :referenced-by-fragment-shader :referenced-by-compute-shader}
 
    GL43/GL_TRANSFORM_FEEDBACK_VARYING
-   [:name-length :type :array-size :offset :transform-feedback-buffer-index]
+   #{:name-length :type :array-size :offset :transform-feedback-buffer-index}
 
    GL30/GL_TRANSFORM_FEEDBACK_BUFFER
-   [:buffer-binding :num-active-variables :active-variables
-    :transform-feedback-buffer-stride]
+   #{:buffer-binding :num-active-variables :active-variables
+     :transform-feedback-buffer-stride}
 
    GL43/GL_VERTEX_SUBROUTINE_UNIFORM
-   [:name-length :array-size :location :num-compatible-subroutines
-    :compatible-subroutines]
+   #{:name-length :array-size :location :num-compatible-subroutines
+     :compatible-subroutines}
 
    GL43/GL_TESS_CONTROL_SUBROUTINE_UNIFORM
-   [:name-length :array-size :location :num-compatible-subroutines
-    :compatible-subroutines]
+   #{:name-length :array-size :location :num-compatible-subroutines
+     :compatible-subroutines}
 
    GL43/GL_TESS_EVALUATION_SUBROUTINE_UNIFORM
-   [:name-length :array-size :location :num-compatible-subroutines
-    :compatible-subroutines]
+   #{:name-length :array-size :location :num-compatible-subroutines
+     :compatible-subroutines}
 
    GL43/GL_GEOMETRY_SUBROUTINE_UNIFORM
-   [:name-length :array-size :location :num-compatible-subroutines
-    :compatible-subroutines]
+   #{:name-length :array-size :location :num-compatible-subroutines
+     :compatible-subroutines}
 
    GL43/GL_FRAGMENT_SUBROUTINE_UNIFORM
-   [:name-length :array-size :location :num-compatible-subroutines
-    :compatible-subroutines]
+   #{:name-length :array-size :location :num-compatible-subroutines
+     :compatible-subroutines}
 
    GL43/GL_COMPUTE_SUBROUTINE_UNIFORM
-   [:name-length :array-size :location :num-compatible-subroutines
-    :compatible-subroutines]
+   #{:name-length :array-size :location :num-compatible-subroutines
+     :compatible-subroutines}
 
    GL43/GL_VERTEX_SUBROUTINE
-   [:name-length]
+   #{:name-length}
 
    GL43/GL_TESS_CONTROL_SUBROUTINE
-   [:name-length]
+   #{:name-length}
 
    GL43/GL_TESS_EVALUATION_SUBROUTINE
-   [:name-length]
+   #{:name-length}
 
    GL43/GL_GEOMETRY_SUBROUTINE
-   [:name-length]
+   #{:name-length}
 
    GL43/GL_FRAGMENT_SUBROUTINE
-   [:name-length]
+   #{:name-length}
 
    GL43/GL_COMPUTE_SUBROUTINE
-   [:name-length]})
+   #{:name-length}})
 
+(def BLOCK-MEMBER-INTERFACES
+  {GL43/GL_UNIFORM_BLOCK            GL43/GL_UNIFORM
+   GL43/GL_SHADER_STORAGE_BLOCK     GL43/GL_BUFFER_VARIABLE
+   GL42/GL_ATOMIC_COUNTER_BUFFER    GL42/GL_ATOMIC_COUNTER_BUFFER
+   GL30/GL_TRANSFORM_FEEDBACK_BUFFER GL43/GL_TRANSFORM_FEEDBACK_VARYING})
 
 (defn shader-interface-indexes
   [program-id program-interface-id]
@@ -155,104 +171,56 @@
 
 (defn shader-interface-props
   [program-id program-interface-id interface-index]
-  (let [props-keys (get INTERFACE-PROPERTIES program-interface-id)
+  (let [varname    (GL43/glGetProgramResourceName program-id program-interface-id interface-index)
+        props-keys (get INTERFACE-PROPERTIES program-interface-id)
         properties (int-array (map PROPERTIES props-keys))
-        length (int-array 1)
-        props-values (int-array (alength properties))
-        _         (GL43/glGetProgramResourceiv program-id program-interface-id interface-index properties length props-values)
-        props-map (zipmap props-keys (vec props-values))
-        varname   (GL43/glGetProgramResourceName program-id program-interface-id interface-index)]
+        length     (int-array 1)
+        props-vals (int-array (alength properties))
+        _          (GL43/glGetProgramResourceiv program-id program-interface-id interface-index properties length props-vals)
+        props-map  (zipmap props-keys (vec props-vals))]
+
 
     (-> props-map
-        (assoc :varname varname
-               :block-index interface-index
-               :program program-id)
+        (assoc :varname varname :interface-index interface-index :program program-id)
         (update :type #(get glsl/TRANSPARENT-TYPE %)))))
 
 
-(defn program-resource-infos
+(defn resource-block-members
+  [program-id resource props-map]
+  (if-let [num-vars (:num-active-variables props-map)]
+    (let [member-interface (get BLOCK-MEMBER-INTERFACES resource)
+          block-index      (:interface-index props-map)
+          member-indices   (int-array num-vars)
+          _                (GL43/glGetProgramResourceiv
+                             program-id
+                             resource
+                             block-index
+                             (int-array [GL43/GL_ACTIVE_VARIABLES])
+                             (int-array 1)
+                             member-indices)
+          members          (mapv (comp #(dissoc % :block-index :interface-index :program :location)
+                                       #(shader-interface-props program-id member-interface %))
+                                 member-indices)]
+      (assoc props-map :members members))
+    props-map))
+
+
+(defn resource-properties
   [program-id resource-k]
-  (let [resource (get PROGRAM-INTERFACES resource-k)
-        indexes  (shader-interface-indexes program-id resource)]
-    (map #(shader-interface-props program-id resource %) indexes)))
+  (let [resource (get PROGRAM-INTERFACES resource-k)]
+      (->> resource
+          (shader-interface-indexes program-id)
+          (map #(shader-interface-props program-id resource %))
+          (map #(resource-block-members program-id resource %)))))
 
 
 (defn attributes-infos
   [program-id]
-  (let [attribs-coll (program-resource-infos program-id ::attribute)]
+  (let [attribs-coll (resource-properties program-id ::attribute)]
     (into {} (map (juxt :varname identity) attribs-coll))))
-
-
-(defn ubo-infos
-  [program-id]
-  (program-resource-infos program-id ::uniform-block))
-
-
-(defn ubo-block-infos
-  [program-id]
-  (->> (program-resource-infos program-id ::uniform)
-       (filter (fn [[_ v]] (>= (:block-index v) 0)))
-       (into {})))
-
-
-(defn uniform-infos
-  [program-id]
-  (->> (program-resource-infos program-id ::uniform)
-       (filter (fn [[_ v]] (< (:block-index v) 0)))
-       (into {})))
-
 
 (comment
 
-    (event/dispatch [:dev/eval #(program-resource-infos 4 ::uniform-block)])
-    (event/dispatch [:dev/eval #(ubo-infos 4)])
-    (event/dispatch [:dev/eval #(uniform-infos 4)])
-  ;;    // OpenGL 4.3+ constants
-  ;;  GL_PROGRAM_INPUT              // Vertex attributes
-  ;;  GL_UNIFORM                    // Uniforms simples (uniform float, vec3, mat4, etc)
-  ;;  GL_UNIFORM_BLOCK              // Uniform Buffer Objects (UBO)
-  ;;  GL_SHADER_STORAGE_BLOCK       // Shader Storage Buffer Objects (SSBO)
-  ;;  GL_BUFFER_VARIABLE            // Variables individuelles dans un SSBO
-  ;;  GL_ATOMIC_COUNTER_BUFFER      // Atomic counter buffers
-  ;;
-  ;;  // Autres interfaces (moins prioritaires)
-  ;;  GL_PROGRAM_OUTPUT             // Fragment shader outputs
-  ;;  GL_TRANSFORM_FEEDBACK_VARYING // Transform feedback
-  ;;  GL_TRANSFORM_FEEDBACK_BUFFER  // Transform feedback buffers
-  ;;
-  ;;  API moderne (OpenGL 4.3+)
-  ;;
-  ;;  Fonctions principales :
-  ;;
-  ;;  // 1. Obtenir le nombre de ressources d'une interface
-  ;;  glGetProgramInterfaceiv(program, interface, GL_ACTIVE_RESOURCES, params)
-  ;;
-  ;;  // 2. Obtenir l'index d'une ressource par nom
-  ;;  glGetProgramResourceIndex(program, interface, name)
-  ;;
-  ;;  // 3. Obtenir le nom d'une ressource par index
-  ;;  glGetProgramResourceName(program, interface, index, length, name)
-  ;;
-  ;;  // 4. Obtenir les propriétés d'une ressource
-  ;;  glGetProgramResourceiv(program, interface, index, propCount, props, bufSize, length, params)
-  ;;
-  ;;  // 5. Obtenir la location (raccourci)
-  ;;  glGetProgramResourceLocation(program, interface, name)
-  ;;  glGetProgramResourceLocationIndex(program, interface, name)
-  ;;
-  ;;  Propriétés interrogeables (pour glGetProgramResourceiv)
-  ;;
-  ;;  GL_NAME_LENGTH                    // Longueur du nom
-  ;;  GL_TYPE                           // Type GLSL (GL_FLOAT, GL_FLOAT_VEC3, GL_FLOAT_MAT4, etc)
-  ;;  GL_ARRAY_SIZE                     // Taille si array
-  ;;  GL_LOCATION                       // Location/binding point
-  ;;  GL_BLOCK_INDEX                    // Index du block parent (UBO/SSBO)
-  ;;  GL_OFFSET                         // Offset en bytes
-  ;;  GL_ARRAY_STRIDE                   // Stride pour arrays
-  ;;  GL_MATRIX_STRIDE                  // Stride pour matrices
-  ;;  GL_IS_ROW_MAJOR                   // Row-major vs column-major
-  ;;  GL_ATOMIC_COUNTER_BUFFER_INDEX    // Index atomic counter
-  ;;  GL_REFERENCED_BY_VERTEX_SHADER    // Utilisé dans VS?
-  ;;  GL_REFERENCED_BY_FRAGMENT_SHADER  // Utilisé dans FS?
-  ;;  GL_REFERENCED_BY_COMPUTE_SHADER   // Utilisé dans CS?
+  (event/dispatch [:dev/eval #(resource-properties 7 ::shader-storage-block)])
+
   )

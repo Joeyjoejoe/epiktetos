@@ -91,36 +91,49 @@
         [[] free-bindings]
         resources-infos))))
 
+(defn allocate-binding-points
+  [register-resource intro-data]
+  (try
+    (->> intro-data
+         tag-explicit-bindings
+         (alloc-known-bindings register-resource)
+         detect-binding-conflict
+         (alloc-new-bindings register-resource))
+    (catch clojure.lang.ExceptionInfo e
+      (prn e))))
 
 (defn setup-ubos
   "Auto allocate binding points of program ubos"
   [prog-map]
-  (try
-    (let [prog-id (:p/id prog-map)
-          resource ::registrar/ubo
-          ubos    (->> prog-id
-                       introspect/ubo-infos
-                       tag-explicit-bindings
-                       (alloc-known-bindings resource)
-                       detect-binding-conflict
-                       (alloc-new-bindings resource))]
+  (let [prog-id (:p/id prog-map)
+        ubos    (->> ::introspect/uniform-block
+                     (introspect/resource-properties prog-id)
+                     (allocate-binding-points ::registrar/ubo))
+        ubo-names (map :varname ubos)]
 
-      (doseq [{:keys  [block-index buffer-binding]
-               :as ubo} ubos]
-        (GL31/glUniformBlockBinding prog-id block-index buffer-binding)
-        (registrar/register-ubo! ubo)
-        )
+    (doseq [{:keys [interface-index buffer-binding]
+             :as   ubo} ubos]
+      (GL31/glUniformBlockBinding prog-id interface-index buffer-binding)
+      (registrar/register-ubo! ubo))
 
-      (assoc prog-map :p/ubos (map :varname ubos)))
-    (catch clojure.lang.ExceptionInfo e
-      (prn e))))
-
+    (assoc prog-map :p/ubos ubo-names)))
 
 (defn setup-ssbos
+  "Auto allocate binding points of program ssbos"
   [prog-map]
-  ;; GL43/glShaderStorageBlockBinding(programId, blockIndex, bindingPoint)
+  (let [prog-id (:p/id prog-map)
+        ssbos    (->> ::introspect/shader-storage-block
+                     (introspect/resource-properties prog-id)
+                     (allocate-binding-points ::registrar/ssbo))
+        ssbo-names (map :varname ssbos)]
 
-)
+    (doseq [{:keys [interface-index buffer-binding]
+             :as   ssbo} ssbos]
+      (GL43/glShaderStorageBlockBinding prog-id interface-index buffer-binding)
+      (registrar/register-ssbo! ssbo))
+
+    (assoc prog-map :p/ssbos ssbo-names)))
+
 
 (comment
 
