@@ -32,7 +32,11 @@
    :buffer-binding                       GL43/GL_BUFFER_BINDING
    :buffer-data-size                     GL43/GL_BUFFER_DATA_SIZE
    :num-active-variables                 GL43/GL_NUM_ACTIVE_VARIABLES
+
+   ;; FIXME This property return an array of indice, not a single int
+   ;; but we are storing properties value in a int-array.
    :active-variables                     GL43/GL_ACTIVE_VARIABLES
+
    :top-level-array-size                 GL43/GL_TOP_LEVEL_ARRAY_SIZE
    :top-level-array-stride               GL43/GL_TOP_LEVEL_ARRAY_STRIDE
    :transform-feedback-buffer-index      GL44/GL_TRANSFORM_FEEDBACK_BUFFER_INDEX
@@ -146,11 +150,7 @@
   (let [buffer (BufferUtils/createIntBuffer 1)
         _      (GL43/glGetProgramInterfaceiv program-id program-interface-id GL43/GL_ACTIVE_RESOURCES buffer)
         interface-count (.get buffer 0)]
-  (range interface-count)))
-
-(defn shader-interface-name
-  [program-id program-interface-id interface-index]
-  (GL43/glGetProgramResourceName program-id program-interface-id interface-index))
+    (range interface-count)))
 
 
 (defn shader-interface-props
@@ -163,33 +163,30 @@
         props-map (zipmap props-keys (vec props-values))
         varname   (GL43/glGetProgramResourceName program-id program-interface-id interface-index)]
 
-    ;; Add detailled types data
     (-> props-map
         (assoc :varname varname
                :block-index interface-index
                :program program-id)
         (update :type #(get glsl/TRANSPARENT-TYPE %)))))
 
+
 (defn program-resource-infos
   [program-id resource-k]
   (let [resource (get PROGRAM-INTERFACES resource-k)
         indexes  (shader-interface-indexes program-id resource)]
-;;    (reduce #(assoc %1 (shader-interface-name program-id resource %2)
-;;                    (shader-interface-props program-id resource %2))
-;;            {}
-;;            indexes)
-    (map #(shader-interface-props program-id resource %) indexes)
+    (map #(shader-interface-props program-id resource %) indexes)))
 
-    ))
 
 (defn attributes-infos
   [program-id]
   (let [attribs-coll (program-resource-infos program-id ::attribute)]
     (into {} (map (juxt :varname identity) attribs-coll))))
 
+
 (defn ubo-infos
   [program-id]
   (program-resource-infos program-id ::uniform-block))
+
 
 (defn ubo-block-infos
   [program-id]
@@ -197,11 +194,14 @@
        (filter (fn [[_ v]] (>= (:block-index v) 0)))
        (into {})))
 
+
 (defn uniform-infos
   [program-id]
   (->> (program-resource-infos program-id ::uniform)
        (filter (fn [[_ v]] (< (:block-index v) 0)))
        (into {})))
+
+
 (comment
 
     (event/dispatch [:dev/eval #(program-resource-infos 4 ::uniform-block)])

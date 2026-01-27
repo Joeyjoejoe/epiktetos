@@ -66,7 +66,8 @@
 
 (reg-fx ::eval-in-onpengl-context
         (fn [f]
-         (clojure.pprint/pprint (f))))
+         (clojure.pprint/pprint (f))
+         (println "-----------------------")))
 
 ;; Eval f in opengl context
 (reg-event :dev/eval
