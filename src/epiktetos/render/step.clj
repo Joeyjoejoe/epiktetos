@@ -31,6 +31,30 @@
   "
   (:require [epiktetos.registrar :as registrar]))
 
+(defonce CORE-STEPS
+  #{:step/frame :step/group :step/vao :step/program :step/entity})
+
+(defonce GROUP-STEP
+  [:step/group
+   (fn [entity]
+     (get entity :group))
+   4])
+
+(defonce VAO-STEP
+  [:step/vao
+   (fn [entity]
+     (-> entity
+         :program
+         registrar/get-program
+         :p/vao-id))
+   6])
+
+(defonce PROGRAM-STEP
+  [:step/program
+   (fn [entity]
+     (get entity :program))
+   10])
+
 
 (defn- create-index-pool
   "Creates a dense index pool with indices in range [0, 2^n-bits):
@@ -90,21 +114,6 @@
         updated-steps (mapv first results)
         sk-values (mapv second results)]
     [updated-steps sk-values]))
-
-(defonce VAO-STEP
-  [:step/vao
-   (fn [entity]
-     (-> entity
-         :program
-         registrar/get-program
-         :p/vao-id))
-   6])
-
-(defonce PROGRAM-STEP
-  [:step/program
-   (fn [entity]
-     (get entity :program))
-   10])
 
 (defn- parse-step
   "Parse a step vector"
@@ -170,13 +179,13 @@
 (defn build-render-steps
   "Build the render steps map"
   [& custom-steps]
-  (let [steps (->> (concat [VAO-STEP PROGRAM-STEP] custom-steps)
+  (let [steps (->> (concat [GROUP-STEP VAO-STEP PROGRAM-STEP] custom-steps)
                    (mapv parse-step)
                    (assign-shifts)
                    (assign-masks)
                    (into {} (map (juxt :name identity))))
 
-        steps-order (concat [:step/frame :step/vao :step/program]
+        steps-order (concat [:step/frame :step/group :step/vao :step/program]
                             (map first custom-steps)
                             [:step/entity])]
 
@@ -188,8 +197,15 @@
   ([rs-map]
    (save-render-steps! registrar/register rs-map))
   ([register rs-map]
-   ;; TODO Recompute all entities sort-keys
+   ;; TODO Recompute all entities sort-keys to prevent nasty bugs
+   ;; if steps definition have changed
    (swap! register update ::registrar/render merge rs-map)))
+
+(defn custom-steps
+  [steps steps-order]
+  (keep #(if-not (% CORE-STEPS)
+           (% steps))
+        steps-order))
 
 (defn step-changed?
   "Returns true if the step value differs between two sort-keys"
