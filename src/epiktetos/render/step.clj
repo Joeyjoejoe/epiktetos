@@ -167,12 +167,12 @@
      (sort-key render-register entity)))
   ([render-register entity]
    (let [steps-order (get render-register :steps-order)
-         steps       (keep #(get-in render-register [:step %]) steps-order)
+         steps       (keep #(get-in render-register [:steps %]) steps-order)
          [updated-steps sk-values] (steps-sk-values steps entity)
          sk           (encode-sort-key updated-steps sk-values)
          updated-step (into {} (map (juxt :name identity) updated-steps))]
 
-     (vector (assoc render-register :step updated-step)
+     (vector (assoc render-register :steps updated-step)
              (assoc entity :sort-key sk)))))
 
 
@@ -189,7 +189,7 @@
                             (map first custom-steps)
                             [:step/entity])]
 
-    (hash-map :step steps :steps-order steps-order)))
+    (hash-map :steps steps :steps-order steps-order)))
 
 ;; TODO Should be a fx instead
 (defn save-render-steps!
