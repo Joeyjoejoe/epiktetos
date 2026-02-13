@@ -66,12 +66,13 @@
 
     (GL45/glVertexArrayBindingDivisor vao-id binding-index divisor)
 
-    #:vb{:handler      handler
-         :handler-spec (fn [] true)
+    #:vb{:handler       handler
+         :handler-spec  (fn [] true)
          :binding-index binding-index
-         :offset 0 ;; might lives at entity scope for buffer data management
-         :stride stride
-         :storage (storage buffer/BUFFER-STORAGE)}))
+         :offset        0 ;; might lives at entity scope for buffer data management
+         :stride        stride
+         :storage       (storage buffer/BUFFER-STORAGE)
+         :type-layout   (mapv #(get-in % [:type :glsl-name]) vb-attribs)}))
 
 (defn setup
   "Setup a shader program attributes. It produce :
