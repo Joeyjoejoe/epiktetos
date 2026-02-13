@@ -43,6 +43,14 @@
   [program-k]
   (get-in @register [::opengl ::program program-k]))
 
+(defn find-vao-by-layout
+  "Finds a registered VAO by its layout hash"
+  [layout-hash]
+  (->> (get-in @register [::opengl ::vao])
+       (filter (fn [[_ vao]] (= layout-hash (:vao/layout-hash vao))))
+       first
+       second))
+
 (defn lookup-resource
   ([resource]
    (get-in @register [::opengl resource]))

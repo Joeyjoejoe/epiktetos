@@ -88,18 +88,18 @@
   "
   [prog-map]
   (let [{:p/keys [id vertex-layout]} prog-map
-        layout-id  (sha256 vertex-layout)
-        vao-id (or (registrar/get-vao-v2 layout-id)
-                   (GL45/glCreateVertexArrays))
+        layout-hash  (sha256 vertex-layout)
+        existing-vao (registrar/find-vao-by-layout layout-hash)]
 
-        vertex-buffers (doall (map-indexed #(prep-vertex-buffer id vao-id %1 %2)
-                                           vertex-layout))]
-
-    (registrar/register-vao layout-id vao-id)
-
-    (-> prog-map
-        (assoc :p/vao-id vao-id)
-        (assoc :p/vbos   vertex-buffers))))
+    (if existing-vao
+      (assoc prog-map :p/vao-id (:vao/id existing-vao))
+      (let [vao-id         (GL45/glCreateVertexArrays)
+            vertex-buffers (doall (map-indexed #(prep-vertex-buffer id vao-id %1 %2)
+                                               vertex-layout))]
+        (registrar/register-vao vao-id {:vao/id          vao-id
+                                         :vao/layout-hash layout-hash
+                                         :vao/vbos        vertex-buffers})
+        (assoc prog-map :p/vao-id vao-id)))))
 
 (comment
 
