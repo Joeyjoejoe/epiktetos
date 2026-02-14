@@ -31,9 +31,6 @@
   "
   (:require [epiktetos.registrar :as registrar]))
 
-(defonce CORE-STEPS
-  #{:step/frame :step/group :step/vao :step/program :step/entity})
-
 (defonce GROUP-STEP
   [:step/group
    (fn [entity]
@@ -166,8 +163,8 @@
    (let [render-register (::registrar/render @registrar/register)]
      (sort-key render-register entity)))
   ([render-register entity]
-   (let [steps-order (get render-register :steps-order)
-         steps       (keep #(get-in render-register [:steps %]) steps-order)
+   (let [step-order (get render-register :step-order)
+         steps      (keep #(get-in render-register [:steps %]) step-order)
          [updated-steps sk-values] (steps-sk-values steps entity)
          sk           (encode-sort-key updated-steps sk-values)
          updated-step (into {} (map (juxt :name identity) updated-steps))]
@@ -185,11 +182,14 @@
                    (assign-masks)
                    (into {} (map (juxt :name identity))))
 
-        steps-order (concat [:step/frame :step/group :step/vao :step/program]
-                            (map first custom-steps)
-                            [:step/entity])]
+        custom-step-order (mapv first custom-steps)
+        step-order       (-> [:step/frame :step/group :step/vao :step/program]
+                             (into custom-step-order)
+                             (conj :step/entity))]
 
-    (hash-map :steps steps :steps-order steps-order)))
+    (hash-map :steps steps
+              :step-order step-order
+              :custom-step-order custom-step-order)))
 
 ;; TODO Should be a fx instead
 (defn save-render-steps!
@@ -200,12 +200,6 @@
    ;; TODO Recompute all entities sort-keys to prevent nasty bugs
    ;; if steps definition have changed
    (swap! register update ::registrar/render merge rs-map)))
-
-(defn custom-steps
-  [steps steps-order]
-  (keep #(if-not (% CORE-STEPS)
-           (% steps))
-        steps-order))
 
 (defn step-changed?
   "Returns true if the step value differs between two sort-keys"
