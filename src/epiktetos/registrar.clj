@@ -27,26 +27,28 @@
     (swap! register assoc-in [:program k] prog)))
 
 
+
+
 (defn get-vao-v2
   [hash-k]
-  (get-in @register [::opengl ::vao hash-k]))
+  (get-in @register [::opengl ::vaos hash-k]))
 
 (defn register-vao
   [hash-k vao]
-  (swap! register assoc-in [::opengl ::vao hash-k] vao))
+  (swap! register assoc-in [::opengl ::vaos hash-k] vao))
 
 (defn register-program
   [hash-k program]
-  (swap! register assoc-in [::opengl ::program hash-k] program))
+  (swap! register assoc-in [::opengl ::programs hash-k] program))
 
 (defn get-program
   [program-k]
-  (get-in @register [::opengl ::program program-k]))
+  (get-in @register [::opengl ::programs program-k]))
 
 (defn find-vao-by-layout
   "Finds a registered VAO by its layout hash"
   [layout-hash]
-  (->> (get-in @register [::opengl ::vao])
+  (->> (get-in @register [::opengl ::vaos])
        (filter (fn [[_ vao]] (= layout-hash (:vao/layout-hash vao))))
        first
        second))
@@ -60,7 +62,7 @@
 (defn register-ubo!
   [ubo]
   (let [{:keys [varname program buffer-binding alloc members buffer-data-size]} ubo
-        ubo-map (or (lookup-resource ::ubo varname)
+        ubo-map (or (lookup-resource ::ubos varname)
                     {:varname varname
                      :resource :ubo
                      :buffer-data-size buffer-data-size
@@ -70,12 +72,12 @@
                      :programs #{}})]
 
     (->> (update ubo-map :programs conj program)
-         (swap! register assoc-in [::opengl ::ubo varname]))))
+         (swap! register assoc-in [::opengl ::ubos varname]))))
 
 (defn register-ssbo!
   [ssbo]
   (let [{:keys [varname program buffer-binding alloc members buffer-data-size]} ssbo
-        ssbo-map (or (lookup-resource ::ssbo varname)
+        ssbo-map (or (lookup-resource ::ssbos varname)
                     {:varname varname
                      :resource :ssbo
                      :buffer-data-size buffer-data-size
@@ -85,4 +87,4 @@
                      :programs #{}})]
 
     (->> (update ssbo-map :programs conj program)
-         (swap! register assoc-in [::opengl ::ssbo varname]))))
+         (swap! register assoc-in [::opengl ::ssbos varname]))))

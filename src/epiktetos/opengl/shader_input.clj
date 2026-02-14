@@ -5,11 +5,11 @@
   (:import  (org.lwjgl.opengl GL11 GL20 GL31 GL42 GL43)))
 
 (defonce RESOURCE-BINDING-MAX
-  #::registrar{:ubo  GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
-               :ssbo GL43/GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
-               :atomic-counter GL42/GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS
-               :texture-unit GL20/GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
-               :image-unit GL42/GL_MAX_IMAGE_UNITS})
+  #::registrar{:ubos  GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
+               :ssbos GL43/GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
+               :atomic-counters GL42/GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS
+               :texture-units GL20/GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
+               :image-units GL42/GL_MAX_IMAGE_UNITS})
 
 (defn resource-binding-set
   "Returns a set of all valid binding points for resource.
@@ -108,7 +108,7 @@
   (let [prog-id (:p/id prog-map)
         ubos    (->> ::introspect/uniform-block
                      (introspect/resource-properties prog-id)
-                     (allocate-binding-points ::registrar/ubo))
+                     (allocate-binding-points ::registrar/ubos))
         ubo-names (map :varname ubos)]
 
     (doseq [{:keys [interface-index buffer-binding]
@@ -124,7 +124,7 @@
   (let [prog-id (:p/id prog-map)
         ssbos    (->> ::introspect/shader-storage-block
                      (introspect/resource-properties prog-id)
-                     (allocate-binding-points ::registrar/ssbo))
+                     (allocate-binding-points ::registrar/ssbos))
         ssbo-names (map :varname ssbos)]
 
     (doseq [{:keys [interface-index buffer-binding]
@@ -137,7 +137,7 @@
 
 (comment
 
-    (event/dispatch [:dev/eval #(sort (remove (set (range 5 90)) (resource-binding-set ::registrar/ubo)))])
+    (event/dispatch [:dev/eval #(sort (remove (set (range 5 90)) (resource-binding-set ::registrar/ubos)))])
 
 
 
