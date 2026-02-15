@@ -7,7 +7,7 @@
   (:import (org.lwjgl.opengl GL20 GL30 GL11 GL43 GL45)
            (org.lwjgl BufferUtils)))
 
-(defn link
+(defn link!
   "Create a shader program from program map DSL"
   [program-map]
   (let [{:p/keys [pipeline vertex-layout]} program-map
@@ -29,14 +29,18 @@
 
     (assoc program-map :p/id id)))
 
-(defn setup
+(defn setup!
   [prog-k prog-map]
-  (let [program (-> prog-map
-                    link
-                    attribute/setup
-                    input/setup-ubos
-                    input/setup-ssbos
-                    )]
+  (let [old-prog        (registrar/get-program prog-k)
+        layout-changed? (and old-prog
+                             (not= (:p/vertex-layout old-prog)
+                                   (:p/vertex-layout prog-map)))
+        program (-> prog-map
+                    link!
+                    attribute/setup!
+                    input/setup-ubos!
+                    input/setup-ssbos!
+                    (assoc :p/dirty layout-changed?))]
 
     (registrar/register-program prog-k program)
 
@@ -54,7 +58,7 @@
                            :handler #()
                            :storage :dynamic}]})
 
-    (event/dispatch [:dev/eval #(setup :some-program prog-map)])
+    (event/dispatch [:dev/eval #(setup!:some-program prog-map)])
 
     (def prog-map2
       #:p{:pipeline [[:vertex "shaders/flat2.vert"]
@@ -63,9 +67,7 @@
                            :handler #()
                            :storage :dynamic}]})
 
-    (event/dispatch [:dev/eval #(setup :some-program prog-map2)])
-
-    )
+    (event/dispatch [:dev/eval #(setup!:some-program2 prog-map2)])
 
 
 

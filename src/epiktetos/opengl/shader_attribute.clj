@@ -74,7 +74,7 @@
          :storage       (storage buffer/BUFFER-STORAGE)
          :type-layout   (mapv #(get-in % [:type :glsl-name]) vb-attribs)}))
 
-(defn setup
+(defn setup!
   "Setup a shader program attributes. It produce :
     - One vao (register or lookup one)
     - For each vbo :

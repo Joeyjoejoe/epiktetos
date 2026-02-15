@@ -102,7 +102,7 @@
     (catch clojure.lang.ExceptionInfo e
       (prn e))))
 
-(defn setup-ubos
+(defn setup-ubos!
   "Auto allocate binding points of program ubos"
   [prog-map]
   (let [prog-id (:p/id prog-map)
@@ -118,7 +118,7 @@
 
     (assoc prog-map :p/ubos ubo-names)))
 
-(defn setup-ssbos
+(defn setup-ssbos!
   "Auto allocate binding points of program ssbos"
   [prog-map]
   (let [prog-id (:p/id prog-map)
