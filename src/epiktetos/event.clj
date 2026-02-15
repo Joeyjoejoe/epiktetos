@@ -58,5 +58,5 @@
   []
   (while (seq @queue)
     (let [e (peek @queue)]
-      (execute e)
-      (swap! queue pop))))
+      (swap! queue pop)
+      (execute e))))
