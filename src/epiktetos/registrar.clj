@@ -61,30 +61,22 @@
 
 (defn register-ubo!
   [ubo]
-  (let [{:keys [varname program buffer-binding alloc members buffer-data-size]} ubo
-        ubo-map (or (lookup-resource ::ubos varname)
-                    {:varname varname
-                     :resource :ubo
-                     :buffer-data-size buffer-data-size
-                     :members members
-                     :alloc alloc
-                     :binding-point buffer-binding
-                     :programs #{}})]
-
-    (->> (update ubo-map :programs conj program)
-         (swap! register assoc-in [::opengl ::ubos varname]))))
+  (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ubo]
+    (swap! register assoc-in [::opengl ::ubos varname]
+           {:varname varname
+            :resource :ubo
+            :buffer-data-size buffer-data-size
+            :members members
+            :alloc alloc
+            :binding-point buffer-binding})))
 
 (defn register-ssbo!
   [ssbo]
-  (let [{:keys [varname program buffer-binding alloc members buffer-data-size]} ssbo
-        ssbo-map (or (lookup-resource ::ssbos varname)
-                    {:varname varname
-                     :resource :ssbo
-                     :buffer-data-size buffer-data-size
-                     :members members
-                     :alloc alloc
-                     :binding-point buffer-binding
-                     :programs #{}})]
-
-    (->> (update ssbo-map :programs conj program)
-         (swap! register assoc-in [::opengl ::ssbos varname]))))
+  (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ssbo]
+    (swap! register assoc-in [::opengl ::ssbos varname]
+           {:varname varname
+            :resource :ssbo
+            :buffer-data-size buffer-data-size
+            :members members
+            :alloc alloc
+            :binding-point buffer-binding})))
