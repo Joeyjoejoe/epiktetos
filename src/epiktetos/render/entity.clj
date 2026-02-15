@@ -25,7 +25,7 @@
   #{:group :primitives :indices :instances})
 
 (defonce RESERVED-ENTITY-KEYS
-  #{:prog-id :vao-id :vbo-ids :ibo-id :sort-key})
+  #{:vbo-ids :ibo-id :sort-key})
 
 (defn build-vbos [entity vao]
   (assoc entity :vbo-ids []))
@@ -46,9 +46,9 @@
           :or   {primitives :triangles}}
          render-params]
 
-     (if-let [{:p/keys [id vao-id]} (get programs program)]
+     (if-let [{:p/keys [vao-id]} (get programs program)]
        (-> render-params
-           (assoc :prog-id id :vao-id vao-id :primitives primitives)
+           (assoc :primitives primitives)
            (build-vbos (get vaos vao-id))
            (build-ibo  indices))
        (throw (ex-info "Unknown shader program"

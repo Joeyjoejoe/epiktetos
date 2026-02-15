@@ -47,7 +47,7 @@
 (defonce PROGRAM-STEP
   [:step/program
    (fn [entity]
-     (get entity :prog-id))
+     (get entity :program))
    10])
 
 
