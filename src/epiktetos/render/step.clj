@@ -41,15 +41,13 @@
   [:step/vao
    (fn [entity]
      (-> entity
-         :program
-         registrar/get-program
-         :p/vao-id))
+         :vao-id))
    6])
 
 (defonce PROGRAM-STEP
   [:step/program
    (fn [entity]
-     (get entity :program))
+     (get entity :prog-id))
    10])
 
 
@@ -167,10 +165,9 @@
          steps      (keep #(get-in render-register [:steps %]) step-order)
          [updated-steps sk-values] (steps-sk-values steps entity)
          sk           (encode-sort-key updated-steps sk-values)
-         updated-step (into {} (map (juxt :name identity) updated-steps))]
-
-     (vector (assoc render-register :steps updated-step)
-             (assoc entity :sort-key sk)))))
+         updated-step (into {} (map (juxt :name identity) updated-steps))
+         updated-render-register (assoc render-register :steps updated-step)]
+     [updated-render-register sk])))
 
 
 (defn build-render-steps
