@@ -158,7 +158,7 @@
   "Compute the sort key of entity.
   Returns a tuple of the updated render register and entity"
   ([entity]
-   (let [render-register (::registrar/render @registrar/register)]
+   (let [render-register (::registrar/render-state @registrar/register)]
      (sort-key render-register entity)))
   ([render-register entity]
    (let [step-order (get render-register :step-order)
@@ -191,12 +191,12 @@
 ;; TODO Should be a fx instead
 (defn save-render-steps!
   "Update render steps and trigger sort-key recomputes"
-  ([rs-map]
-   (save-render-steps! registrar/register rs-map))
-  ([register rs-map]
+  ([custom-steps]
+   (save-render-steps! registrar/register custom-steps))
+  ([register custom-steps]
    ;; TODO Recompute all entities sort-keys to prevent nasty bugs
    ;; if steps definition have changed
-   (swap! register update ::registrar/render merge rs-map)))
+   (swap! register update ::registrar/render-state merge (apply build-render-steps custom-steps))))
 
 (defn step-changed?
   "Returns true if the step value differs between two sort-keys"

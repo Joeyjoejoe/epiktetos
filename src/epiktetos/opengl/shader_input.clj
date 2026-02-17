@@ -5,11 +5,11 @@
   (:import  (org.lwjgl.opengl GL11 GL20 GL31 GL42 GL43)))
 
 (defonce RESOURCE-BINDING-MAX
-  #::registrar{:ubos  GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
-               :ssbos GL43/GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
-               :atomic-counters GL42/GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS
-               :texture-units GL20/GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
-               :image-units GL42/GL_MAX_IMAGE_UNITS})
+  {:ubos  GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
+   :ssbos GL43/GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
+   :atomic-counters GL42/GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS
+   :texture-units GL20/GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
+   :image-units GL42/GL_MAX_IMAGE_UNITS})
 
 (defn resource-binding-set
   "Returns a set of all valid binding points for resource.
@@ -105,10 +105,10 @@
 (defn setup-ubos!
   "Auto allocate binding points of program ubos"
   [prog-map]
-  (let [prog-id (:p/id prog-map)
+  (let [prog-id (:id prog-map)
         ubos    (->> ::introspect/uniform-block
                      (introspect/resource-properties prog-id)
-                     (allocate-binding-points ::registrar/ubos))
+                     (allocate-binding-points :ubos))
         ubo-names (map :varname ubos)]
 
     (doseq [{:keys [interface-index buffer-binding]
@@ -116,15 +116,15 @@
       (GL31/glUniformBlockBinding prog-id interface-index buffer-binding)
       (registrar/register-ubo! ubo))
 
-    (assoc prog-map :p/ubos ubo-names)))
+    (assoc prog-map :ubos ubo-names)))
 
 (defn setup-ssbos!
   "Auto allocate binding points of program ssbos"
   [prog-map]
-  (let [prog-id (:p/id prog-map)
+  (let [prog-id (:id prog-map)
         ssbos    (->> ::introspect/shader-storage-block
                      (introspect/resource-properties prog-id)
-                     (allocate-binding-points ::registrar/ssbos))
+                     (allocate-binding-points :ssbos))
         ssbo-names (map :varname ssbos)]
 
     (doseq [{:keys [interface-index buffer-binding]
@@ -132,12 +132,12 @@
       (GL43/glShaderStorageBlockBinding prog-id interface-index buffer-binding)
       (registrar/register-ssbo! ssbo))
 
-    (assoc prog-map :p/ssbos ssbo-names)))
+    (assoc prog-map :ssbos ssbo-names)))
 
 
 (comment
 
-    (event/dispatch [:dev/eval #(sort (remove (set (range 5 90)) (resource-binding-set ::registrar/ubos)))])
+    (event/dispatch [:dev/eval #(sort (remove (set (range 5 90)) (resource-binding-set :ubos)))])
 
 
 

@@ -66,13 +66,13 @@
 
     (GL45/glVertexArrayBindingDivisor vao-id binding-index divisor)
 
-    #:vb{:handler       handler
-         :handler-spec  (fn [] true)
-         :binding-index binding-index
-         :offset        0 ;; might lives at entity scope for buffer data management
-         :stride        stride
-         :storage       (storage buffer/BUFFER-STORAGE)
-         :type-layout   (mapv #(get-in % [:type :glsl-name]) vb-attribs)}))
+    {:handler       handler
+     :handler-spec  (fn [] true)
+     :binding-index binding-index
+     :offset        0 ;; might lives at entity scope for buffer data management
+     :stride        stride
+     :storage       (storage buffer/BUFFER-STORAGE)
+     :type-layout   (mapv #(get-in % [:type :glsl-name]) vb-attribs)}))
 
 (defn setup!
   "Setup a shader program attributes. It produce :
@@ -87,19 +87,19 @@
     -
   "
   [prog-map]
-  (let [{:p/keys [id vertex-layout]} prog-map
+  (let [{:keys [id vertex-layout]} prog-map
         layout-hash  (sha256 vertex-layout)
         existing-vao (registrar/find-vao-by-layout layout-hash)]
 
     (if existing-vao
-      (assoc prog-map :p/vao-id (:vao/id existing-vao))
+      (assoc prog-map :vao-id (:id existing-vao))
       (let [vao-id         (GL45/glCreateVertexArrays)
             vertex-buffers (doall (map-indexed #(prep-vertex-buffer id vao-id %1 %2)
                                                vertex-layout))]
-        (registrar/register-vao vao-id {:vao/id          vao-id
-                                         :vao/layout-hash layout-hash
-                                         :vao/vbos        vertex-buffers})
-        (assoc prog-map :p/vao-id vao-id)))))
+        (registrar/register-vao vao-id {:id          vao-id
+                                        :layout-hash layout-hash
+                                        :vbos        vertex-buffers})
+        (assoc prog-map :vao-id vao-id)))))
 
 (comment
 

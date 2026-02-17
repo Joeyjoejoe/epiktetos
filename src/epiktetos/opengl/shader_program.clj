@@ -10,7 +10,7 @@
 (defn link!
   "Create a shader program from program map DSL"
   [program-map]
-  (let [{:p/keys [pipeline vertex-layout]} program-map
+  (let [{:keys [pipeline vertex-layout]} program-map
         shader-ids (map shader/interpret pipeline)
         id (GL20/glCreateProgram)]
 
@@ -27,20 +27,20 @@
     (doseq [shader-id shader-ids]
       (GL20/glDeleteShader shader-id))
 
-    (assoc program-map :p/id id)))
+    (assoc program-map :id id)))
 
 (defn setup!
   [prog-k prog-map]
   (let [old-prog        (registrar/get-program prog-k)
         layout-changed? (and old-prog
-                             (not= (:p/vertex-layout old-prog)
-                                   (:p/vertex-layout prog-map)))
+                             (not= (:vertex-layout old-prog)
+                                   (:vertex-layout prog-map)))
         program (-> prog-map
                     link!
                     attribute/setup!
                     input/setup-ubos!
                     input/setup-ssbos!
-                    (assoc :p/dirty layout-changed?))]
+                    (assoc :dirty layout-changed?))]
 
     (registrar/register-program prog-k program)
 
@@ -51,24 +51,29 @@
 
   (do
 
-    (def prog-map
-      #:p{:pipeline [[:vertex "shaders/flat.vert"]
-                     [:fragment "shaders/blank.frag"]]
-          :vertex-layout [{:layout ["vLocal" "vColor"]
-                           :handler #()
-                           :storage :dynamic}]})
+    (defn foo-handler
+      [entity]
+      entity)
 
-    (event/dispatch [:dev/eval #(setup!:some-program prog-map)])
+    (def prog-map
+      {:pipeline [[:vertex "shaders/flat.vert"]
+                  [:fragment "shaders/blank.frag"]]
+       :vertex-layout [{:layout ["vLocal" "vColor"]
+                        :handler foo-handler
+                        :storage :dynamic}]})
+
+    (event/dispatch [:dev/eval #(setup! :some-program prog-map)])
 
     (def prog-map2
-      #:p{:pipeline [[:vertex "shaders/flat2.vert"]
-                     [:fragment "shaders/blank.frag"]]
-          :vertex-layout [{:layout ["vLocal" "vColor"]
-                           :handler #()
-                           :storage :dynamic}]})
+      {:pipeline [[:vertex "shaders/flat2.vert"]
+                  [:fragment "shaders/blank.frag"]]
+       :vertex-layout [{:layout ["vLocal" "vColor"]
+                        :handler foo-handler
+                        :storage :dynamic}]})
 
-    (event/dispatch [:dev/eval #(setup!:some-program2 prog-map2)])
+    (event/dispatch [:dev/eval #(setup! :some-program2 prog-map2)])
 
 
 
+  )
   )

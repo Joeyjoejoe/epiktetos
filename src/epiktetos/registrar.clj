@@ -31,25 +31,25 @@
 
 (defn get-vao-v2
   [hash-k]
-  (get-in @register [::opengl ::vaos hash-k]))
+  (get-in @register [::opengl :vaos hash-k]))
 
 (defn register-vao
   [hash-k vao]
-  (swap! register assoc-in [::opengl ::vaos hash-k] vao))
+  (swap! register assoc-in [::opengl :vaos hash-k] vao))
 
 (defn register-program
   [hash-k program]
-  (swap! register assoc-in [::opengl ::programs hash-k] program))
+  (swap! register assoc-in [::opengl :programs hash-k] program))
 
 (defn get-program
   [program-k]
-  (get-in @register [::opengl ::programs program-k]))
+  (get-in @register [::opengl :programs program-k]))
 
 (defn find-vao-by-layout
   "Finds a registered VAO by its layout hash"
   [layout-hash]
-  (->> (get-in @register [::opengl ::vaos])
-       (filter (fn [[_ vao]] (= layout-hash (:vao/layout-hash vao))))
+  (->> (get-in @register [::opengl :vaos])
+       (filter (fn [[_ vao]] (= layout-hash (:layout-hash vao))))
        first
        second))
 
@@ -62,7 +62,7 @@
 (defn register-ubo!
   [ubo]
   (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ubo]
-    (swap! register assoc-in [::opengl ::ubos varname]
+    (swap! register assoc-in [::opengl :ubos varname]
            {:varname varname
             :resource :ubo
             :buffer-data-size buffer-data-size
@@ -73,7 +73,7 @@
 (defn register-ssbo!
   [ssbo]
   (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ssbo]
-    (swap! register assoc-in [::opengl ::ssbos varname]
+    (swap! register assoc-in [::opengl :ssbos varname]
            {:varname varname
             :resource :ssbo
             :buffer-data-size buffer-data-size

@@ -41,12 +41,12 @@
    (prep-entity (::registrar/opengl @registrar/register) render-params))
 
   ([opengl-register render-params]
-   (let [{::registrar/keys [programs vaos]} opengl-register
+   (let [{:keys [programs vaos]} opengl-register
          {:keys [program primitives indices]
           :or   {primitives :triangles}}
          render-params]
 
-     (if-let [{:p/keys [vao-id]} (get programs program)]
+     (if-let [{:keys [vao-id]} (get programs program)]
        (-> render-params
            (assoc :primitives primitives)
            (build-vbos (get vaos vao-id))
@@ -79,11 +79,11 @@
 
 (defn add-entity
   [register entity-id render-params]
-  (let [{::registrar/keys [render opengl]} register]
+  (let [{::registrar/keys [render-state opengl]} register]
     (->> render-params
          (prep-entity opengl)
-         (reg-entity (delete-entity render entity-id) entity-id)
-         (assoc register ::registrar/render))))
+         (reg-entity (delete-entity render-state entity-id) entity-id)
+         (assoc register ::registrar/render-state))))
 
 (defn add-entity!
   [entity-id render-params]
@@ -91,25 +91,31 @@
 
 (defn delete-entity!
   [entity-id]
-  (swap! registrar/register update ::registrar/render delete-entity entity-id))
+  (swap! registrar/register update ::registrar/render-state delete-entity entity-id))
 
 
 (comment
 
-  (add-entity! :my-entity2 {:program :some-program
-                            :assets  {}
-                            :group   "group0"
-                            :primitives :triangles
-                            :indices    [1 2 3]
-                            :instances  10
-                            ;; custom user defined stuff for shader inputs
-                            :position []
-                            :material "water"})
+  (def triangle-assets
+    {:vertices [{:coordinates [-0.5 -0.5 0.1] :color [1.0 0.0 0.0]}
+                {:coordinates [ 0.5 -0.5 0.1] :color [0.0 1.0 0.0]}
+                {:coordinates [ 0.0  0.5 0.1] :color [0.0 0.0 1.0]}]})
+
+
+  (add-entity! :my-entity6 {:program :some-program2
+                           :assets  {}
+                           :group   "group1"
+                           :primitives :triangles
+                           :indices    [1 2 3]
+                           :instances  10
+                           ;; custom user defined stuff for shader inputs
+                           :position []
+                           :material "wood"})
 
   (delete-entity! :my-entity2)
 
 
-  ;; (get-in @registrar/register [::registrar/render :queue])
+  ;; (get-in @registrar/register [::registrar/render-state :queue])
   ;; (assoc fx :e/render! [:my-entity {:program "MyShaderProgram" :assets myModel}])
 
   )
