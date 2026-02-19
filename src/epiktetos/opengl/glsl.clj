@@ -53,3 +53,12 @@
    GL40/GL_DOUBLE_MAT3x4        {:base-type GL11/GL_DOUBLE       :size 4 :bytes 96  :total-locations 3 :double? true :glsl-name :dmat3x4}
    GL40/GL_DOUBLE_MAT4x2        {:base-type GL11/GL_DOUBLE       :size 2 :bytes 64  :total-locations 4 :double? true :glsl-name :dmat4x2}
    GL40/GL_DOUBLE_MAT4x3        {:base-type GL11/GL_DOUBLE       :size 3 :bytes 96  :total-locations 4 :double? true :glsl-name :dmat4x3}})
+
+(def TYPE-BY-NAME
+  "Reverse index from GLSL type name keyword to OpenGL type constant integer.
+  - glsl-name keyword -> int
+  - e.g. :vec3 -> GL20/GL_FLOAT_VEC3"
+  (->> TRANSPARENT-TYPE
+       (reduce-kv (fn [m gl-id {:keys [glsl-name]}]
+                    (assoc m glsl-name gl-id))
+                  {})))

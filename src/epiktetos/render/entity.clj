@@ -1,8 +1,9 @@
 (ns epiktetos.render.entity
   (:require [epiktetos.registrar :as registrar]
             [epiktetos.render.step :as render-step]
+            [epiktetos.opengl.buffer :as buffer]
             [epiktetos.effect :as fx])
-  (:import (org.lwjgl.opengl GL11 GL32 GL40)))
+  (:import (org.lwjgl.opengl GL11 GL32 GL40 GL44 GL45)))
 
 (defonce DRAW-PRIMITIVES
   {:triangles                GL11/GL_TRIANGLES
@@ -19,7 +20,7 @@
    :patches                  GL40/GL_PATCHES})
 
 (defonce MANDATORY-RENDER-PARAMS
-  #{:program :assets})
+  #{:program})
 
 (defonce OPTIONAL-RENDER-PARAMS
   #{:group :primitives :indices :instances})
@@ -27,16 +28,58 @@
 (defonce RESERVED-ENTITY-KEYS
   #{:vbo-ids :ibo-id :sort-key})
 
-(defn build-vbos [entity vao]
-  (assoc entity :vbo-ids []))
+(defn- run-handler
+  "Executes a VBO handler and return output with vertex count if divisor is 0."
+  [entity {:keys [handler divisor type-layout]}]
+  (let [data (handler entity)]
+    (if (= 0 divisor)
+      {:handler-output data :vertex-count (/ (count data) (buffer/type-layout-count type-layout))}
+      {:handler-output data})))
+
+(defn- validate-vertex-count
+  "Validates VBOs have the same vertex number and return it"
+  [handler-results]
+  (let [counts (keep :vertex-count handler-results)]
+    (when (empty? counts)
+      (throw (ex-info "No vertex buffer found" {})))
+    (when-not (apply = counts)
+      (throw (ex-info "Per-vertex VBO size mismatch"
+                      {:counts (vec counts)})))
+    (first counts)))
+
+(defn- create-vbo
+  [program {:keys [handler-output]} {:keys [type-layout storage] :as vbo-template}]
+  (let [byte-buf  (try
+                    (buffer/fill-byte-buffer type-layout handler-output)
+                    (catch clojure.lang.ExceptionInfo e
+                      (throw (ex-info (ex-message e)
+                                      (assoc (ex-data e) :program program :vbo vbo-template)))))
+        buffer-id (GL45/glCreateBuffers)]
+    (GL45/glNamedBufferStorage buffer-id byte-buf ^int storage)
+    buffer-id))
+
+(defn build-vbos
+  "Creates OpenGL byte buffers for each VBO defined in the VAO."
+  [entity vbo-templates]
+  (let [program         (:program entity)
+        handler-results (mapv #(run-handler entity %) vbo-templates)
+        vtx-count       (validate-vertex-count handler-results)
+        vbo-ids         (mapv #(create-vbo program %1 %2) handler-results vbo-templates)]
+    (assoc entity :vbo-ids vbo-ids :vertex-count vtx-count)))
 
 (defn build-ibo  [entity indices]
-  (assoc entity :ibo-id nil))
+  (if-not (nil? indices)
+    (let [ibo-id   (GL45/glCreateBuffers)
+          ibo-data (buffer/int-buffer indices)
+          ibo-length (count indices)]
+
+      (GL45/glNamedBufferStorage ibo-id ibo-data GL44/GL_DYNAMIC_STORAGE_BIT)
+      (assoc entity :ibo-id ibo-id :ibo-length ibo-length))
+    entity))
 
 (defn prep-entity
   "Prepare an entity for rendering.
   Return entity map"
-
   ([render-params]
    (prep-entity (::registrar/opengl @registrar/register) render-params))
 
@@ -46,10 +89,10 @@
           :or   {primitives :triangles}}
          render-params]
 
-     (if-let [{:keys [vao-id]} (get programs program)]
+     (if-let [vao-id (get-in programs [program :vao-id])]
        (-> render-params
-           (assoc :primitives primitives)
-           (build-vbos (get vaos vao-id))
+           (assoc :primitives (DRAW-PRIMITIVES primitives))
+           (build-vbos (get-in vaos [vao-id :vbos]))
            (build-ibo  indices))
        (throw (ex-info "Unknown shader program"
                        {:program program}))))))

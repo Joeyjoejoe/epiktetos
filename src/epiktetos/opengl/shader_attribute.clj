@@ -69,6 +69,7 @@
     {:handler       handler
      :handler-spec  (fn [] true)
      :binding-index binding-index
+     :divisor       divisor
      :offset        0 ;; might lives at entity scope for buffer data management
      :stride        stride
      :storage       (storage buffer/BUFFER-STORAGE)
@@ -94,8 +95,9 @@
     (if existing-vao
       (assoc prog-map :vao-id (:id existing-vao))
       (let [vao-id         (GL45/glCreateVertexArrays)
-            vertex-buffers (doall (map-indexed #(prep-vertex-buffer id vao-id %1 %2)
-                                               vertex-layout))]
+            vertex-buffers (mapv #(prep-vertex-buffer id vao-id %1 %2)
+                                 (range)
+                                 vertex-layout)]
         (registrar/register-vao vao-id {:id          vao-id
                                         :layout-hash layout-hash
                                         :vbos        vertex-buffers})
