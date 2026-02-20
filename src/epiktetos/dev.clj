@@ -87,3 +87,12 @@
   [:press :enter]
   (fn loop-play [_ fx]
     (assoc fx :loop/pause-toggle true)))
+
+(reg-event ::event/loop.iter
+           (fn loop-infos [cofx fx]
+             (let [{[_ loop-iter] :event
+                    db :db}
+                   cofx
+
+                   new-db (assoc db :core/loop loop-iter)]
+               (assoc fx :db new-db))))

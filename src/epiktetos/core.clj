@@ -4,13 +4,11 @@
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
             [epiktetos.startup :as startup]
-            [epiktetos.registrar :as register]
             [epiktetos.event :as event]
-            [epiktetos.uniform :as u]
-            [epiktetos.entity :as entity]
+            [epiktetos.render.entity :as entity]
+            [epiktetos.opengl.shader-program :as prog]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
-            [epiktetos.window]
-            [epiktetos.program :as prog]))
+            [epiktetos.window]))
 
 (def db state/db)
 
@@ -81,57 +79,45 @@
   [id fx-fn]
   (fx/register id fx-fn))
 
-
-(defn reg-u
-  "Register a uniform handler function ran at rendering time and returning
-  uniform's value.
-
-  u-name is a uniform name keyword (varname in shader source). In order to
-  specify a handler for a specific uniform in a specific program,
-  you can provide a vector of 2 keywords:
-  [:program-name :uniform-name]
-
-  handler is a pure function
-
-  Examples:
-
-  ;; Register a global uniform whose value will be computed only once per Loop
-  ;; iteration.
-  ;; handler function takes one parameter: state/db
-
-  (reg-u :foo (fn [db] ...))
-
-  ;; Register a program uniform whose value is computed once at progam start.
-  ;; handler function takes 2 parameters: state/db and a a map of entities
-  ;; being rendered with uniform's program.
-
-  (reg-u [:program-name :foo] (fn [db entities] ...))"
-  ([u-name handler]
-   (event/dispatch [::event/reg-u [u-name handler]]))
-  ([fx u-name handler]
-   (assoc-in fx [::fx/reg-u u-name] handler)))
-
-(defn reg-eu
-  "Same as reg-u, but register a uniform whose value will be
-  computed for each entity rendered with uniform's program.
-  An entity uniform handler function take 2 parameters:
-  "
-  ([u-name handler]
-   (event/dispatch [::event/reg-eu [u-name handler]]))
-  ([fx u-name handler]
-   (assoc-in fx [::fx/reg-eu u-name] handler)))
-
-(defn send-event!
+(defn dispatch
   "Dispatch an event"
-  [& events]
-  (doseq [e events]
-    (event/dispatch e)))
+  ([event-k value]
+  (event/dispatch [event-k value]))
+  ([fx event-k value]
+   (update fx ::fx/dispatch conj [event-k value])))
+
+(defn render
+  ([id render-params]
+  (dispatch ::entity/render [id render-params]))
+  ([fx id render-params]
+   (update fx ::fx/render conj [id render-params])))
+
+(defn delete
+  ([id]
+  (dispatch ::entity/delete id))
+  ([fx id]
+   (update fx ::fx/delete conj id)))
 
 (defn reg-p
-  ([id p]
-   (event/dispatch [::event/reg-p [id p]]))
-  ([fx id p]
-   (assoc-in fx [::fx/reg-p id] p)))
+  ([id prog-map]
+   (dispatch ::event/reg-p [id prog-map]))
+  ([fx id prog-map]
+   (update fx ::fx/reg-p conj [id prog-map])))
+
+(reg-event ::event/reg-p
+           (fn [cofx fx]
+             (let [[id prog] (get-in cofx [:event 1])]
+               (reg-p fx id prog))))
+
+(reg-event ::entity/render
+           (fn [cofx fx]
+             (let [[id render-params] (get-in cofx [:event 1])]
+               (render fx id render-params))))
+
+(reg-event ::entity/delete
+           (fn [cofx fx]
+             (let [id (get-in cofx [:event 1])]
+               (delete fx id))))
 
 (reg-cofx :inject-system
           (fn [coeffects]
@@ -147,74 +133,27 @@
               (doseq [err errors] (pprint err)))
             coeffects))
 
-(reg-cofx :entity/get entity/get-entity)
-(reg-cofx :entity/get-all
-          (fn get-all-entities
-            [coeffects]
-            (assoc coeffects :entity @state/entities)))
-
-(reg-event ::event/loop.iter
-           (fn loop-infos [cofx fx]
-             (let [{[_ loop-iter] :event
-                    db :db}
-                   cofx
-
-                   new-db (assoc db :core/loop loop-iter)]
-               (assoc fx :db new-db))))
-
-(reg-event ::event/reg-p
-           (fn [cofx fx]
-             (let [[id prog] (get-in cofx [:event 1])]
-               (reg-p fx id prog))))
-
-(reg-event ::event/reg-eu
-           (fn [cofx fx]
-             (let [[u-name handler] (get-in cofx [:event 1])]
-               (reg-eu fx u-name handler))))
-
-(reg-event ::event/reg-u
-           (fn [cofx fx]
-             (let [[u-name handler] (get-in cofx [:event 1])]
-               (reg-u fx u-name handler))))
-
-(reg-fx :event/dispatch
-        (fn dispatch-event! [events]
-          (if (keyword? (first events))
-            (event/dispatch events)
-            (doseq [e events]
-              (event/dispatch e)))))
+(reg-fx ::fx/dispatch
+        (fn dispatch-event!
+          [event-coll]
+            (doseq [e event-coll]
+              (event/dispatch e))))
 
 (reg-fx ::fx/reg-p
-        (fn [progs-map]
-          (doseq [[id p] progs-map]
-            (-> p
-                (assoc :name id)
-                prog/create
-                register/add-program!))))
-
-(reg-fx ::fx/reg-eu
-        (fn register-entity-uniform-fx [u-map]
-          (doseq [[u-name handler] u-map]
-            (u/register-entity-uniform u-name handler))))
-
-(reg-fx ::fx/reg-u
-        (fn register-uniform-fx [u-map]
-          (doseq [[u-name handler] u-map]
-            (if (= clojure.lang.Keyword (type u-name))
-              (u/register-global-uniform u-name handler)
-              (u/register-uniform u-name handler)))))
+        (fn [prog-coll]
+          (doseq [[id prog-map] prog-coll]
+            (prog/setup! id prog-map))))
 
 (reg-fx :db
         (fn update-db! [new-db]
           (reset! state/db new-db)))
 
-(reg-fx :entity/render       entity/render!)
-(reg-fx :entity/batch-render entity/batch-render!)
-(reg-fx :entity/update       entity/update!)
-(reg-fx :entity/batch-update entity/batch-update!) ;
-(reg-fx :entity/delete       entity/delete!)
-(reg-fx :entity/delete-all   entity/delete-all!)
-(reg-fx :entity/reset-all    entity/reset-all!)
+(reg-fx ::fx/render
+        (fn render-entity! [entity-coll]
+          (doseq [[id render-params] entity-coll]
+            (entity/add-entity! id render-params))))
 
-
-;; TODO Add fx for "throwing" error from handler function without stoping the loop
+(reg-fx ::fx/delete
+        (fn delete-entity! [entity-ids]
+          (doseq [id entity-ids]
+            (entity/delete-entity! id))))
