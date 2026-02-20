@@ -81,7 +81,7 @@
   "Prepare an entity for rendering.
   Return entity map"
   ([render-params]
-   (prep-entity (::registrar/opengl @registrar/register) render-params))
+   (prep-entity (::registrar/opengl-registry @registrar/registry) render-params))
 
   ([opengl-register render-params]
    (let [{:keys [programs vaos]} opengl-register
@@ -128,7 +128,7 @@
 
 (defn add-entity!
   [entity-id render-params]
-  (swap! registrar/render-state add-entity (::registrar/opengl @registrar/register) entity-id render-params))
+  (swap! registrar/render-state add-entity (::registrar/opengl-registry @registrar/registry) entity-id render-params))
 
 (defn delete-entity!
   [entity-id]

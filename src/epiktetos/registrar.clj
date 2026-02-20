@@ -1,7 +1,7 @@
 (ns epiktetos.registrar
   (:import  (org.lwjgl.opengl GL20)))
 
-(defonce register
+(defonce registry
   (atom {}))
 
 (defonce render-state
@@ -9,15 +9,15 @@
 
 (defn get-vao
   [layout]
-  (get-in @register [:vao layout]))
+  (get-in @registry [:vao layout]))
 
 (defn add-vao!
   [vao]
   (let [layout (:vao/layout vao)]
-    (swap! register assoc-in [:vao layout] vao)))
+    (swap! registry assoc-in [:vao layout] vao)))
 
 (defn get-prog [k]
-  (get-in @register [:program k]))
+  (get-in @registry [:program k]))
 
 (defn add-program!
   [prog]
@@ -27,45 +27,45 @@
     (when-let [old-prog (get-prog k)]
       (GL20/glDeleteProgram (:id old-prog)))
 
-    (swap! register assoc-in [:program k] prog)))
+    (swap! registry assoc-in [:program k] prog)))
 
 
 
 
 (defn get-vao-v2
   [hash-k]
-  (get-in @register [::opengl :vaos hash-k]))
+  (get-in @registry [::opengl-registry :vaos hash-k]))
 
 (defn register-vao
   [hash-k vao]
-  (swap! register assoc-in [::opengl :vaos hash-k] vao))
+  (swap! registry assoc-in [::opengl-registry :vaos hash-k] vao))
 
 (defn register-program
   [hash-k program]
-  (swap! register assoc-in [::opengl :programs hash-k] program))
+  (swap! registry assoc-in [::opengl-registry :programs hash-k] program))
 
 (defn get-program
   [program-k]
-  (get-in @register [::opengl :programs program-k]))
+  (get-in @registry [::opengl-registry :programs program-k]))
 
 (defn find-vao-by-layout
   "Finds a registered VAO by its layout hash"
   [layout-hash]
-  (->> (get-in @register [::opengl :vaos])
+  (->> (get-in @registry [::opengl-registry :vaos])
        (filter (fn [[_ vao]] (= layout-hash (:layout-hash vao))))
        first
        second))
 
 (defn lookup-resource
   ([resource]
-   (get-in @register [::opengl resource]))
+   (get-in @registry [::opengl-registry resource]))
   ([resource varname]
-   (get-in @register [::opengl resource varname])))
+   (get-in @registry [::opengl-registry resource varname])))
 
 (defn register-ubo!
   [ubo]
   (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ubo]
-    (swap! register assoc-in [::opengl :ubos varname]
+    (swap! registry assoc-in [::opengl-registry :ubos varname]
            {:varname varname
             :resource :ubo
             :buffer-data-size buffer-data-size
@@ -76,7 +76,7 @@
 (defn register-ssbo!
   [ssbo]
   (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ssbo]
-    (swap! register assoc-in [::opengl :ssbos varname]
+    (swap! registry assoc-in [::opengl-registry :ssbos varname]
            {:varname varname
             :resource :ssbo
             :buffer-data-size buffer-data-size

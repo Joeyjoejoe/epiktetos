@@ -43,7 +43,7 @@
      ;; Dirty state management may prevent this impure call.
      ;; For now I removed vao-id from entities because in development program vao may change
      ;; and be reload, so each entity using the program should be reload too.
-     (get-in @registrar/register [::registrar/opengl :programs (:program entity) :vao-id]))
+     (get-in @registrar/registry [::registrar/opengl-registry :programs (:program entity) :vao-id]))
    6])
 
 (defonce PROGRAM-STEP

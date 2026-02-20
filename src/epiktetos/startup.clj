@@ -48,7 +48,7 @@
     (cond-> opts
       hot-reload (assoc :hot-reload {:watcher (apply beholder/watch
                                                      (fn [_]
-                                                       (doseq [[id prog] (get-in @registrar/register [::registrar/opengl :programs])]
+                                                       (doseq [[id prog] (get-in @registrar/registry [::registrar/opengl-registry :programs])]
                                                          (event/dispatch [::event/reg-p [id prog]])))
                                                      hot-reload)
                                      :paths hot-reload}))))
@@ -72,7 +72,7 @@
     (when hot-reload
       (beholder/stop (:watcher hot-reload)))
 
-    (reset! registrar/register {})
+    (reset! registrar/registry {})
     (reset! registrar/render-state {})
     (reset! event/kind->id->handler {})
     (reset! event/queue clojure.lang.PersistentQueue/EMPTY)

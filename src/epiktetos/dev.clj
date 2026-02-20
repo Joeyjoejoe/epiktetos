@@ -15,7 +15,7 @@
   "Open portal with engine's current state (ready for inspection)"
   []
   (p/clear)
-  (tap> {:register      @registrar/register
+  (tap> {:registry      @registrar/registry
          :render-state  @registrar/render-state
          :db            @state/db
          :system        @state/system
