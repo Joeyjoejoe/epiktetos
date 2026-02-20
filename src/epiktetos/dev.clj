@@ -18,7 +18,6 @@
   (tap> {:registry      @registrar/registry
          :render-state  @registrar/render-state
          :db            @state/db
-         :system        @state/system
          :events/queue  @event/queue}))
 
 (defn- open-inspector
@@ -35,10 +34,11 @@
 (defn start
   "Start engine"
   ([]
-   (if-not (empty? @state/system)
-     (do (ig/halt! (dissoc @state/system :glfw/window))
-         (refresh-all :after (symbol "epiktetos.dev" "start")))
-     (epiktet/run)))
+   (let [system (::registrar/system-registry @registrar/registry)]
+     (if-not (empty? system)
+       (do (ig/halt! (dissoc system :glfw/window))
+           (refresh-all :after (symbol "epiktetos.dev" "start")))
+       (epiktet/run))))
   ([config-path]
    (epiktet/run config-path)))
 
@@ -57,7 +57,7 @@
 
 (reg-fx :engine/stop
         (fn [_]
-          (let [window (state/window)]
+          (let [window (get-in @registrar/registry [::registrar/system-registry :glfw/window])]
             (GLFW/glfwSetWindowShouldClose window true))))
 
 (reg-fx ::eval-in-onpengl-context

@@ -1,6 +1,7 @@
 (ns epiktetos.loop
   (:require [epiktetos.event :as event]
             [epiktetos.state :as state]
+            [epiktetos.registrar :as registrar]
             [integrant.core :as ig]
             [epiktetos.render.pipeline :as render])
 
@@ -70,7 +71,7 @@
              (recur lag)))))
 
    ;; Stop window system
-   (-> @state/system
+   (-> (::registrar/system-registry @registrar/registry)
        (select-keys [:glfw/window])
        ig/halt!)
    :engine/stop)

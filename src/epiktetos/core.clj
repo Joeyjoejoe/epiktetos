@@ -1,6 +1,7 @@
 (ns epiktetos.core
   (:require [clojure.pprint :refer [pprint]]
             [epiktetos.state :as state]
+            [epiktetos.registrar :as registrar]
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
             [epiktetos.startup :as startup]
@@ -117,7 +118,7 @@
 
 (reg-cofx :inject-system
           (fn [coeffects]
-            (assoc coeffects :system @state/system)))
+            (assoc coeffects :system (::registrar/system-registry @registrar/registry))))
 
 (reg-cofx :inject-db
           (fn [coeffects]

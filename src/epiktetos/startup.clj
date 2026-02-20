@@ -36,9 +36,8 @@
   events to execute immediately"
   ([] (start-engine! (init-systems)))
   ([systems]
-    (->> systems
-        (reset! state/system)
-        game-loop/start)))
+    (swap! registrar/registry assoc ::registrar/system-registry systems)
+    (game-loop/start systems)))
 
 (defmethod ig/init-key
   :gl/engine
@@ -75,5 +74,4 @@
     (reset! registrar/registry {})
     (reset! registrar/render-state {})
     (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
-    (reset! state/system {})
     (reset! state/db {})))
