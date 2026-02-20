@@ -34,18 +34,11 @@
 (defn start-engine!
   "Start the engine with a list of user defined
   events to execute immediately"
-  ([]
-   (start-engine! (init-systems)))
+  ([] (start-engine! (init-systems)))
   ([systems]
-   (start-engine! systems []))
-  ([systems startup-events]
-
-   (reset! state/system systems)
-
-   (doseq [e startup-events]
-     (event/dispatch e))
-
-   (game-loop/start systems)))
+    (->> systems
+        (reset! state/system)
+        game-loop/start)))
 
 (defmethod ig/init-key
   :gl/engine
@@ -63,15 +56,18 @@
 (defmethod ig/halt-key!
   :gl/engine
   [_ system]
-  (let [{:keys [hot-reload]} system]
-    ;; reset state
-    (doseq [[layout programs] @state/rendering]
-      (doseq [[program-k entities] programs]
-        (for [[entity-id {:keys [buffers ibo]}] entities]
-          (do
-            (when ibo
-              (GL15/glDeleteBuffers ibo))
-            (GL15/glDeleteBuffers (map :id buffers))))))
+  (let [{:keys [hot-reload]} system
+        {::registrar/keys [opengl render-state]} @registrar/register]
+
+    ;; Delete ibos and vbos
+    (doseq [[entitiy-id {:keys [ibo-id vbo-ids]}] (:entities render-state)]
+      (println "Clear entity " entitiy-id)
+      (when ibo-id
+        (println "ibo " ibo-id " deleted...")
+        (GL15/glDeleteBuffers ibo-id))
+      (doseq [vbo-id vbo-ids]
+        (println "vbo " vbo-id " deleted...")
+        (GL15/glDeleteBuffers vbo-id)))
 
     (when hot-reload
       (beholder/stop (:watcher hot-reload)))
@@ -79,8 +75,5 @@
     (reset! registrar/register {})
     (reset! event/kind->id->handler {})
     (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
-    (reset! texture/text-cache {})
-    (reset! state/rendering {})
-    (reset! state/entities {})
     (reset! state/system {})
     (reset! state/db {})))

@@ -16,17 +16,13 @@
   "Run the engine.
   - startup-events is a vector of events to dispatch
   - config-path is a path to an edn configuration file"
-  ([startup-events]
-   (run startup/DEFAULT_CONFIG_PATH startup-events))
-  ([config-path startup-events]
-   (let [systems (startup/init-systems config-path)
-         events (if (-> startup-events first keyword?)
-                  [startup-events]
-                  startup-events)]
+  ([]
+   (run startup/DEFAULT_CONFIG_PATH))
+  ([config-path]
+   (let [systems (startup/init-systems config-path)]
      (-> systems
          (assoc-in [:gl/engine :config-path] config-path)
-         (assoc-in [:gl/engine :startup-events] startup-events)
-         (startup/start-engine! events)))))
+         (startup/start-engine!)))))
 
 (defn reg-cofx
   "A cofx is a function that takes a coeffects map and

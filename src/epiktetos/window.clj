@@ -156,7 +156,6 @@
 
   ;; TODO server-side GL capabilities should be activable/disablable
   ;; at render time on a per program/entity basis.
-  ;; It will necessitate some control over rendering order (just like with transparency)
 
   ;; Enable Depth test
   (GL11/glEnable GL11/GL_DEPTH_TEST)

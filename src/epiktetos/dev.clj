@@ -17,8 +17,6 @@
   (p/clear)
   (tap> {:register @registrar/register
          :db @state/db
-         :rendering @state/rendering
-         :entities @state/entities
          :system @state/system
          :events @event/kind->id->handler
          :events/queue @event/queue}))
@@ -40,15 +38,9 @@
    (if-not (empty? @state/system)
      (do (ig/halt! (dissoc @state/system :glfw/window))
          (refresh-all :after (symbol "epiktetos.dev" "start")))
-     (epiktet/run [])))
+     (epiktet/run)))
   ([config-path]
-   (start config-path []))
-  ([config-path events]
-   (epiktet/run config-path events)))
-
-(defn dispatch
-  [event]
-  (event/dispatch event))
+   (epiktet/run config-path)))
 
 (reg-fx :loop/pause-toggle
         (fn [db]
