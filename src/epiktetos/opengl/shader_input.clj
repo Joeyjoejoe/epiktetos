@@ -133,12 +133,3 @@
       (registrar/register-ssbo! ssbo))
 
     (assoc prog-map :ssbos ssbo-names)))
-
-
-(comment
-
-    (event/dispatch [:dev/eval #(sort (remove (set (range 5 90)) (resource-binding-set :ubos)))])
-
-
-
-    )

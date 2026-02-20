@@ -3,30 +3,6 @@
             [epiktetos.render.step :as rs])
   (:import (org.lwjgl.opengl GL11 GL20 GL30 GL31 GL45)))
 
-
-;; (defn draw
-;;   [entity]
-;;   (let [{:keys [vao-id primitive-id ibo ibo-length assets]} entity
-;;         vertex-count (count (:vertices assets))]
-;;
-;;     (if ibo
-;;       (GL11/glDrawElements primitive-id ibo-length GL11/GL_UNSIGNED_INT 0)
-;;       (GL11/glDrawArrays primitive-id 0 vertex-count))))
-;;
-;; (defn draw-instances
-;;   [entity]
-;;   (let [{:keys [primitive-id ibo ibo-length assets]} entity
-;;         instances-count (count (get-in entity [:assets :instances]))
-;;         vertex-count (count (:vertices assets))
-;;         indices-count (count (:indices assets))]
-;;
-;;     (if ibo
-;;       (GL31/glDrawElementsInstanced primitive-id indices-count GL11/GL_UNSIGNED_INT 0 instances-count)
-;;       (GL31/glDrawArraysInstanced primitive-id 0 vertex-count instances-count))))
-
-
-
-
 (defn pipeline
   ""
   ([] (pipeline @registrar/register))

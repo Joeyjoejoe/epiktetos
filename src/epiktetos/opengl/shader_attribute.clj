@@ -102,10 +102,3 @@
                                         :layout-hash layout-hash
                                         :vbos        vertex-buffers})
         (assoc prog-map :vao-id vao-id)))))
-
-(comment
-
-
-    (event/dispatch [:dev/eval #(build 3 ::attribute)])
-
- )

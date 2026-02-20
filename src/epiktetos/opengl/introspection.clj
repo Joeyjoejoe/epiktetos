@@ -218,9 +218,3 @@
   [program-id]
   (let [attribs-coll (resource-properties program-id ::attribute)]
     (into {} (map (juxt :varname identity) attribs-coll))))
-
-(comment
-
-  (event/dispatch [:dev/eval #(resource-properties 7 ::shader-storage-block)])
-
-  )

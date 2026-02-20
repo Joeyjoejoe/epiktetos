@@ -135,30 +135,3 @@
 (defn delete-entity!
   [entity-id]
   (swap! registrar/register update ::registrar/render-state delete-entity entity-id))
-
-
-(comment
-
-  (def triangle-assets
-    {:vertices [{:coordinates [-0.5 -0.5 0.1] :color [1.0 0.0 0.0]}
-                {:coordinates [ 0.5 -0.5 0.1] :color [0.0 1.0 0.0]}
-                {:coordinates [ 0.0  0.5 0.1] :color [0.0 0.0 1.0]}]})
-
-
-  (add-entity! :my-entity6 {:program :some-program2
-                           :assets  {}
-                           :group   "group1"
-                           :primitives :triangles
-                           :indices    [1 2 3]
-                           :instances  10
-                           ;; custom user defined stuff for shader inputs
-                           :position []
-                           :material "wood"})
-
-  (delete-entity! :my-entity2)
-
-
-  ;; (get-in @registrar/register [::registrar/render-state :queue])
-  ;; (assoc fx :e/render! [:my-entity {:program "MyShaderProgram" :assets myModel}])
-
-  )

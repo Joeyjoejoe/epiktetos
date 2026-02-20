@@ -45,35 +45,3 @@
     (registrar/register-program prog-k program)
 
     program))
-
-
-(comment
-
-  (do
-
-    (defn foo-handler
-      [entity]
-      entity)
-
-    (def prog-map
-      {:pipeline [[:vertex "shaders/flat.vert"]
-                  [:fragment "shaders/blank.frag"]]
-       :vertex-layout [{:layout ["vLocal" "vColor"]
-                        :handler foo-handler
-                        :storage :dynamic}]})
-
-    (event/dispatch [:dev/eval #(setup! :some-program prog-map)])
-
-    (def prog-map2
-      {:pipeline [[:vertex "shaders/flat2.vert"]
-                  [:fragment "shaders/blank.frag"]]
-       :vertex-layout [{:layout ["vLocal" "vColor"]
-                        :handler foo-handler
-                        :storage :dynamic}]})
-
-    (event/dispatch [:dev/eval #(setup! :some-program2 prog-map2)])
-
-
-
-  )
-  )

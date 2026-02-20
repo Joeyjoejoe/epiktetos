@@ -29,15 +29,15 @@
        flatten))
 
 (def no-camera
-  {:pipeline [[:vertex "shaders/flat.vert"]
-              [:fragment "shaders/blank.frag"]]
+  {:pipeline [[:vertex   "shaders/flat.vert"]
+              [:fragment "shaders/default.frag"]]
    :vertex-layout [{:layout  ["vLocal" "vColor"]
                     :handler colored-vertices-handler
                     :storage :dynamic}]})
 
 (def no-camera-instanced
-  {:pipeline [[:vertex "shaders/flat-instances.vert"]
-              [:fragment "shaders/blank.frag"]]
+  {:pipeline [[:vertex   "shaders/flat-instances.vert"]
+              [:fragment "shaders/default.frag"]]
    :vertex-layout [{:layout    ["vLocal" "vColor"]
                     :handler   colored-vertices-handler
                     :storage   :dynamic}
@@ -86,7 +86,7 @@
                  :primitives :triangles})
 
 (render :triangle {:program  :no-camera
-                   :vertices triangle-vertices})
+                  :vertices triangle-vertices})
 
 (comment
 

@@ -1,20 +1,9 @@
 #version 330 core
 
+in vec4 vertexColor;
 out vec4 FragColor;
-
-in vec3 vertexColor;
-in vec2 textCoord;
-
-uniform float t;
-uniform float speed;
-uniform sampler2D textIndex0;
 
 void main()
 {
-    vec4 texColor = texture(textIndex0, textCoord);
-    FragColor = texColor * vec4(vertexColor, 1.0);
-
-    // * vec4(vertexColor.r * (1.5 + cos(speed * t)),
-    //       vertexColor.g * (2.0 + cos(speed * t)),
-    //       vertexColor.b * (1.0 + cos(speed * t)), 1.0);
+    FragColor = vec4(vertexColor);
 }
