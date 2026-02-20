@@ -15,11 +15,12 @@
   "Open portal with engine's current state (ready for inspection)"
   []
   (p/clear)
-  (tap> {:register @registrar/register
-         :db @state/db
-         :system @state/system
-         :events @event/kind->id->handler
-         :events/queue @event/queue}))
+  (tap> {:register      @registrar/register
+         :render-state  @registrar/render-state
+         :db            @state/db
+         :system        @state/system
+         :events        @event/kind->id->handler
+         :events/queue  @event/queue}))
 
 (defn- open-inspector
   []

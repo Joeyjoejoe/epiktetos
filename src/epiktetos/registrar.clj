@@ -4,6 +4,9 @@
 (defonce register
   (atom {}))
 
+(defonce render-state
+  (atom {}))
+
 (defn get-vao
   [layout]
   (get-in @register [:vao layout]))

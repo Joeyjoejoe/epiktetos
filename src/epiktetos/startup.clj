@@ -57,7 +57,7 @@
   :gl/engine
   [_ system]
   (let [{:keys [hot-reload]} system
-        {::registrar/keys [opengl render-state]} @registrar/register]
+        render-state @registrar/render-state]
 
     ;; Delete ibos and vbos
     (doseq [[entitiy-id {:keys [ibo-id vbo-ids]}] (:entities render-state)]
@@ -73,6 +73,7 @@
       (beholder/stop (:watcher hot-reload)))
 
     (reset! registrar/register {})
+    (reset! registrar/render-state {})
     (reset! event/kind->id->handler {})
     (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
     (reset! state/system {})

@@ -56,7 +56,6 @@
 
 (defn consume!
   []
-  (while (seq @queue)
-    (let [e (peek @queue)]
-      (swap! queue pop)
+  (let [[q] (swap-vals! queue (constantly clojure.lang.PersistentQueue/EMPTY))]
+    (doseq [e q]
       (execute e))))

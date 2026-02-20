@@ -5,12 +5,12 @@
 
 (defn pipeline
   ""
-  ([] (pipeline @registrar/register))
-  ([register]
+  ([] (pipeline @registrar/register @registrar/render-state))
+  ([register render-state]
 
   ;; TODO Handle dirty state here in dvelopment environement only ?
 
-  (let [{::registrar/keys [opengl render-state]} register
+  (let [{::registrar/keys [opengl]} register
         {:keys [programs vaos ubos ssbos]} opengl
         {:keys [steps custom-step-order queue entities]} render-state
         custom-steps  (keep steps custom-step-order)

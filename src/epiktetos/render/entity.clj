@@ -121,17 +121,15 @@
     render-register))
 
 (defn add-entity
-  [register entity-id render-params]
-  (let [{::registrar/keys [render-state opengl]} register]
-    (->> render-params
-         (prep-entity opengl)
-         (reg-entity (delete-entity render-state entity-id) entity-id)
-         (assoc register ::registrar/render-state))))
+  [render-state opengl-registry entity-id render-params]
+  (->> render-params
+       (prep-entity opengl-registry)
+       (reg-entity (delete-entity render-state entity-id) entity-id)))
 
 (defn add-entity!
   [entity-id render-params]
-  (swap! registrar/register add-entity entity-id render-params))
+  (swap! registrar/render-state add-entity (::registrar/opengl @registrar/register) entity-id render-params))
 
 (defn delete-entity!
   [entity-id]
-  (swap! registrar/register update ::registrar/render-state delete-entity entity-id))
+  (swap! registrar/render-state delete-entity entity-id))
