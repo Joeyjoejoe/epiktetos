@@ -19,7 +19,6 @@
          :render-state  @registrar/render-state
          :db            @state/db
          :system        @state/system
-         :events        @event/kind->id->handler
          :events/queue  @event/queue}))
 
 (defn- open-inspector

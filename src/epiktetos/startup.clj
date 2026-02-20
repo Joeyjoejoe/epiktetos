@@ -74,7 +74,6 @@
 
     (reset! registrar/registry {})
     (reset! registrar/render-state {})
-    (reset! event/kind->id->handler {})
     (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
     (reset! state/system {})
     (reset! state/db {})))

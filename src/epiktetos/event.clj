@@ -1,5 +1,6 @@
 (ns epiktetos.event
-  (:require [epiktetos.interceptors :as interc]))
+  (:require [epiktetos.interceptors :as interc]
+            [epiktetos.registrar :as registrar]))
 
 (def queue (atom clojure.lang.PersistentQueue/EMPTY))
 
@@ -7,23 +8,22 @@
 ;; - coeffects are just functions, later executed by do-cofx interceptor
 ;;   TODO we should directly store them as interceptors (cd inject-cofx)
 ;; - events are chain of interceptors
-(def kind->id->handler (atom {}))
 
 (defn get-id [event]
   (get event 0))
 
 (defn get-handler
   ([id] (get-handler :event id))
-  ([kind id] (get-in @kind->id->handler [kind id])))
+  ([kind id] (get-in @registrar/registry [::registrar/event-registry kind id])))
 
 (defn get-handlers [kind]
-  (kind @kind->id->handler))
+  (get-in @registrar/registry [::registrar/event-registry kind]))
 
 ;; Probably useless as a (when-let [h get-handler] ...) would suffice
 (defn handler?
   ([event] (handler? :event event))
   ([kind event]
-   (get-in @kind->id->handler [kind event])))
+   (get-in @registrar/registry [::registrar/event-registry kind event])))
 
 (def PLACEHOLDER-EVENTS
   #{::physics.update ::loop.iter})
@@ -43,7 +43,7 @@
   ([id handler]
    (register :event id handler))
   ([kind id handler]
-   (swap! kind->id->handler assoc-in [kind id] handler)))
+   (swap! registrar/registry assoc-in [::registrar/event-registry kind id] handler)))
 
 (defn execute
   ([event]
