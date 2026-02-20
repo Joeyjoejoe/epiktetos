@@ -107,13 +107,13 @@
         (update-in [:entities entity-id] assoc :sort-key sort-key)
         (update :queue
                 (fnil update-in (sorted-map))
-                [sort-key] (fnil conj #{}) entity-id))))
+                [sort-key] (fnil conj []) entity-id))))
 
 (defn delete-entity
   "Remove entity from :entities and :queue"
   [render-register entity-id]
   (if-let [{sort-key :sort-key} (get-in render-register [:entities entity-id])]
-    (let [remaining (disj (get-in render-register [:queue sort-key]) entity-id)]
+    (let [remaining (filterv #(not= % entity-id) (get-in render-register [:queue sort-key]))]
       (cond-> render-register
         (empty? remaining) (update :queue dissoc sort-key)
         (seq remaining)    (assoc-in [:queue sort-key] remaining)
