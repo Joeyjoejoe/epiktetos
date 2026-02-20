@@ -201,52 +201,8 @@
 (defn step-changed?
   "Returns true if the step value differs between two sort-keys"
   [step curr-k prev-k]
-  (let [{:keys [mask]} step]
-    (not= (bit-and curr-k mask)
-          (bit-and prev-k mask))))
-
-(comment
-
-  (do
-
-    (save-render-steps!
-      registrar/register
-      (build-render-steps
-        [:per-material
-         (fn [entity]
-           (:material entity))]))
-
-  (def entity
-    {:program  :some-program
-     :position [0.0 0.0 0.24]
-     :material "wood"
-     :assets   {:vertices [{:coordinates [-0.5 -0.5 0.1] :color [1.0 1.0 0.0] :texture [0.0 0.0]}
-                           {:coordinates [ 0.5 -0.5 0.1] :color [0.05 0.0 0.0] :texture [0.0 0.0]}
-                           {:coordinates [ 0.0  0.5 0.1] :color [1.0 0.0 0.80] :texture [0.0 0.0]}]}})
-
-  (def entity2
-    {:program  :some-program
-     :position [0.0 0.0 0.4]
-     :assets   {:vertices [{:coordinates [-0.5 -0.5 0.1] :color [1.0 1.0 0.0] :texture [0.0 0.0]}
-                           {:coordinates [ 0.5 -0.5 0.1] :color [0.05 0.0 0.0] :texture [0.0 0.0]}
-                           {:coordinates [ 0.0  0.5 0.1] :color [1.0 0.0 0.80] :texture [0.0 0.0]}]}})
-
-  (def entity3
-    {:program  :some-program2
-     :position [0.0 0.0 0.1]
-     :material "wood"
-     :assets   {:vertices [{:coordinates [-0.5 -0.5 0.1] :color [1.0 1.0 0.0] :texture [0.0 0.0]}
-                           {:coordinates [ 0.5 -0.5 0.1] :color [0.05 0.0 0.0] :texture [0.0 0.0]}
-                           {:coordinates [ 0.0  0.5 0.1] :color [1.0 0.0 0.80] :texture [0.0 0.0]}]}})
-
-  (-> (sort-key entity) ;; 0
-      (doto prn)
-      first
-      (sort-key entity2) ;; 1099511627776
-      (doto prn)
-      first
-      (sort-key entity3) ;; 281474976710656
-      last
-      :sort-key))
-
-  )
+  (if (nil? prev-k)
+    true
+    (let [{:keys [mask]} step]
+      (not= (bit-and curr-k mask)
+            (bit-and prev-k mask)))))

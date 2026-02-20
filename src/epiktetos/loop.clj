@@ -2,7 +2,7 @@
   (:require [epiktetos.event :as event]
             [epiktetos.state :as state]
             [integrant.core :as ig]
-            [epiktetos.rendering :as rendering])
+            [epiktetos.render.pipeline :as render])
 
   (:import (org.lwjgl.glfw GLFW))
   (:gen-class))
@@ -49,7 +49,7 @@
        (swap! lag #(- % FIXED_TIMESTEP)))
 
      (when-not (GLFW/glfwWindowShouldClose window)
-       (rendering/pipeline)
+       (render/pipeline)
 
        (GLFW/glfwSwapBuffers window)
        (GLFW/glfwPollEvents)
