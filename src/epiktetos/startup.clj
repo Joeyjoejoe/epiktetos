@@ -1,6 +1,7 @@
 (ns epiktetos.startup
   (:require [clojure.java.io :as io]
             [integrant.core :as ig]
+            [epiktetos.opengl.shader-program :as prog]
             [nextjournal.beholder :as beholder]
             [epiktetos.registrar :as registrar]
             [epiktetos.texture :as texture]
@@ -54,7 +55,7 @@
     (cond-> opts
       hot-reload (assoc :hot-reload {:watcher (apply beholder/watch
                                                      (fn [_]
-                                                       (doseq [[id prog] (:program @registrar/register)]
+                                                       (doseq [[id prog] (get-in @registrar/register [::registrar/opengl :programs])]
                                                          (event/dispatch [::event/reg-p [id prog]])))
                                                      hot-reload)
                                      :paths hot-reload}))))
