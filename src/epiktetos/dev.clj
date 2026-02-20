@@ -46,6 +46,10 @@
   ([config-path events]
    (epiktet/run config-path events)))
 
+(defn dispatch
+  [event]
+  (event/dispatch event))
+
 (reg-fx :loop/pause-toggle
         (fn [db]
           (let [paused (get-in @state/db [:core/loop :paused?])]

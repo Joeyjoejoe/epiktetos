@@ -160,6 +160,7 @@
 
   ;; Enable Depth test
   (GL11/glEnable GL11/GL_DEPTH_TEST)
+  (GL11/glDepthFunc GL11/GL_LEQUAL)
 
   ;; Enable points primitive size
   (GL11/glEnable GL20/GL_VERTEX_PROGRAM_POINT_SIZE) ;; gl_PointSize
