@@ -42,6 +42,9 @@
                     input/setup-ssbos!
                     (assoc :dirty layout-changed?))]
 
+    (when old-prog
+      (GL20/glDeleteProgram (:id old-prog)))
+
     (registrar/register-program prog-k program)
 
     program))
