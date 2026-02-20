@@ -1,6 +1,5 @@
 (ns epiktetos.coeffect
   (:require [epiktetos.event :as event]
-            [epiktetos.state :as state]
             [epiktetos.interceptors :refer [->interceptor]]))
 
 (defn register

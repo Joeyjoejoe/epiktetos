@@ -5,7 +5,7 @@
             [nextjournal.beholder :as beholder]
             [epiktetos.registrar :as registrar]
             [epiktetos.texture :as texture]
-            [epiktetos.state :as state]
+            [epiktetos.db :as app-db]
             [epiktetos.event :as event]
             [epiktetos.loop :as game-loop])
   (:import (org.lwjgl.glfw GLFW)
@@ -74,4 +74,4 @@
     (reset! registrar/registry {})
     (reset! registrar/render-state {})
     (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
-    (reset! state/db {})))
+    (reset! app-db/db {})))

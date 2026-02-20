@@ -4,7 +4,7 @@
             [clojure.tools.namespace.repl :refer [refresh-all]]
             [epiktetos.core :as epiktet :refer [reg-event reg-fx]]
             [epiktetos.loop :as epiktet-loop]
-            [epiktetos.state :as state]
+            [epiktetos.db :as app-db]
             [epiktetos.event :as event]
             [epiktetos.registrar :as registrar])
   (:import (org.lwjgl.glfw GLFW)))
@@ -17,8 +17,8 @@
   (p/clear)
   (tap> {:registry      @registrar/registry
          :render-state  @registrar/render-state
-         :db            @state/db
-         :events/queue  @event/queue}))
+         :event-queue  @event/queue
+         :db            @app-db/db}))
 
 (defn- open-inspector
   []
@@ -44,13 +44,13 @@
 
 (reg-fx :loop/pause-toggle
         (fn [db]
-          (let [paused (get-in @state/db [:core/loop :paused?])]
+          (let [paused (get-in @app-db/db [:core/loop :paused?])]
 
             (if-not paused
               (open-inspector)
               (close-inspector))
 
-            (swap! state/db update-in [:core/loop :paused?] not)
+            (swap! app-db/db update-in [:core/loop :paused?] not)
 
             (when-not paused
               (portal-load-state)))))

@@ -1,6 +1,6 @@
 (ns epiktetos.loop
   (:require [epiktetos.event :as event]
-            [epiktetos.state :as state]
+            [epiktetos.db :as app-db]
             [epiktetos.registrar :as registrar]
             [integrant.core :as ig]
             [epiktetos.render.pipeline :as render])
@@ -27,7 +27,7 @@
           lag (atom 0.0)]
 
      (swap! lag #(+ % delta))
-     (swap! state/db assoc :core/loop loop-iter)
+     (swap! app-db/db assoc :core/loop loop-iter)
 
      ;; TODO apply entities transformations that can be multi threaded:
      ;; like motions, animations ?
@@ -43,7 +43,7 @@
        ;; - Manual event loop consumption
        ;; - Events redo/undo
        ;; - Inspector controls
-       (while (get-in @state/db [:core/loop :paused?])
+       (while (get-in @app-db/db [:core/loop :paused?])
          (GLFW/glfwWaitEvents)
          (event/consume!))
 

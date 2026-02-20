@@ -1,6 +1,6 @@
 (ns epiktetos.core
   (:require [clojure.pprint :refer [pprint]]
-            [epiktetos.state :as state]
+            [epiktetos.db :as app-db]
             [epiktetos.registrar :as registrar]
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
@@ -11,7 +11,7 @@
             [epiktetos.interceptors :as interc :refer [->interceptor]]
             [epiktetos.window]))
 
-(def db state/db)
+(def db app-db/db)
 
 (defn run
   "Run the engine.
@@ -122,7 +122,7 @@
 
 (reg-cofx :inject-db
           (fn [coeffects]
-            (assoc coeffects :db @state/db)))
+            (assoc coeffects :db @app-db/db)))
 
 (reg-cofx :error-logger
           (fn [coeffects]
@@ -143,7 +143,7 @@
 
 (reg-fx :db
         (fn update-db! [new-db]
-          (reset! state/db new-db)))
+          (reset! app-db/db new-db)))
 
 (reg-fx ::fx/render
         (fn render-entity! [entity-coll]
