@@ -7,6 +7,7 @@
             [epiktetos.startup :as startup]
             [epiktetos.event :as event]
             [epiktetos.render.entity :as entity]
+            [epiktetos.render.step :as render-step]
             [epiktetos.opengl.shader-program :as prog]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
             [epiktetos.window]))
@@ -154,3 +155,29 @@
         (fn delete-entity! [entity-ids]
           (doseq [id entity-ids]
             (entity/delete-entity! id))))
+
+(defn reg-steps!
+  [& steps]
+  (dispatch ::render-step/register steps))
+
+(reg-event ::render-step/register
+           (fn [cofx fx]
+             (let [step-coll (get-in cofx [:event 1])]
+               (assoc fx ::fx/reg-steps step-coll))))
+
+;; NOTE This will invalidate every single sort-key in
+;; the render-state when custom-step-coll is different
+;; from previous call.
+;; This won't happen in production, but in development,
+;; ns reloads are frequent. Most of the time custom-step-coll
+;; will remains the same.
+;; TODO For the rare occasion when an actuel step is added
+;; or modified, we should recompute all sort-keys. To detect
+;; such event, we could hash steps vector and compare them, which
+;; induce the need to prevent anonymous functions in step vector,
+;; for the hash algorithm and comparison to be effective.
+(reg-fx ::fx/reg-steps
+        (fn register-cutom-steps! [custom-step-coll]
+          (->> custom-step-coll
+               (apply render-step/build-render-steps)
+               (swap! registrar/render-state merge))))

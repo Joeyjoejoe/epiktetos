@@ -1,6 +1,5 @@
 (ns user
-  (:require [epiktetos.core :refer [reg-event reg-cofx inject-cofx reg-fx reg-p dispatch render delete]]
-            [epiktetos.render.step :refer [save-render-steps!]]
+  (:require [epiktetos.core :refer [reg-event reg-cofx inject-cofx reg-fx reg-p reg-steps! dispatch render delete]]
             [epiktetos.dev :as dev :refer [start inspector]])
 
 
@@ -8,11 +7,6 @@
            (org.joml Matrix4f Vector3f)
            (org.lwjgl BufferUtils)
            (org.lwjgl.opengl GL45)))
-
-(save-render-steps!
-  [[:per-material
-    (fn [entity]
-      (:material entity))]])
 
 (defn colored-vertices-handler
   "Extract vertices and colors from an entity"
@@ -45,9 +39,6 @@
                     :handler instance-positions-handler
                     :divisor 1}]})
 
-(reg-p :no-camera no-camera)
-(reg-p :no-camera-instanced no-camera-instanced)
-
 (def triangle-vertices
   [{:coordinates [-0.5 -0.5 0.1] :color [1.0 0.0 0.0]}
    {:coordinates [ 0.5 -0.5 0.1] :color [0.0 1.0 0.0]}
@@ -59,38 +50,58 @@
    {:coordinates [ 0.5  0.5 0.1] :color [0.0 0.0 1.0]}
    {:coordinates [-0.5  0.5 0.1] :color [1.0 1.0 0.0]}])
 
-(render :squares {:program    :no-camera-instanced
-                  :vertices   square-vertices
-                  :indices    [0 1 2 0 2 3]
-                  :instances  4
-                  :instances-positions [[-0.5  0.5  0.0]
-                                        [ 0.5  0.5  0.0]
-                                        [-0.5 -0.5  0.0]
-                                        [ 0.5 -0.5  0.0]]})
-
-(render :triangles {:program    :no-camera-instanced
-                    :vertices   triangle-vertices
-                    :instances  8
-                    :instances-positions [[-0.5  0.5  0.0]
-                                          [ 0.5  0.5  0.0]
-                                          [-0.5 -0.5  0.0]
-                                          [ 0.5 -0.5  0.0]
-                                          [-0.5  0.0  0.0]
-                                          [ 0.5  0.0  0.0]
-                                          [ 0.0  0.5  0.0]
-                                          [ 0.0 -0.5  0.0]]})
-
-(render :square {:program    :no-camera
-                 :vertices   square-vertices
-                 :indices    [0 1 2 0 2 3]
-                 :primitives :triangles})
-
-(render :triangle {:program  :no-camera
-                  :vertices triangle-vertices})
 
 (comment
 
-(delete :triangle)
+  (reg-steps! [:per-materiol (fn [entity]
+                               (:materiol entity))])
+
+  (reg-p :no-camera no-camera)
+  (reg-p :no-camera-instanced no-camera-instanced)
+  (render :squares {:program    :no-camera-instanced
+                    :vertices   square-vertices
+                    :indices    [0 1 2 0 2 3]
+                    :primitives :points
+                    :instances  6
+                    :instances-positions [[-0.5  0.5  0.0]
+                                          [ 0.5  0.5  0.0]
+                                          [ 0.75 0.0  0.0]
+                                          [-0.75 0.0  0.0]
+                                          [-0.5 -0.5  0.0]
+                                          [ 0.5 -0.5  0.0]]})
+
+  (render :triangles {:program    :no-camera-instanced
+                      :vertices   triangle-vertices
+                      :instances  4
+                      :instances-positions [[-0.5  0.0  0.0]
+                                            [ 0.5  0.0  0.0]
+                                            [ 0.0  0.5  0.0]
+                                            [ 0.0 -0.5  0.0]]})
+
+  (render :square {:program    :no-camera
+                   :vertices   square-vertices
+                   :indices    [0 1 2 0 2 3]
+                   :primitives :points})
+
+  (render :triangle {:program  :no-camera
+                     :vertices triangle-vertices})
 
 
-)
+  (reg-event [:press :delete]
+             (fn [cofx fx]
+               (delete fx :squares)))
+
+  (reg-event [:press :shift :delete]
+             (fn [cofx fx]
+               (render fx :squares {:program    :no-camera-instanced
+                                    :vertices   square-vertices
+                                    :indices    [0 1 2 0 2 3]
+                                    :primitives :points
+                                    :instances  6
+                                    :instances-positions [[-0.5  0.5  0.0]
+                                                          [ 0.5  0.5  0.0]
+                                                          [ 0.75 0.0  0.0]
+                                                          [-0.75 0.0  0.0]
+                                                          [-0.5 -0.5  0.0]
+                                                          [ 0.5 -0.5  0.0]]})))
+  )
