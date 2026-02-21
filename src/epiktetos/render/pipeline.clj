@@ -12,7 +12,7 @@
 
   (let [{::registrar/keys [opengl-registry]} registry
         {:keys [programs vaos ubos ssbos]} opengl-registry
-        {:keys [steps custom-step-order queue entities]} render-state
+        {::registrar/keys [steps custom-step-order queue entities]} render-state
         custom-steps  (keep steps custom-step-order)
         {group-step   :step/group
          vao-step     :step/vao

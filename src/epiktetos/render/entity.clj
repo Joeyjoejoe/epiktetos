@@ -100,25 +100,25 @@
 
 (defn reg-entity
   "Compute entity sort key, add entity to render-queue and entities index"
-  [render-register entity-id entity]
-  (let [[updated-render-register sort-key] (render-step/sort-key render-register entity)]
-    (-> updated-render-register
-        (assoc-in  [:entities entity-id] entity)
-        (update-in [:entities entity-id] assoc :sort-key sort-key)
-        (update :queue
+  [render-state entity-id entity]
+  (let [[updated-render-state sort-key] (render-step/sort-key render-state entity)]
+    (-> updated-render-state
+        (assoc-in  [::registrar/entities entity-id] entity)
+        (update-in [::registrar/entities entity-id] assoc :sort-key sort-key)
+        (update ::registrar/queue
                 (fnil update-in (sorted-map))
                 [sort-key] (fnil conj []) entity-id))))
 
 (defn delete-entity
   "Remove entity from :entities and :queue"
-  [render-register entity-id]
-  (if-let [{sort-key :sort-key} (get-in render-register [:entities entity-id])]
-    (let [remaining (filterv #(not= % entity-id) (get-in render-register [:queue sort-key]))]
-      (cond-> render-register
-        (empty? remaining) (update :queue dissoc sort-key)
-        (seq remaining)    (assoc-in [:queue sort-key] remaining)
-        true (update :entities dissoc entity-id)))
-    render-register))
+  [render-state entity-id]
+  (if-let [{sort-key :sort-key} (get-in render-state [::registrar/entities entity-id])]
+    (let [remaining (filterv #(not= % entity-id) (get-in render-state [::registrar/queue sort-key]))]
+      (cond-> render-state
+        (empty? remaining) (update ::registrar/queue dissoc sort-key)
+        (seq remaining)    (assoc-in [::registrar/queue sort-key] remaining)
+        true (update ::registrar/entities dissoc entity-id)))
+    render-state))
 
 (defn add-entity
   [render-state opengl-registry entity-id render-params]

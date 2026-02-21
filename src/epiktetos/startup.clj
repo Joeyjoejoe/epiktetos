@@ -59,7 +59,7 @@
         render-state @registrar/render-state]
 
     ;; Delete ibos and vbos
-    (doseq [[entitiy-id {:keys [ibo-id vbo-ids]}] (:entities render-state)]
+    (doseq [[entitiy-id {:keys [ibo-id vbo-ids]}] (::registrar/entities render-state)]
       (println "Clear entity " entitiy-id)
       (when ibo-id
         (println "ibo " ibo-id " deleted...")

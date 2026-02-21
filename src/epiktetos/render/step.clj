@@ -161,14 +161,14 @@
   Returns a tuple of the updated render register and entity"
   ([entity]
    (sort-key @registrar/render-state entity))
-  ([render-register entity]
-   (let [step-order (get render-register :step-order)
-         steps      (keep #(get-in render-register [:steps %]) step-order)
+  ([render-state entity]
+   (let [step-order (get render-state ::registrar/step-order)
+         steps      (keep #(get-in render-state [::registrar/steps %]) step-order)
          [updated-steps sk-values] (steps-sk-values steps entity)
          sk           (encode-sort-key updated-steps sk-values)
          updated-step (into {} (map (juxt :name identity) updated-steps))
-         updated-render-register (assoc render-register :steps updated-step)]
-     [updated-render-register sk])))
+         updated-render-state (assoc render-state ::registrar/steps updated-step)]
+     [updated-render-state sk])))
 
 
 (defn build-render-steps
@@ -185,17 +185,9 @@
                              (into custom-step-order)
                              (conj :step/entity))]
 
-    (hash-map :steps steps
-              :step-order step-order
-              :custom-step-order custom-step-order)))
-
-;; TODO Should be a fx instead
-(defn save-render-steps!
-  "Update render steps and trigger sort-key recomputes"
-  [custom-steps]
-  ;; TODO Recompute all entities sort-keys to prevent nasty bugs
-  ;; if steps definition have changed
-  (swap! registrar/render-state merge (apply build-render-steps custom-steps)))
+    {::registrar/steps            steps
+     ::registrar/step-order       step-order
+     ::registrar/custom-step-order custom-step-order}))
 
 (defn step-changed?
   "Returns true if the step value differs between two sort-keys"
