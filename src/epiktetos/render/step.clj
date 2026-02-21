@@ -200,7 +200,7 @@
 (defn step-changed?
   "Returns true if the step value differs between two sort-keys"
   [step curr-k prev-k]
-  (if (nil? prev-k)
+  (if-not prev-k
     true
     (let [{:keys [mask]} step]
       (not= (bit-and curr-k mask)

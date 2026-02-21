@@ -21,10 +21,10 @@
   ([]
    (run startup/DEFAULT_CONFIG_PATH))
   ([config-path]
-   (let [systems (startup/init-systems config-path)]
-     (-> systems
-         (assoc-in [:gl/engine :config-path] config-path)
-         (startup/start-engine!)))))
+   (-> config-path
+       startup/init-systems
+       (assoc-in [:gl/engine :config-path] config-path)
+       startup/start-engine!)))
 
 (defn reg-cofx
   "A cofx is a function that takes a coeffects map and
