@@ -143,11 +143,11 @@
 (defonce MOUSE-BUTTONS {GLFW/GLFW_MOUSE_BUTTON_1 :btn-left
                         GLFW/GLFW_MOUSE_BUTTON_2 :btn-right
                         GLFW/GLFW_MOUSE_BUTTON_3 :btn-middle
-                        GLFW/GLFW_MOUSE_BUTTON_4 :btn-3
-                        GLFW/GLFW_MOUSE_BUTTON_5 :btn-4
-                        GLFW/GLFW_MOUSE_BUTTON_6 :btn-5
-                        GLFW/GLFW_MOUSE_BUTTON_7 :btn-6
-                        GLFW/GLFW_MOUSE_BUTTON_8 :btn-7})
+                        GLFW/GLFW_MOUSE_BUTTON_4 :btn-4
+                        GLFW/GLFW_MOUSE_BUTTON_5 :btn-5
+                        GLFW/GLFW_MOUSE_BUTTON_6 :btn-6
+                        GLFW/GLFW_MOUSE_BUTTON_7 :btn-7
+                        GLFW/GLFW_MOUSE_BUTTON_8 :btn-8})
 
 ;; proxy object signature: https://www.glfw.org/docs/3.3/group__input.html#ga5bd751b27b90f865d2ea613533f0453c
 ;; scancode Platform-specific key code and given as an alternative to k
@@ -158,7 +158,7 @@
             key-name     (get KEYBOARD-KEYS k)
             key-mod      (get KEYBOARD-MODS mods)
             event-no-mod [key-status key-name :*]
-            event-id     (->> [key-status key-name key-mod]
+            event-id     (->> [key-status key-mod key-name]
                             (remove nil?)
                             vec)]
 
