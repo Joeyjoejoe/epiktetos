@@ -13,7 +13,7 @@
   (get event 0))
 
 (defn get-handler
-  ([id] (get-handler :event id))
+  ([id] (get-handler :events id))
   ([kind id] (get-in @registrar/registry [::registrar/event-registry kind id])))
 
 (defn get-handlers [kind]
@@ -21,7 +21,7 @@
 
 ;; Probably useless as a (when-let [h get-handler] ...) would suffice
 (defn handler?
-  ([event] (handler? :event event))
+  ([event] (handler? :events event))
   ([kind event]
    (get-in @registrar/registry [::registrar/event-registry kind event])))
 
@@ -41,13 +41,13 @@
 
 (defn register
   ([id handler]
-   (register :event id handler))
+   (register :events id handler))
   ([kind id handler]
    (swap! registrar/registry assoc-in [::registrar/event-registry kind id] handler)))
 
 (defn execute
   ([event]
-   (if-let [interceptors (get-handler :event (get-id event))]
+   (if-let [interceptors (get-handler :events (get-id event))]
      (interc/execute event interceptors)
      (log-missing-event! (get-id event))))
   ([event & events]

@@ -53,8 +53,8 @@
 
 (comment
 
-  (reg-steps! [:per-materiol (fn [entity]
-                               (:materiol entity))])
+  (reg-steps! [:per-material (fn [entity]
+                               (:material entity))])
 
   (reg-p :no-camera no-camera)
   (reg-p :no-camera-instanced no-camera-instanced)

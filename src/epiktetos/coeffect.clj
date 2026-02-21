@@ -7,7 +7,7 @@
    an optional parameter, and return a modified version
    of the coeffects map"
   [id cofx-fn]
-  (event/register :coeffect id cofx-fn))
+  (event/register :coeffects id cofx-fn))
 
 ;; TODO implement fx-error to prevent loop break
 (defn cofx-error
@@ -36,7 +36,7 @@
      :id      :coeffects
      :before  (fn coeffects-before
                 [context]
-                (if-let [handler (event/get-handler :coeffect id)]
+                (if-let [handler (event/get-handler :coeffects id)]
                   (try
                     (update context :coeffects handler)
                     (catch Exception e
@@ -49,7 +49,7 @@
      :id     :coeffects
      :before  (fn coeffects-before
                 [context]
-                (if-let [handler (event/get-handler :coeffect id)]
+                (if-let [handler (event/get-handler :coeffects id)]
                   ;; TODO rescue handler execution errors and create
                   ;; proper cofx-error
                   (try

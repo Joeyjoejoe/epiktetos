@@ -68,7 +68,7 @@
                        (inject-cofx :error-logger)
                        handler]
          chain        (->> interceptors flatten (remove nil?))]
-     (event/register :event id chain))))
+     (event/register :events id chain))))
 
 (defn reg-fx
   "An effect, aka fx, is a function that takes a coeffects map and
