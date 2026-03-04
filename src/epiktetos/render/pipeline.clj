@@ -11,7 +11,7 @@
   ;; TODO Handle dirty state here in dvelopment environement only ?
 
   (let [{::registrar/keys [opengl-registry]} registry
-        {:keys [programs vaos ubos ssbos]} opengl-registry
+        {:keys [programs vaos]} opengl-registry
         {::registrar/keys [steps custom-step-order queue entities]} render-state
         custom-steps  (keep steps custom-step-order)
         {group-step   :step/group

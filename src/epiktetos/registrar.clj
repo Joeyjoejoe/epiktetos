@@ -27,16 +27,24 @@
   [program-k]
   (get-in @registry [::opengl-registry :programs program-k]))
 
-(defn lookup-resource
-  ([resource]
-   (get-in @registry [::opengl-registry resource]))
-  ([resource varname]
-   (get-in @registry [::opengl-registry resource varname])))
+(defn lookup-resource-inputs
+  "Returns a list of program inputs whose :resource field matches resource.
+   resource: keyword — e.g. :ubo, :ssbo"
+  [resource]
+  (->> (get-in @registry [::opengl-registry :program-inputs])
+       vals
+       (filter #(= resource (:resource %)))))
+
+(defn lookup-input
+  "Returns the program input map for varname, or nil if not found.
+   varname: string — GLSL variable name"
+  [varname]
+  (get-in @registry [::opengl-registry :program-inputs varname]))
 
 (defn register-ubo!
   [ubo]
   (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ubo]
-    (swap! registry assoc-in [::opengl-registry :ubos varname]
+    (swap! registry assoc-in [::opengl-registry :program-inputs varname]
            {:varname varname
             :resource :ubo
             :buffer-data-size buffer-data-size
@@ -47,7 +55,7 @@
 (defn register-ssbo!
   [ssbo]
   (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ssbo]
-    (swap! registry assoc-in [::opengl-registry :ssbos varname]
+    (swap! registry assoc-in [::opengl-registry :program-inputs varname]
            {:varname varname
             :resource :ssbo
             :buffer-data-size buffer-data-size

@@ -5,11 +5,11 @@
   (:import  (org.lwjgl.opengl GL11 GL20 GL31 GL42 GL43)))
 
 (defonce RESOURCE-BINDING-MAX
-  {:ubos  GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
-   :ssbos GL43/GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
-   :atomic-counters GL42/GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS
-   :texture-units GL20/GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
-   :image-units GL42/GL_MAX_IMAGE_UNITS})
+  {:ubo            GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
+   :ssbo           GL43/GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
+   :atomic-counter GL42/GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS
+   :texture-unit   GL20/GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
+   :image-unit     GL42/GL_MAX_IMAGE_UNITS})
 
 (defn resource-binding-set
   "Returns a set of all valid binding points for resource.
@@ -26,10 +26,10 @@
   "Lookup for a single resource in registrar.
   Return resource-infos unchanged if lookup returns nil.
   Return resource-infos with updated binding-point if lookup succeed"
-  [resource resource-infos]
+  [resource-infos]
   (let [{:keys [buffer-binding varname]} resource-infos]
 
-    (if-let [{:keys [binding-point] :as res} (registrar/lookup-resource resource varname)]
+    (if-let [{:keys [binding-point]} (registrar/lookup-input varname)]
       (cond
         (= buffer-binding 0)             (assoc resource-infos :alloc :registrar :buffer-binding binding-point)
         (= buffer-binding binding-point) (assoc resource-infos :alloc :valid)
@@ -40,9 +40,8 @@
       resource-infos)))
 
 (defn alloc-known-bindings
- [resource resources-infos]
-   (map #(alloc-known-binding resource %)
-        resources-infos))
+  [resources-infos]
+  (map alloc-known-binding resources-infos))
 
 (defn tag-explicit-binding
   [resources-info]
@@ -71,9 +70,7 @@
   [resource resources-infos]
   (let [bindings (resource-binding-set resource)
 
-        allocated-bindings (->> resource
-                                registrar/lookup-resource
-                                vals
+        allocated-bindings (->> (registrar/lookup-resource-inputs resource)
                                 (map :binding-point))
 
         free-bindings (sort (remove (set allocated-bindings) bindings))]
@@ -96,7 +93,7 @@
   (try
     (->> intro-data
          tag-explicit-bindings
-         (alloc-known-bindings register-resource)
+         alloc-known-bindings
          detect-binding-conflict
          (alloc-new-bindings register-resource))
     (catch clojure.lang.ExceptionInfo e
@@ -108,7 +105,7 @@
   (let [prog-id (:id prog-map)
         ubos    (->> ::introspect/uniform-block
                      (introspect/resource-properties prog-id)
-                     (allocate-binding-points :ubos))
+                     (allocate-binding-points :ubo))
         ubo-names (map :varname ubos)]
 
     (doseq [{:keys [interface-index buffer-binding]
@@ -116,7 +113,7 @@
       (GL31/glUniformBlockBinding prog-id interface-index buffer-binding)
       (registrar/register-ubo! ubo))
 
-    (assoc prog-map :ubos ubo-names)))
+    (update prog-map :inputs into ubo-names)))
 
 (defn setup-ssbos!
   "Auto allocate binding points of program ssbos"
@@ -124,7 +121,7 @@
   (let [prog-id (:id prog-map)
         ssbos    (->> ::introspect/shader-storage-block
                      (introspect/resource-properties prog-id)
-                     (allocate-binding-points :ssbos))
+                     (allocate-binding-points :ssbo))
         ssbo-names (map :varname ssbos)]
 
     (doseq [{:keys [interface-index buffer-binding]
@@ -132,4 +129,4 @@
       (GL43/glShaderStorageBlockBinding prog-id interface-index buffer-binding)
       (registrar/register-ssbo! ssbo))
 
-    (assoc prog-map :ssbos ssbo-names)))
+    (update prog-map :inputs into ssbo-names)))
