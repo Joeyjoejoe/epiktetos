@@ -90,14 +90,11 @@
 
 (defn allocate-binding-points
   [register-resource intro-data]
-  (try
-    (->> intro-data
-         tag-explicit-bindings
-         alloc-known-bindings
-         detect-binding-conflict
-         (alloc-new-bindings register-resource))
-    (catch clojure.lang.ExceptionInfo e
-      (prn e))))
+  (->> intro-data
+       tag-explicit-bindings
+       alloc-known-bindings
+       detect-binding-conflict
+       (alloc-new-bindings register-resource)))
 
 (defn setup-ubos!
   "Auto allocate binding points of program ubos"
