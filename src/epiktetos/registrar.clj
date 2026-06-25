@@ -41,24 +41,21 @@
   [varname]
   (get-in @registry [::opengl-registry :program-inputs varname]))
 
+(defn- register-program-input!
+  [resource input]
+  (let [{:keys [varname buffer-binding alloc members buffer-data-size]} input]
+    (swap! registry assoc-in [::opengl-registry :program-inputs varname]
+           {:varname          varname
+            :resource         resource
+            :buffer-data-size buffer-data-size
+            :members          members
+            :alloc            alloc
+            :binding-point    buffer-binding})))
+
 (defn register-ubo!
   [ubo]
-  (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ubo]
-    (swap! registry assoc-in [::opengl-registry :program-inputs varname]
-           {:varname varname
-            :resource :ubo
-            :buffer-data-size buffer-data-size
-            :members members
-            :alloc alloc
-            :binding-point buffer-binding})))
+  (register-program-input! :ubo ubo))
 
 (defn register-ssbo!
   [ssbo]
-  (let [{:keys [varname buffer-binding alloc members buffer-data-size]} ssbo]
-    (swap! registry assoc-in [::opengl-registry :program-inputs varname]
-           {:varname varname
-            :resource :ssbo
-            :buffer-data-size buffer-data-size
-            :members members
-            :alloc alloc
-            :binding-point buffer-binding})))
+  (register-program-input! :ssbo ssbo))
