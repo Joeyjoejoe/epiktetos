@@ -50,7 +50,7 @@
 (defn- create-vbo
   [program {:keys [handler-output]} {:keys [type-layout storage] :as vbo-template}]
   (let [byte-buf  (try
-                    (buffer/fill-byte-buffer type-layout handler-output)
+                    (buffer/from-flat-layout type-layout handler-output)
                     (catch clojure.lang.ExceptionInfo e
                       (throw (ex-info (ex-message e)
                                       (assoc (ex-data e) :program program :vbo vbo-template)))))

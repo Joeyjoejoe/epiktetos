@@ -53,9 +53,11 @@
     :else    (.putFloat  buf (clojure.core/float v)))
   buf)
 
-(defn fill-byte-buffer
-  "Creates and fills a ByteBuffer from a flat sequence of vertex data,
-  ensuring the seaquence match expeted type layout"
+(defn from-flat-layout
+  "Creates and fills a ByteBuffer according to a flat layout of
+   glsl types and a flat collection of scalar data:
+
+  (from-flat-layout [:vec3 :int] [1.0 1.0 1.0 24])"
   [type-layout flat-data]
   (let [tinfos     (mapv type-info type-layout)
         type-bytes (reduce + (map :bytes tinfos))
