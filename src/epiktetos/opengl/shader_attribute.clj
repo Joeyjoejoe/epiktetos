@@ -39,18 +39,22 @@
     ;; Initialize VAO attributes
     (doseq [[attrib offset] (map list vb-attribs attribs-offsets)
             :let [{:keys [varname location type]}  attrib
-                  {:keys [base-type size total-locations integer? double?]
+                  {:keys [base-type size bytes total-locations integer? double?]
                    :or   {total-locations 1}} type
                   normalize (-> normalize (get varname) boolean)]]
 
-      (doseq [loc (range location (+ location total-locations))]
-        (cond
-          double?  (GL45/glVertexArrayAttribLFormat vao-id loc size base-type offset)
-          integer? (GL45/glVertexArrayAttribIFormat vao-id loc size base-type offset)
-          :else    (GL45/glVertexArrayAttribFormat vao-id loc size base-type normalize offset))
+      (let [col-bytes (quot bytes total-locations)
+            loc-step  (if (and double? (> size 2)) 2 1)]
+        (doseq [col (range total-locations)
+                :let [loc        (+ location (* col loc-step))
+                      col-offset (+ offset (* col col-bytes))]]
+          (cond
+            double?  (GL45/glVertexArrayAttribLFormat vao-id loc size base-type col-offset)
+            integer? (GL45/glVertexArrayAttribIFormat vao-id loc size base-type col-offset)
+            :else    (GL45/glVertexArrayAttribFormat vao-id loc size base-type normalize col-offset))
 
-        (GL45/glEnableVertexArrayAttrib vao-id loc)
-        (GL45/glVertexArrayAttribBinding vao-id loc binding-index)))
+          (GL45/glEnableVertexArrayAttrib vao-id loc)
+          (GL45/glVertexArrayAttribBinding vao-id loc binding-index))))
 
     (GL45/glVertexArrayBindingDivisor vao-id binding-index divisor)
 
