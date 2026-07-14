@@ -1,6 +1,5 @@
 (ns epiktetos.opengl.shader-input
-  (:require [epiktetos.event :as event]
-            [epiktetos.opengl.introspection :as introspect]
+  (:require [epiktetos.opengl.introspection :as introspect]
             [epiktetos.registrar :as registrar])
   (:import  (org.lwjgl.opengl GL11 GL20 GL31 GL42 GL43)))
 
@@ -29,7 +28,7 @@
   [resource-infos]
   (let [{:keys [buffer-binding varname]} resource-infos]
 
-    (if-let [{:keys [binding-point]} (registrar/lookup-input varname)]
+    (if-let [{:keys [binding-point]} (registrar/lookup-program-input varname)]
       (cond
         (= buffer-binding 0)             (assoc resource-infos :alloc :registrar :buffer-binding binding-point)
         (= buffer-binding binding-point) (assoc resource-infos :alloc :valid)
@@ -96,34 +95,54 @@
        detect-binding-conflict
        (alloc-new-bindings register-resource)))
 
+(defn- setup-block-bindings!
+  "Allocates and applies binding points for a program's interface blocks.
+   prog-map    - program map with :id
+   resource    - keyword, :ubo or :ssbo
+   interface-k - introspection interface keyword
+   bind!       - function (fn [prog-id interface-index binding-point])
+   register!   - function (fn [block]), registers the block in the registry
+   Returns prog-map with block varnames added to :inputs."
+  [prog-map resource interface-k bind! register!]
+  (let [prog-id (:id prog-map)
+        blocks  (try (->> interface-k
+                          (introspect/resource-properties prog-id)
+                          (allocate-binding-points resource))
+                     (catch clojure.lang.ExceptionInfo e
+                       (throw (ex-info (ex-message e)
+                                       (assoc (ex-data e) :in-program prog-id)))))]
+
+    (doseq [{:keys [interface-index buffer-binding]
+             :as   block} blocks]
+      (bind! prog-id interface-index buffer-binding)
+      (register! block))
+
+    (update prog-map :inputs into (map :varname blocks))))
+
 (defn setup-ubos!
   "Auto allocate binding points of program ubos"
   [prog-map]
-  (let [prog-id (:id prog-map)
-        ubos    (->> ::introspect/uniform-block
-                     (introspect/resource-properties prog-id)
-                     (allocate-binding-points :ubo))
-        ubo-names (map :varname ubos)]
-
-    (doseq [{:keys [interface-index buffer-binding]
-             :as   ubo} ubos]
-      (GL31/glUniformBlockBinding prog-id interface-index buffer-binding)
-      (registrar/register-ubo! ubo))
-
-    (update prog-map :inputs into ubo-names)))
+  (setup-block-bindings! prog-map :ubo ::introspect/uniform-block
+                         (fn [prog-id idx binding-point]
+                           (GL31/glUniformBlockBinding prog-id idx binding-point))
+                         registrar/register-ubo!))
 
 (defn setup-ssbos!
   "Auto allocate binding points of program ssbos"
   [prog-map]
-  (let [prog-id (:id prog-map)
-        ssbos    (->> ::introspect/shader-storage-block
-                     (introspect/resource-properties prog-id)
-                     (allocate-binding-points :ssbo))
-        ssbo-names (map :varname ssbos)]
+  (setup-block-bindings! prog-map :ssbo ::introspect/shader-storage-block
+                         (fn [prog-id idx binding-point]
+                           (GL43/glShaderStorageBlockBinding prog-id idx binding-point))
+                         registrar/register-ssbo!))
 
-    (doseq [{:keys [interface-index buffer-binding]
-             :as   ssbo} ssbos]
-      (GL43/glShaderStorageBlockBinding prog-id interface-index buffer-binding)
-      (registrar/register-ssbo! ssbo))
-
-    (update prog-map :inputs into ssbo-names)))
+(defn register-input-handler!
+  "Registers a user input handler for a bindable shader input.
+   varname - string, GLSL block variable name
+   handler - function (fn [db step-value]), produces the buffer data
+   options - map, :step defaults to :step/frame
+   Returns the updated render-state value."
+  [varname handler options]
+  (let [{:keys [step] :or {step :step/frame}} options
+        input-handler (merge options {:handler handler :step step})]
+    (swap! registrar/render-state
+           assoc-in [::registrar/step-inputs step varname] input-handler)))

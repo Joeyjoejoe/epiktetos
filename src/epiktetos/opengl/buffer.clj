@@ -11,12 +11,12 @@
    :coherent   GL44/GL_MAP_COHERENT_BIT
    :client     GL44/GL_CLIENT_STORAGE_BIT})
 
-(defn- type-info
+(defn type-info
   "Returns the GLSL type info map for a given glsl-name keyword"
   [glsl-name]
   (glsl/TRANSPARENT-TYPE (glsl/TYPE-BY-NAME glsl-name)))
 
-(defn- type-length
+(defn type-length
   "Returns the total number of scalar elements in a GLSL type"
   [{:keys [size total-locations] :or {total-locations 1}}]
   (* size total-locations))
@@ -28,12 +28,12 @@
   [type-layout]
   (transduce (map (comp type-length type-info)) + type-layout))
 
-(defn- assert-value-type!
+(defn assert-value-type!
   "Validates value is compatible with the expected GLSL type."
   [v {:keys [integer?]}]
   (cond
     (not (number? v))
-    (throw (ex-info "Non-numeric value in flat vertex data"
+    (throw (ex-info "Non-numeric value in buffer data"
                     {:expected-type Number
                      :actual-type   (type v)
                      :actual-value  v}))
@@ -44,7 +44,7 @@
                      :actual-type   (type v)
                      :actual-value  v}))))
 
-(defn- put-value!
+(defn put-value!
   "Puts a value into a ByteBuffer"
   [^java.nio.ByteBuffer buf {:keys [integer? double?]} v]
   (cond
@@ -83,5 +83,13 @@
   [data]
   (let [data (int-array data)]
     (-> (BufferUtils/createIntBuffer (count data))
+        (.put data)
+        (.flip))))
+
+(defn float-buffer
+  "Create an float array buffer from data"
+  [data]
+  (let [data (float-array data)]
+    (-> (BufferUtils/createFloatBuffer (count data))
         (.put data)
         (.flip))))

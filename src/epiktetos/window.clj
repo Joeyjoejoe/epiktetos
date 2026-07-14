@@ -2,7 +2,7 @@
   (:require [clojure.string :as s]
             [integrant.core :as ig]
             [epiktetos.controls :as controls]
-            [epiktetos.utils.buffer :as b]
+            [epiktetos.opengl.buffer :as b]
             [epiktetos.lang.glfw :as glfw])
   (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback)
            (org.lwjgl.system MemoryUtil)

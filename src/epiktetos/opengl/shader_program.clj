@@ -1,6 +1,5 @@
 (ns epiktetos.opengl.shader-program
-  (:require [epiktetos.event :as event]
-            [epiktetos.registrar :as registrar]
+  (:require [epiktetos.registrar :as registrar]
             [epiktetos.opengl.shader :as shader]
             [epiktetos.opengl.shader-input :as input]
             [epiktetos.opengl.shader-attribute :as attribute])

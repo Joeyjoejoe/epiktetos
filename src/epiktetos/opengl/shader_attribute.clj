@@ -1,21 +1,9 @@
 (ns epiktetos.opengl.shader-attribute
-  (:require [epiktetos.event :as event]
-            [epiktetos.registrar :as registrar]
+  (:require [epiktetos.registrar :as registrar]
             [epiktetos.opengl.buffer :as buffer]
-            [epiktetos.opengl.introspection :as introspect])
-  (:import (java.security MessageDigest)
-           (org.lwjgl.opengl GL45)))
-
-(defn sha256
-  "Convert a clojure data structure to a string use sha-256 algorithm.
-  Using anonymous function forms in the data structure will generate
-  a different string each time. Use function symbols to provide this
-  behavior"
-  [data]
-  (let [string (pr-str data)
-        digest (.digest (MessageDigest/getInstance "SHA-256") (.getBytes string "UTF-8"))]
-    (apply str (map (partial format "%02x") digest))))
-
+            [epiktetos.opengl.introspection :as introspect]
+            [epiktetos.utils.hash :as hash])
+  (:import (org.lwjgl.opengl GL45)))
 
 (defn prep-vertex-buffer
   "Interpret a vertex-buffer-map valid to DSL :
@@ -67,7 +55,6 @@
     (GL45/glVertexArrayBindingDivisor vao-id binding-index divisor)
 
     {:handler       handler
-     :handler-spec  (fn [] true)
      :binding-index binding-index
      :divisor       divisor
      :offset        0 ;; might lives at entity scope for buffer data management
@@ -89,7 +76,7 @@
   "
   [prog-map]
   (let [{:keys [id vertex-layout]} prog-map
-        layout-hash  (sha256 vertex-layout)
+        layout-hash  (hash/sha256 vertex-layout)
         existing-vao (registrar/find-vao-by-layout layout-hash)]
 
     (if existing-vao

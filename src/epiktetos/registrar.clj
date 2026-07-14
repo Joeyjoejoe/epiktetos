@@ -28,14 +28,14 @@
   (get-in @registry [::opengl-registry :programs program-k]))
 
 (defn lookup-resource-inputs
-  "Returns a list of program inputs whose :resource field matches resource.
+  "Returns a list of shader inputs of same `resource` type.
    resource: keyword — e.g. :ubo, :ssbo"
   [resource]
   (->> (get-in @registry [::opengl-registry :program-inputs])
        vals
        (filter #(= resource (:resource %)))))
 
-(defn lookup-input
+(defn lookup-program-input
   "Returns the program input map for varname, or nil if not found.
    varname: string — GLSL variable name"
   [varname]

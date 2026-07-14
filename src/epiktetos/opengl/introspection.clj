@@ -1,6 +1,5 @@
 (ns epiktetos.opengl.introspection
-  (:require [epiktetos.event :as event]
-            [epiktetos.opengl.glsl :as glsl])
+  (:require [epiktetos.opengl.glsl :as glsl])
   (:import (org.lwjgl.opengl GL20 GL30 GL42 GL43 GL44)
            (org.lwjgl BufferUtils)))
 
