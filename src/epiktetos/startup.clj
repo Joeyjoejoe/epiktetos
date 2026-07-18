@@ -4,6 +4,7 @@
             [epiktetos.opengl.shader-program :as prog]
             [nextjournal.beholder :as beholder]
             [epiktetos.registrar :as registrar]
+            [epiktetos.render.step :as render-step]
             [epiktetos.texture :as texture]
             [epiktetos.db :as app-db]
             [epiktetos.event :as event]
@@ -37,6 +38,8 @@
   ([] (start-engine! (init-systems)))
   ([systems]
     (swap! registrar/registry assoc ::registrar/system-registry systems)
+    (when-not (::registrar/steps @registrar/render-state)
+      (swap! registrar/render-state merge (render-step/build-render-steps)))
     (game-loop/start systems)))
 
 (defmethod ig/init-key
