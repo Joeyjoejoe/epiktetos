@@ -70,6 +70,18 @@
       (t/is (= :scalar (get-in data [:element :kind])))
       (t/is (= 0 (get-in data [:element :offset])))))
 
+  (t/testing "unsized basic-type arrays signaled by array-size only"
+    (let [schema (types/members->schema
+                   "Skeleton" [(member "bones[0]" :mat4 :offset 0
+                                       :array-size 0 :array-stride 64
+                                       :matrix-stride 16
+                                       :top-level-array-size 1
+                                       :top-level-array-stride 0)])
+          bones  (get schema "bones")]
+      (t/is (= :runtime (:count bones)))
+      (t/is (= 64 (:stride bones)))
+      (t/is (= :matrix (get-in bones [:element :kind])))))
+
   (t/testing "runtime-array finds the runtime array entry"
     (t/is (= "particles" (first (types/runtime-array particles-schema))))
     (t/is (nil? (types/runtime-array scene-schema))))

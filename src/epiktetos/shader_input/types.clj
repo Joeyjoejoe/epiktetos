@@ -93,10 +93,22 @@
 (defn- runtime-member?
   "Returns true when an introspected member belongs to the block's
    runtime array (unsized last member of an SSBO), signaled by a
-   top-level-array-size of 0.
+   top-level-array-size of 0 (struct elements) or an array-size of 0
+   (basic-type elements, drivers reporting a top-level size of 1).
    member - map, introspected member properties"
   [member]
-  (= 0 (:top-level-array-size member)))
+  (or (= 0 (:top-level-array-size member))
+      (= 0 (:array-size member))))
+
+(defn- runtime-stride
+  "Byte stride between two consecutive elements of a runtime array:
+   the top-level array stride when positive, the member's own array
+   stride otherwise (basic-type elements).
+   member - map, introspected member properties
+   Returns a positive int."
+  [member]
+  (let [stride (:top-level-array-stride member 0)]
+    (if (pos? stride) stride (:array-stride member))))
 
 (defn- runtime-array-schema
   "Converts the finalized single-element array schema of a runtime
@@ -146,7 +158,7 @@
         strides (->> members
                      (filter runtime-member?)
                      (map (juxt (comp first parse-path :varname)
-                                :top-level-array-stride))
+                                runtime-stride))
                      (into {}))
         schema  (-> (reduce (fn [tree member]
                               (when (pos? (:is-row-major member 0))
