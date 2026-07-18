@@ -6,6 +6,7 @@
                :mode/sticky-keys               false
                :hint.window/visible            false
                :hint.window/resizable          true
+               :hint.window/samples            8
                :hint.context/version.maj       4
                :hint.context/version.min       6
                :hint.context/gl.profile        :gl.profile/core

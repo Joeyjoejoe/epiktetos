@@ -21,10 +21,13 @@
 
    ;; Window creation hints
    ;; https://www.glfw.org/docs/3.3/window_guide.html#window_hints
-   :hint.type/integer              'GLFW/glfwWindowHint
-   :hint.type/string               'GLFW/glfwWindowHintString
+   :hint.type/integer              (fn [hint value]
+                                     (GLFW/glfwWindowHint (int hint) (int value)))
+   :hint.type/string               (fn [hint value]
+                                     (GLFW/glfwWindowHintString (int hint) (str value)))
    :hint.window/resizable          GLFW/GLFW_RESIZABLE
    :hint.window/visible            GLFW/GLFW_VISIBLE
+   :hint.window/samples            GLFW/GLFW_SAMPLES
    :hint.context/version.maj       GLFW/GLFW_CONTEXT_VERSION_MAJOR
    :hint.context/version.min       GLFW/GLFW_CONTEXT_VERSION_MINOR
    :hint.context/gl.profile        GLFW/GLFW_OPENGL_PROFILE
@@ -49,5 +52,6 @@
       (k/derivev
         [:hint.window/resizable   :hint.context/gl.forward-compat
          :hint.window/visible     :hint.context/version.maj
-         :hint.context/gl.profile :hint.context/version.min]
+         :hint.context/gl.profile :hint.context/version.min
+         :hint.window/samples     :hint.window/gl.debug-context]
         :hint.type/integer)))

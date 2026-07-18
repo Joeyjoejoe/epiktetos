@@ -6,7 +6,7 @@
             [epiktetos.lang.glfw :as glfw])
   (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback)
            (org.lwjgl.system MemoryUtil)
-           (org.lwjgl.opengl GL GL11 GL20 GL32 GL43 GLDebugMessageCallback)))
+           (org.lwjgl.opengl GL GL11 GL13 GL20 GL32 GL43 GLDebugMessageCallback)))
 
 
 (defn get-size
@@ -162,8 +162,9 @@
   (GL11/glDepthFunc GL11/GL_LEQUAL)
 
   ;; Enable points primitive size
+  ;; gl_PointCoord needs no enable in core profile (point sprites are
+  ;; always on, GL_POINT_SPRITE is an invalid enum there).
   (GL11/glEnable GL20/GL_VERTEX_PROGRAM_POINT_SIZE) ;; gl_PointSize
-  (GL11/glEnable GL20/GL_POINT_SPRITE) ;; gl_PointCoord
 
   ;; Enable lines primitive size & type
   (GL11/glEnable GL11/GL_LINE_SMOOTH)
@@ -172,6 +173,9 @@
   ;; Enable transparancy support
   (GL11/glEnable GL11/GL_BLEND)
   (GL11/glBlendFunc GL11/GL_SRC_ALPHA GL11/GL_ONE_MINUS_SRC_ALPHA);
+
+  ;; MSAA
+  (GL11/glEnable GL13/GL_MULTISAMPLE)
 
   w)
 
