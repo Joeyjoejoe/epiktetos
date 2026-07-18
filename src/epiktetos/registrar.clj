@@ -41,21 +41,34 @@
   [varname]
   (get-in @registry [::opengl-registry :program-inputs varname]))
 
-(defn- register-program-input!
-  [resource input]
-  (let [{:keys [varname buffer-binding alloc members buffer-data-size]} input]
+(defn register-input!
+  "Registers a shader input handler definition.
+   input: map — with :varname, :handler and :step
+   Returns the updated registry value."
+  [input]
+  (swap! registry assoc-in [::input-registry (:varname input)] input))
+
+(defn lookup-input
+  "Returns the input definition registered for varname, or nil.
+   varname: string — GLSL variable name"
+  [varname]
+  (get-in @registry [::input-registry varname]))
+
+(defn register-program-input!
+  "Registers the program side of a shader input.
+   resource      - keyword, e.g. :ubo, :ssbo
+   program-input - map, introspected program input with allocated
+                   binding point, :buffer-id and :schema
+   Returns the updated registry value."
+  [resource program-input]
+  (let [{:keys [varname buffer-binding alloc members buffer-data-size
+                buffer-id schema]} program-input]
     (swap! registry assoc-in [::opengl-registry :program-inputs varname]
            {:varname          varname
             :resource         resource
             :buffer-data-size buffer-data-size
             :members          members
+            :schema           schema
+            :buffer-id        buffer-id
             :alloc            alloc
             :binding-point    buffer-binding})))
-
-(defn register-ubo!
-  [ubo]
-  (register-program-input! :ubo ubo))
-
-(defn register-ssbo!
-  [ssbo]
-  (register-program-input! :ssbo ssbo))

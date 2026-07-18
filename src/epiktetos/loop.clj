@@ -50,7 +50,7 @@
        (swap! lag #(- % FIXED_TIMESTEP)))
 
      (when-not (GLFW/glfwWindowShouldClose window)
-       (render/pipeline)
+       (render/pipeline @app-db/db)
 
        (GLFW/glfwSwapBuffers window)
        (GLFW/glfwPollEvents)

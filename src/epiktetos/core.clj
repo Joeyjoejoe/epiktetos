@@ -9,7 +9,7 @@
             [epiktetos.render.entity :as entity]
             [epiktetos.render.step :as render-step]
             [epiktetos.opengl.shader-program :as prog]
-            [epiktetos.opengl.shader-input :as shader-input]
+            [epiktetos.shader-input.registration :as shader-input]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
             [epiktetos.window]))
 
@@ -158,11 +158,9 @@
             (prog/setup! id prog-map))))
 
 (reg-fx ::fx/reg-input
-       (fn [input-coll]
-         (doseq [[varname handler options] input-coll]
-          ;; TODO
-         (shader-input/register-input-handler! varname handler options)
-           )))
+        (fn [input-coll]
+          (doseq [[varname handler options] input-coll]
+            (shader-input/register-input-handler! varname handler options))))
 
 (reg-fx :db
         (fn update-db! [new-db]

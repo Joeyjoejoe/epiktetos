@@ -1,7 +1,7 @@
 (ns epiktetos.opengl.shader-program
   (:require [epiktetos.registrar :as registrar]
             [epiktetos.opengl.shader :as shader]
-            [epiktetos.opengl.shader-input :as input]
+            [epiktetos.shader-input.registration :as input]
             [epiktetos.opengl.shader-attribute :as attribute])
   (:import (org.lwjgl.opengl GL20 GL30 GL11 GL43 GL45)
            (org.lwjgl BufferUtils)))

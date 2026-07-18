@@ -31,6 +31,9 @@
   "
   (:require [epiktetos.registrar :as registrar]))
 
+(defonce CORE-STEPS
+  #{:step/frame :step/group :step/vao :step/program :step/entity})
+
 (defonce GROUP-STEP
   [:step/group
    (fn [entity]

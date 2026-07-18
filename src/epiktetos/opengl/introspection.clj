@@ -51,8 +51,8 @@
 (def INTERFACE-PROPERTIES
   {GL43/GL_UNIFORM
    #{:type :array-size :offset :block-index :location
+     :array-stride :matrix-stride :is-row-major
      ;; :name-length
-     ;; :array-stride :matrix-stride :is-row-major
      ;; :atomic-counter-buffer-index
      ;; :referenced-by-vertex-shader :referenced-by-tess-control-shader
      ;; :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader

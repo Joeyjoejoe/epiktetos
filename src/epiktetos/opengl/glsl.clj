@@ -62,3 +62,31 @@
        (reduce-kv (fn [m gl-id {:keys [glsl-name]}]
                     (assoc m glsl-name gl-id))
                   {})))
+
+(defn bool-type?
+  "Returns true when glsl-type describes a GLSL bool or bvec type.
+   glsl-type - map, GLSL type from TRANSPARENT-TYPE"
+  [{:keys [glsl-name]}]
+  (contains? #{:bool :bvec2 :bvec3 :bvec4} glsl-name))
+
+(defn scalar-error
+  "Validates a single scalar against a GLSL type.
+   glsl-type - map, GLSL type from TRANSPARENT-TYPE
+   scalar    - the value, expected number or boolean
+   Returns an error keyword (:not-a-number, :float-for-integer-type,
+   :integer-out-of-range), or nil when valid. Booleans are valid for
+   bool and bvec types only."
+  [glsl-type scalar]
+  (cond
+    (and (boolean? scalar) (bool-type? glsl-type))
+    nil
+
+    (not (number? scalar))
+    :not-a-number
+
+    (and (:integer? glsl-type) (not (integer? scalar)))
+    :float-for-integer-type
+
+    (and (:integer? glsl-type)
+         (not (<= Integer/MIN_VALUE scalar Integer/MAX_VALUE)))
+    :integer-out-of-range))
