@@ -1,7 +1,9 @@
 (ns epiktetos.shader-input.types-test
   (:require [clojure.test :as t]
             [epiktetos.opengl.buffer :as gl-buffer]
-            [epiktetos.shader-input.fixtures :refer [member scene-schema]]
+            [epiktetos.shader-input.fixtures :refer [member particles-members
+                                                     particles-schema
+                                                     scene-schema]]
             [epiktetos.shader-input.types :as types]))
 
 (t/deftest members->schema-test
@@ -44,3 +46,34 @@
                    (types/members->schema
                      "Scene" [(member "view" :mat4 :offset 0
                                       :matrix-stride 16 :is-row-major 1)])))))
+
+(t/deftest runtime-array-test
+  (t/testing "unsized struct arrays produce a runtime array schema"
+    (let [schema    (types/members->schema "Particles" particles-members)
+          particles (get schema "particles")]
+      (t/is (= :scalar (:kind (get schema "count"))))
+      (t/is (= :array (:kind particles)))
+      (t/is (= :runtime (:count particles)))
+      (t/is (= 16 (:stride particles)))
+      (t/is (= :struct (get-in particles [:element :kind])))
+      (t/is (= 16 (get-in particles [:element :fields "position" :offset])))
+      (t/is (= 28 (get-in particles [:element :fields "energy" :offset])))))
+
+  (t/testing "unsized basic-type arrays produce a leaf element"
+    (let [schema (types/members->schema
+                   "Data" [(member "data[0]" :float :offset 0 :array-size 0
+                                   :top-level-array-size 0
+                                   :top-level-array-stride 4)])
+          data   (get schema "data")]
+      (t/is (= :runtime (:count data)))
+      (t/is (= 4 (:stride data)))
+      (t/is (= :scalar (get-in data [:element :kind])))
+      (t/is (= 0 (get-in data [:element :offset])))))
+
+  (t/testing "runtime-array finds the runtime array entry"
+    (t/is (= "particles" (first (types/runtime-array particles-schema))))
+    (t/is (nil? (types/runtime-array scene-schema))))
+
+  (t/testing "set-capacity stores the capacity on the runtime array"
+    (t/is (= 4 (get-in particles-schema ["particles" :capacity])))
+    (t/is (= scene-schema (types/set-capacity scene-schema 8)))))

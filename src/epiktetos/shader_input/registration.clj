@@ -64,15 +64,35 @@
                        :known-steps known-steps
                        :cause "Custom steps must be registered with reg-steps! before reg-input."})))))
 
+(defn- assert-capacity!
+  "Validates the :ssbo/capacity option when present. Throws ex-info
+   unless it is a positive integer.
+   varname - string, input variable name
+   options - map, reg-input options"
+  [varname options]
+  (let [capacity (:ssbo/capacity options)]
+    (when (and (some? capacity)
+               (not (and (integer? capacity) (pos? capacity))))
+      (throw (ex-info "Invalid :ssbo/capacity"
+                      {:varname       varname
+                       :ssbo/capacity capacity
+                       :cause ":ssbo/capacity must be a positive integer."})))))
+
 (defn register-input-handler!
-  "Registers a user input handler for a bindable shader input.
+  "Registers a user input handler for a bindable shader input, and
+   reconciles the capacity of its GPU buffer when the matching program
+   input is already registered.
    varname - string, GLSL block variable name
    handler - function (fn [db step-value]), produces the buffer data
    options - map, :step defaults to :step/frame and must be a core
-             render step or a custom step registered with reg-steps!
+             render step or a custom step registered with reg-steps!,
+             :ssbo/capacity must be a positive integer when present
    Returns the updated registry value."
   [varname handler options]
   (let [{:keys [step] :or {step :step/frame}} options
         input (merge options {:varname varname :handler handler :step step})]
     (assert-known-step! varname step)
-    (registrar/register-input! input)))
+    (assert-capacity! varname options)
+    (let [registry (registrar/register-input! input)]
+      (buffer/ensure-block-capacity! varname)
+      registry)))

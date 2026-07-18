@@ -62,7 +62,7 @@
    Returns the updated registry value."
   [resource program-input]
   (let [{:keys [varname buffer-binding alloc members buffer-data-size
-                buffer-id schema]} program-input]
+                buffer-id schema capacity]} program-input]
     (swap! registry assoc-in [::opengl-registry :program-inputs varname]
            {:varname          varname
             :resource         resource
@@ -70,5 +70,6 @@
             :members          members
             :schema           schema
             :buffer-id        buffer-id
+            :capacity         capacity
             :alloc            alloc
             :binding-point    buffer-binding})))

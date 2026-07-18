@@ -85,9 +85,9 @@
 
    GL43/GL_BUFFER_VARIABLE
    #{:type :array-size :offset :block-index :array-stride
+     :matrix-stride :is-row-major
+     :top-level-array-size :top-level-array-stride
      ;; :name-length
-     ;; :matrix-stride :is-row-major
-     ;; :top-level-array-size :top-level-array-stride
      ;; :referenced-by-vertex-shader :referenced-by-tess-control-shader
      ;; :referenced-by-tess-evaluation-shader :referenced-by-geometry-shader
      ;; :referenced-by-fragment-shader :referenced-by-compute-shader

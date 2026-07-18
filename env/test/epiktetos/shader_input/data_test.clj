@@ -1,7 +1,9 @@
 (ns epiktetos.shader-input.data-test
   (:require [clojure.test :as t]
             [epiktetos.shader-input.data :as data]
-            [epiktetos.shader-input.fixtures :refer [member scene-schema
+            [epiktetos.shader-input.fixtures :refer [member particles-schema
+                                                     scene-schema
+                                                     valid-particles-value
                                                      valid-scene-data]]
             [epiktetos.shader-input.types :as types]))
 
@@ -133,3 +135,62 @@
           ^java.nio.ByteBuffer buf
           (data/serialize schema {"d" 2.5} 8)]
       (t/is (= 2.5 (.getDouble buf 0))))))
+
+(defn- particles-error
+  "Returns the :error keyword of the ex-info thrown when validating
+   value against particles-schema, or nil when validation passes.
+   value - the handler output to validate"
+  [value]
+  (try
+    (data/validate particles-schema value)
+    nil
+    (catch clojure.lang.ExceptionInfo e
+      (:error (ex-data e)))))
+
+(t/deftest runtime-array-validation-test
+  (t/testing "0 to capacity elements pass"
+    (t/is (nil? (data/validate particles-schema
+                               (assoc valid-particles-value "particles" []))))
+    (t/is (nil? (data/validate particles-schema valid-particles-value)))
+    (t/is (nil? (data/validate particles-schema
+                               (assoc valid-particles-value "particles"
+                                      (repeat 4 {"position" [0.0 0.0 0.0]
+                                                 "energy"   1.0}))))))
+
+  (t/testing "exceeding the capacity is an error"
+    (t/is (= :element-count-exceeds-capacity
+             (particles-error (assoc valid-particles-value "particles"
+                                     (repeat 5 {"position" [0.0 0.0 0.0]
+                                                "energy"   1.0}))))))
+
+  (t/testing "elements are validated against the element schema"
+    (t/is (= ["particles" 1 "energy"]
+             (try
+               (data/validate particles-schema
+                              (assoc-in valid-particles-value
+                                        ["particles" 1 "energy"] "x"))
+               nil
+               (catch clojure.lang.ExceptionInfo e
+                 (:path (ex-data e))))))))
+
+(t/deftest block-size-test
+  (t/testing "fixed blocks keep the introspected size"
+    (t/is (= 192 (data/block-size scene-schema valid-scene-data 192))))
+
+  (t/testing "runtime arrays adjust the size to the element count"
+    (t/is (= 48 (data/block-size particles-schema valid-particles-value 32)))
+    (t/is (= 16 (data/block-size particles-schema
+                                 (assoc valid-particles-value "particles" [])
+                                 32)))))
+
+(t/deftest runtime-array-serialize-test
+  (t/testing "elements are written at their introspected element stride"
+    (let [size (data/block-size particles-schema valid-particles-value 32)
+          ^java.nio.ByteBuffer buf
+          (data/serialize particles-schema valid-particles-value size)]
+      (t/is (= 48 (.capacity buf)))
+      (t/is (= 2 (.getInt buf 0)))
+      (t/is (= 1.0 (.getFloat buf 16)))
+      (t/is (= 2.0 (.getFloat buf 28)))
+      (t/is (= 1.0 (.getFloat buf 36)))
+      (t/is (= 0.5 (.getFloat buf 44))))))

@@ -90,23 +90,74 @@
       {:kind   :struct
        :fields (update-vals schema finalize-schema)})))
 
+(defn- runtime-member?
+  "Returns true when an introspected member belongs to the block's
+   runtime array (unsized last member of an SSBO), signaled by a
+   top-level-array-size of 0.
+   member - map, introspected member properties"
+  [member]
+  (= 0 (:top-level-array-size member)))
+
+(defn- runtime-array-schema
+  "Converts the finalized single-element array schema of a runtime
+   array into its runtime form.
+   schema - map, array schema holding the introspected element 0
+   stride - int, byte stride between two consecutive elements
+   Returns {:kind :array :count :runtime :stride stride :element schema}."
+  [schema stride]
+  {:kind    :array
+   :count   :runtime
+   :stride  stride
+   :element (first (:elements schema))})
+
+(defn runtime-array
+  "Returns the [field-name schema] entry of the schema's runtime
+   array, or nil when the block has none.
+   schema - map {field-name schema}, from members->schema"
+  [schema]
+  (->> schema
+       (filter (fn [[_ fschema]] (= :runtime (:count fschema))))
+       first))
+
+(defn set-capacity
+  "Sets the element capacity of the schema's runtime array.
+   schema   - map {field-name schema}, from members->schema
+   capacity - pos int, maximum element count
+   Returns the schema, unchanged when it has no runtime array."
+  [schema capacity]
+  (if-let [[fname _] (runtime-array schema)]
+    (assoc-in schema [fname :capacity] capacity)
+    schema))
+
 (defn members->schema
   "Builds a recursive block schema from introspected block members.
    block-name - string, GLSL block variable name
    members    - coll of maps, introspected member properties
    Returns a map {field-name schema} where schema is a leaf
    ({:kind :scalar|:vector|:matrix ...}), a struct
-   ({:kind :struct :fields {...}}) or an array
-   ({:kind :array :count n :elements [...]})."
+   ({:kind :struct :fields {...}}), an array
+   ({:kind :array :count n :elements [...]}) or a runtime array
+   ({:kind :array :count :runtime :stride s :element schema})."
   [block-name members]
-  (-> (reduce (fn [tree member]
-                (let [member (update member :varname
-                                     #(strip-block-prefix block-name %))]
-                  (when (pos? (:is-row-major member 0))
-                    (throw (ex-info "Row-major block member not supported"
-                                    {:block  block-name
-                                     :member (:varname member)})))
-                  (assoc-in tree (member-path member) (member-schema member))))
-              {}
-              members)
-      (update-vals finalize-schema)))
+  (let [members (mapv (fn [member]
+                        (update member :varname
+                                #(strip-block-prefix block-name %)))
+                      members)
+        strides (->> members
+                     (filter runtime-member?)
+                     (map (juxt (comp first parse-path :varname)
+                                :top-level-array-stride))
+                     (into {}))
+        schema  (-> (reduce (fn [tree member]
+                              (when (pos? (:is-row-major member 0))
+                                (throw (ex-info "Row-major block member not supported"
+                                                {:block  block-name
+                                                 :member (:varname member)})))
+                              (assoc-in tree (member-path member) (member-schema member)))
+                            {}
+                            members)
+                    (update-vals finalize-schema))]
+    (reduce-kv (fn [schema fname stride]
+                 (update schema fname runtime-array-schema stride))
+               schema
+               strides)))

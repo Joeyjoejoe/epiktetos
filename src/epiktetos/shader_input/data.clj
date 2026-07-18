@@ -1,6 +1,7 @@
 (ns epiktetos.shader-input.data
   (:require [epiktetos.opengl.buffer :as gl-buffer]
-            [epiktetos.opengl.glsl :as glsl])
+            [epiktetos.opengl.glsl :as glsl]
+            [epiktetos.shader-input.types :as types])
   (:import (org.lwjgl BufferUtils)))
 
 (declare validate-value)
@@ -62,20 +63,31 @@
    schema - map, array schema
    path   - vector, path of the value in the block
    value  - the handler value for this schema
-   Returns nil, throws on the first invalid element."
+   Returns nil, throws on the first invalid element. Runtime arrays
+   accept 0 to :capacity elements, fixed arrays exactly :count."
   [schema path value]
-  (cond
-    (not (sequential? value))
-    (invalid! path :not-sequential {:value value})
+  (let [{:keys [capacity] :or {capacity 1}} schema
+        runtime? (= :runtime (:count schema))]
+    (cond
+      (not (sequential? value))
+      (invalid! path :not-sequential {:value value})
 
-    (not= (:count schema) (count value))
-    (invalid! path :element-count-mismatch
-              {:expected-count (:count schema)
-               :actual-count   (count value)})
+      (and runtime? (< capacity (count value)))
+      (invalid! path :element-count-exceeds-capacity
+                {:capacity     capacity
+                 :actual-count (count value)})
 
-    :else
-    (doseq [[i element-schema element] (map vector (range) (:elements schema) value)]
-      (validate-value element-schema (conj path i) element))))
+      (and (not runtime?) (not= (:count schema) (count value)))
+      (invalid! path :element-count-mismatch
+                {:expected-count (:count schema)
+                 :actual-count   (count value)})
+
+      :else
+      (let [element-schemas (if runtime?
+                              (repeat (:element schema))
+                              (:elements schema))]
+        (doseq [[i element-schema element] (map vector (range) element-schemas value)]
+          (validate-value element-schema (conj path i) element))))))
 
 (defn- validate-value
   "Validates a handler value against its schema.
@@ -103,9 +115,28 @@
   [schema value]
   (validate-value {:kind :struct :fields schema} [] value))
 
+(defn- shift-offsets
+  "Shifts every absolute offset of a schema by delta bytes.
+   schema - map, schema
+   delta  - int, byte offset to add
+   Returns the schema."
+  [schema delta]
+  (case (:kind schema)
+    (:scalar :vector :matrix)
+    (update schema :offset + delta)
+
+    :struct
+    (update schema :fields (fn [fields]
+                             (update-vals fields #(shift-offsets % delta))))
+
+    :array
+    (update schema :elements (fn [elements]
+                               (mapv #(shift-offsets % delta) elements)))))
+
 (defn- write-value!
   "Writes a validated handler value into a ByteBuffer according to its
-   schema. Matrix values are read in column-major order.
+   schema. Matrix values are read in column-major order, runtime array
+   elements are written at their element stride.
    buffer - ByteBuffer
    schema - map, schema of the value
    value  - the validated handler value for this schema
@@ -137,14 +168,32 @@
       (write-value! buffer fschema (get value fname)))
 
     :array
-    (doseq [[element-schema element] (map vector (:elements schema) value)]
-      (write-value! buffer element-schema element))))
+    (if (= :runtime (:count schema))
+      (doseq [[i element] (map-indexed vector value)]
+        (write-value! buffer
+                      (shift-offsets (:element schema) (* i (:stride schema)))
+                      element))
+      (doseq [[element-schema element] (map vector (:elements schema) value)]
+        (write-value! buffer element-schema element)))))
+
+(defn block-size
+  "Byte size of a block for a given handler value.
+   schema - map {field-name schema}, from members->schema
+   value  - map, validated handler output
+   size   - int, introspected buffer-data-size (assumes one runtime
+            array element)
+   Returns size unchanged for fixed blocks; for blocks ending with a
+   runtime array, size adjusted to the actual element count."
+  [schema value size]
+  (if-let [[fname fschema] (types/runtime-array schema)]
+    (+ size (* (:stride fschema) (dec (count (get value fname)))))
+    size))
 
 (defn serialize
   "Creates and fills a ByteBuffer matching a block layout.
    schema - map {field-name schema}, from members->schema
    value  - map, validated handler output
-   size   - int, block buffer-data-size in bytes
+   size   - int, block byte size, from block-size
    Returns a ByteBuffer ready for upload to the block GPU buffer."
   [schema value size]
   (let [buffer (BufferUtils/createByteBuffer size)]

@@ -58,3 +58,27 @@
    "sun"         {"position" [10.0 20.0 30.0] "intensity" 3.0}
    "lights"      [{"position" [1.0 0.0 0.0] "intensity" 2.0}
                   {"position" [0.0 1.0 0.0] "intensity" 0.5}]})
+
+(def particles-members
+  "Introspected members of an std430 SSBO block ending with a runtime
+   array:
+
+   struct Particle { vec3 position; float energy; };
+   layout(std430) buffer Particles {
+       int      count;        //  0
+       Particle particles[];  // 16 (stride 16)
+   };                         // buffer-data-size 32"
+  [(member "count"                 :int   :offset 0  :top-level-array-size 1)
+   (member "particles[0].position" :vec3  :offset 16
+           :top-level-array-size 0 :top-level-array-stride 16)
+   (member "particles[0].energy"   :float :offset 28
+           :top-level-array-size 0 :top-level-array-stride 16)])
+
+(def particles-schema
+  (-> (types/members->schema "Particles" particles-members)
+      (types/set-capacity 4)))
+
+(def valid-particles-value
+  {"count"     2
+   "particles" [{"position" [1.0 0.0 0.0] "energy" 2.0}
+                {"position" [0.0 1.0 0.0] "energy" 0.5}]})

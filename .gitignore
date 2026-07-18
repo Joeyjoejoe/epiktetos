@@ -11,4 +11,5 @@ pom.xml.asc
 .cpcache/
 .clj-kondo/
 .lsp/
+.claude/
 CLAUDE.md

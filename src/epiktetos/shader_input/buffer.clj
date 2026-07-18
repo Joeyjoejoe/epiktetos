@@ -4,7 +4,7 @@
             [epiktetos.shader-input.data :as data]
             [epiktetos.shader-input.types :as types])
   (:import (org.lwjgl BufferUtils)
-           (org.lwjgl.opengl GL11 GL20 GL30 GL31 GL42 GL43)))
+           (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL31 GL42 GL43)))
 
 (defonce ^:private RESOURCE-BINDING-MAX
   {:ubo            GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
@@ -131,42 +131,114 @@
   {:ubo  GL31/GL_UNIFORM_BUFFER
    :ssbo GL43/GL_SHADER_STORAGE_BUFFER})
 
+(defn- block-capacity
+  "Element capacity of a block's runtime array, read from the
+   registered input's :ssbo/capacity option.
+   resource - keyword, :ubo or :ssbo
+   schema   - map {field-name schema}
+   varname  - string, block variable name
+   Returns a positive integer, 1 by default. Warns and ignores the
+   option when the block has no runtime array."
+  [resource schema varname]
+  (let [capacity (:ssbo/capacity (registrar/lookup-input varname))]
+    (cond
+      (nil? capacity)
+      1
+
+      (nil? (types/runtime-array schema))
+      (do (println "[epiktetos] Ignoring :ssbo/capacity for" varname ":"
+                   (name resource) "block without runtime array")
+          1)
+
+      :else capacity)))
+
+(defn- block-buffer-size
+  "Byte size of a block's GPU buffer for a given capacity.
+   schema   - map {field-name schema}
+   size     - int, introspected buffer-data-size (one runtime element)
+   capacity - pos int, runtime array capacity
+   Returns size unchanged when the schema has no runtime array."
+  [schema size capacity]
+  (if-let [[_ fschema] (types/runtime-array schema)]
+    (+ size (* (:stride fschema) (dec capacity)))
+    size))
+
 (defn- create-block-buffer!
   "Creates a zeroed GPU buffer for a block and binds it to its
    allocated binding point.
-   target - int, GL buffer target
-   block  - map, introspected block with :buffer-data-size and :buffer-binding
+   target        - int, GL buffer target
+   binding-point - int, binding point index
+   size          - int, buffer byte size
    Returns the GL buffer id."
-  [target {:keys [buffer-data-size buffer-binding]}]
+  [target binding-point size]
   (let [buffer-id (gl-buffer/create-storage-buffer!
-                    (BufferUtils/createByteBuffer buffer-data-size)
+                    (BufferUtils/createByteBuffer size)
                     [:dynamic])]
-    (GL30/glBindBufferBase target buffer-binding buffer-id)
+    (GL30/glBindBufferBase target binding-point buffer-id)
     buffer-id))
 
 (defn ensure-block-buffer!
-  "Adds :buffer-id and :schema to block, reusing the registered buffer
-   when varname is already known, creating and binding a new one
-   otherwise. Throws when a block with the same varname is already
-   registered with a different structure.
+  "Adds :buffer-id, :schema and :capacity to block, reusing the
+   registered buffer when varname is already known with the same
+   capacity, creating and binding a new one otherwise (the previous
+   buffer, if any, is deleted). Throws when a block with the same
+   varname is already registered with a different structure.
    resource - keyword, :ubo or :ssbo
    block    - map, introspected block
-   Returns the block map with :buffer-id and :schema."
+   Returns the block map with :buffer-id, :schema and :capacity."
   [resource block]
-  (let [{:keys [varname members]} block]
-    (if-let [existing (registrar/lookup-program-input varname)]
-      (if (= members (:members existing))
+  (let [{:keys [varname members buffer-data-size buffer-binding]} block
+        existing (registrar/lookup-program-input varname)]
+    (when (and existing (not= members (:members existing)))
+      (throw (ex-info "Block structure mismatch"
+                      {:resource     resource
+                       :varname      varname
+                       :registered   (:members existing)
+                       :introspected members})))
+    (let [schema   (or (:schema existing) (types/members->schema varname members))
+          capacity (block-capacity resource schema varname)
+          schema   (types/set-capacity schema capacity)]
+      (if (and existing (= capacity (:capacity existing)))
         (assoc block
                :buffer-id (:buffer-id existing)
-               :schema    (:schema existing))
-        (throw (ex-info "Block structure mismatch"
-                        {:resource     resource
-                         :varname      varname
-                         :registered   (:members existing)
-                         :introspected members})))
-      (assoc block
-             :buffer-id (create-block-buffer! (BLOCK-BUFFER-TARGET resource) block)
-             :schema    (types/members->schema varname members)))))
+               :schema    (:schema existing)
+               :capacity  capacity)
+        (let [size      (block-buffer-size schema buffer-data-size capacity)
+              buffer-id (create-block-buffer! (BLOCK-BUFFER-TARGET resource)
+                                              buffer-binding size)]
+          (when existing
+            (GL15/glDeleteBuffers (int (:buffer-id existing))))
+          (assoc block
+                 :buffer-id buffer-id
+                 :schema    schema
+                 :capacity  capacity))))))
+
+(defn ensure-block-capacity!
+  "Recreates the GPU buffer of a registered program input when the
+   registered input's :ssbo/capacity no longer matches its capacity:
+   new zeroed buffer bound to the same binding point, previous buffer
+   deleted, registry entry replaced. No-op when varname matches no
+   program input or the capacity is unchanged.
+   varname - string, block variable name
+   Returns nil."
+  [varname]
+  (when-let [existing (registrar/lookup-program-input varname)]
+    (let [{:keys [resource schema binding-point buffer-data-size]} existing
+          capacity (block-capacity resource schema varname)]
+      (when (not= capacity (:capacity existing))
+        (let [schema    (types/set-capacity schema capacity)
+              size      (block-buffer-size schema buffer-data-size capacity)
+              buffer-id (create-block-buffer! (BLOCK-BUFFER-TARGET resource)
+                                              binding-point size)]
+          (GL15/glDeleteBuffers (int (:buffer-id existing)))
+          (registrar/register-program-input!
+            resource
+            (assoc existing
+                   :buffer-binding binding-point
+                   :buffer-id      buffer-id
+                   :schema         schema
+                   :capacity       capacity))))))
+  nil)
 
 (defn inputs-by-step
   "Groups registered input definitions by render step.
@@ -197,7 +269,8 @@
       (catch clojure.lang.ExceptionInfo e
         (throw (ex-info (ex-message e)
                         (assoc (ex-data e) :varname varname)))))
-    (gl-buffer/upload! buffer-id (data/serialize schema value buffer-data-size))
+    (let [size (data/block-size schema value buffer-data-size)]
+      (gl-buffer/upload! buffer-id (data/serialize schema value size)))
     nil))
 
 (defn update-inputs!
