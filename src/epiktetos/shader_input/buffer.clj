@@ -131,6 +131,30 @@
   {:ubo  GL31/GL_UNIFORM_BUFFER
    :ssbo GL43/GL_SHADER_STORAGE_BUFFER})
 
+(defn- forget-input-value!
+  "Drops the cached last-written value of an input, so the next
+   update writes its (recreated, zeroed) buffer again.
+   varname - string, block variable name
+   Returns nil."
+  [varname]
+  (swap! registrar/render-state
+         update ::registrar/input-values dissoc varname)
+  nil)
+
+(defn- unchanged-value?
+  "True when a handler output is member-per-member identical to the
+   last value written to the block buffer: the buffer content is
+   already up to date and the write can be skipped. Members are
+   compared with identical?, so handlers benefit by returning cached
+   immutable structures for static members.
+   prev  - map, last written value, or nil
+   value - map, handler output"
+  [prev value]
+  (and (map? prev)
+       (map? value)
+       (= (count prev) (count value))
+       (every? (fn [[k v]] (identical? v (get prev k))) value)))
+
 (defn- block-capacity
   "Element capacity of a block's runtime array, read from the
    registered input's :ssbo/capacity option.
@@ -208,6 +232,7 @@
                                               buffer-binding size)]
           (when existing
             (GL15/glDeleteBuffers (int (:buffer-id existing))))
+          (forget-input-value! varname)
           (assoc block
                  :buffer-id buffer-id
                  :schema    schema
@@ -231,6 +256,7 @@
               buffer-id (create-block-buffer! (BLOCK-BUFFER-TARGET resource)
                                               binding-point size)]
           (GL15/glDeleteBuffers (int (:buffer-id existing)))
+          (forget-input-value! varname)
           (registrar/register-program-input!
             resource
             (assoc existing
@@ -252,9 +278,11 @@
 
 (defn- update-input!
   "Executes one input handler and writes its output to the block
-   buffer. Validation runs before the GPU write: invalid data throws
-   with the input varname added, and leaves the buffer on its last
-   valid content.
+   buffer. The write is skipped when the output is member-per-member
+   identical to the last written value (see unchanged-value?); the
+   cache is dropped whenever the buffer is recreated. Validation runs
+   before the GPU write: invalid data throws with the input varname
+   added, and leaves the buffer on its last valid content.
    db            - map, application state of the current frame
    program-input - map, registered block with :schema and :buffer-id
    input         - map, input definition with :handler
@@ -263,14 +291,19 @@
   [db program-input input step-value]
   (let [{:keys [varname handler]} input
         {:keys [schema buffer-id buffer-data-size]} program-input
-        value (handler db step-value)]
-    (try
-      (data/validate schema value)
-      (catch clojure.lang.ExceptionInfo e
-        (throw (ex-info (ex-message e)
-                        (assoc (ex-data e) :varname varname)))))
-    (let [size (data/block-size schema value buffer-data-size)]
-      (gl-buffer/upload! buffer-id (data/serialize schema value size)))
+        value (handler db step-value)
+        prev  (get-in @registrar/render-state
+                      [::registrar/input-values varname])]
+    (when-not (unchanged-value? prev value)
+      (try
+        (data/validate schema value)
+        (catch clojure.lang.ExceptionInfo e
+          (throw (ex-info (ex-message e)
+                          (assoc (ex-data e) :varname varname)))))
+      (let [size (data/block-size schema value buffer-data-size)]
+        (gl-buffer/upload! buffer-id (data/serialize schema value size)))
+      (swap! registrar/render-state
+             assoc-in [::registrar/input-values varname] value))
     nil))
 
 (defn update-inputs!
