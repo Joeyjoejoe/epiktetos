@@ -5,6 +5,36 @@
             [epiktetos.utils.hash :as hash])
   (:import (org.lwjgl.opengl GL45)))
 
+(defn- assert-packing!
+  "Validates the :packing map of a vertex-buffer-map against the
+   introspected attributes: known attribute names, known packed
+   formats (see buffer/PACKED-FORMATS), single-location non-double
+   attributes only, and integer storage for integer attributes.
+   Throws ex-info otherwise.
+   packing      - map {varname pack-keyword}
+   prog-attribs - map {varname attrib}, introspected attributes
+   Returns nil."
+  [packing prog-attribs]
+  (doseq [[varname pack] packing]
+    (let [fmt    (buffer/PACKED-FORMATS pack)
+          attrib (get prog-attribs varname)
+          {:keys [total-locations integer? double?]
+           :or   {total-locations 1}} (:type attrib)]
+      (when-not fmt
+        (throw (ex-info "Unknown attribute packing"
+                        {:attribute varname :packing pack
+                         :known (set (keys buffer/PACKED-FORMATS))})))
+      (when-not attrib
+        (throw (ex-info "Packed attribute not found in shader"
+                        {:attribute varname :packing pack})))
+      (when (or double? (> total-locations 1))
+        (throw (ex-info "Packing is not supported on matrix or double attributes"
+                        {:attribute varname :packing pack})))
+      (when (not= (boolean integer?) (boolean (:integer? fmt)))
+        (throw (ex-info "Packed format does not match the attribute base type"
+                        {:attribute varname :packing pack
+                         :integer-attribute? (boolean integer?)}))))))
+
 (defn prep-vertex-buffer
   "Interpret a vertex-buffer-map valid to DSL :
 
@@ -12,15 +42,21 @@
   :handler (fn [entity] []) ;; For buffer creation when first render entity
   :storage :dynamic  ;; For buffer creation when first render entity
   :normalize #{\"color\"}
+  :packing {\"color\" :ubyte-norm} ;; packed VBO storage per attribute
   :divisor 0}
   "
   [prog-id vao-id binding-index vb-map]
-  (let [{:keys [layout handler normalize storage divisor]
-         :or   {storage :dynamic divisor 0 normalize #{}}} vb-map
+  (let [{:keys [layout handler normalize storage divisor packing]
+         :or   {storage :dynamic divisor 0 normalize #{} packing {}}} vb-map
 
         prog-attribs    (introspect/attributes-infos prog-id)
         vb-attribs      (keep prog-attribs layout)
-        attribs-offsets (reductions + 0 (keep #(get-in % [:type :bytes]) vb-attribs))
+        attrib-bytes    (fn [{:keys [varname type]}]
+                          (if-let [pack (packing varname)]
+                            (* (:size type)
+                               (:scalar-bytes (buffer/PACKED-FORMATS pack)))
+                            (:bytes type)))
+        attribs-offsets (reductions + 0 (keep attrib-bytes vb-attribs))
         stride          (last attribs-offsets)]
 
     ;; Validates attribute names in layout
@@ -36,12 +72,17 @@
           Exception.
           throw))
 
+    (assert-packing! packing prog-attribs)
+
     ;; Initialize VAO attributes
     (doseq [[attrib offset] (map list vb-attribs attribs-offsets)
             :let [{:keys [varname location type]}  attrib
                   {:keys [base-type size bytes total-locations integer? double?]
                    :or   {total-locations 1}} type
-                  normalize (-> normalize (get varname) boolean)]]
+                  fmt       (some-> (packing varname) buffer/PACKED-FORMATS)
+                  base-type (if fmt (:base-type fmt) base-type)
+                  normalize (boolean (or (:normalized? fmt)
+                                         (get normalize varname)))]]
 
       (let [col-bytes (quot bytes total-locations)
             loc-step  (if (and double? (> size 2)) 2 1)]
@@ -64,7 +105,11 @@
      :offset        0 ;; might lives at entity scope for buffer data management
      :stride        stride
      :storage       (storage buffer/BUFFER-STORAGE)
-     :type-layout   (mapv #(get-in % [:type :glsl-name]) vb-attribs)}))
+     :type-layout   (mapv (fn [{:keys [varname type]}]
+                            (if-let [pack (packing varname)]
+                              [(:glsl-name type) pack]
+                              (:glsl-name type)))
+                          vb-attribs)}))
 
 (defn setup!
   "Setup a shader program attributes. It produce :

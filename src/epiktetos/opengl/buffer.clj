@@ -1,7 +1,7 @@
 (ns epiktetos.opengl.buffer
   (:require [epiktetos.opengl.glsl :as glsl])
   (:import (org.lwjgl BufferUtils)
-           (org.lwjgl.opengl GL30 GL44 GL45)))
+           (org.lwjgl.opengl GL11 GL30 GL44 GL45)))
 
 (defonce BUFFER-STORAGE
   {:dynamic    GL44/GL_DYNAMIC_STORAGE_BIT
@@ -16,17 +16,42 @@
   [glsl-name]
   (glsl/TRANSPARENT-TYPE (glsl/TYPE-BY-NAME glsl-name)))
 
+(defonce PACKED-FORMATS
+  {:half       {:base-type GL30/GL_HALF_FLOAT     :scalar-bytes 2 :normalized? false}
+   :ubyte      {:base-type GL11/GL_UNSIGNED_BYTE  :scalar-bytes 1 :normalized? false :integer? true}
+   :ushort     {:base-type GL11/GL_UNSIGNED_SHORT :scalar-bytes 2 :normalized? false :integer? true}
+   :ubyte-norm {:base-type GL11/GL_UNSIGNED_BYTE  :scalar-bytes 1 :normalized? true}
+   :byte-norm  {:base-type GL11/GL_BYTE           :scalar-bytes 1 :normalized? true}})
+
 (defn type-length
   "Returns the total number of scalars in a GLSL type"
   [{:keys [size total-locations] :or {total-locations 1}}]
   (* size total-locations))
+
+(defn attrib-type
+  "Resolves a type-layout entry into its GLSL type map. A packed
+   entry — a [glsl-name pack-keyword] pair — carries its storage
+   format under :pack and its packed byte size under :bytes.
+   entry - keyword, or [keyword pack-keyword]
+   Returns the type map."
+  [entry]
+  (if (keyword? entry)
+    (glsl-type entry)
+    (let [[glsl-name pack] entry
+          fmt (or (PACKED-FORMATS pack)
+                  (throw (ex-info "Unknown attribute packing"
+                                  {:packing pack :entry entry})))
+          t   (glsl-type glsl-name)]
+      (assoc t
+             :pack  pack
+             :bytes (* (type-length t) (:scalar-bytes fmt))))))
 
 (defn type-layout-count
   "Returns the total number of scalars in a type layout :
   (type-layout-count [:vec3 :ivec2])
   => 5                                                  "
   [type-layout]
-  (transduce (map (comp type-length glsl-type)) + type-layout))
+  (transduce (map (comp type-length attrib-type)) + type-layout))
 
 (defn assert-scalar!
   "Validates a scalar is compatible with the expected GLSL type.
@@ -39,14 +64,51 @@
                      :actual-type   (type scalar)
                      :actual-value  scalar}))))
 
-(defn put-scalar!
-  "Puts a scalar into a ByteBuffer. Booleans are converted to 1/0."
-  [^java.nio.ByteBuffer buffer {:keys [integer? double?]} scalar]
-  (let [scalar (if (boolean? scalar) (if scalar 1 0) scalar)]
+(defn- float->half
+  "IEEE 754 half-float bits of a float value (no rounding, denormals
+   flushed to zero).
+   v - double
+   Returns a long in [0, 0xFFFF]."
+  [^double v]
+  (let [bits (Float/floatToIntBits (float v))
+        sign (bit-and (unsigned-bit-shift-right bits 16) 0x8000)
+        e    (- (bit-and (unsigned-bit-shift-right bits 23) 0xFF) 127)
+        m    (bit-and bits 0x7FFFFF)]
     (cond
-      double?  (.putDouble buffer (clojure.core/double scalar))
-      integer? (.putInt    buffer (clojure.core/int scalar))
-      :else    (.putFloat  buffer (clojure.core/float scalar))))
+      (> e 15)  (bit-or sign 0x7C00)
+      (< e -14) sign
+      :else     (bit-or sign
+                        (bit-shift-left (+ e 15) 10)
+                        (unsigned-bit-shift-right m 13)))))
+
+(defn put-scalar!
+  "Puts a scalar into a ByteBuffer, in the type's packed storage
+   format when it carries one. Booleans are converted to 1/0."
+  [^java.nio.ByteBuffer buffer {:keys [pack integer? double?]} scalar]
+  (let [scalar (if (boolean? scalar) (if scalar 1 0) scalar)]
+    (case pack
+      nil
+      (cond
+        double?  (.putDouble buffer (clojure.core/double scalar))
+        integer? (.putInt    buffer (clojure.core/int scalar))
+        :else    (.putFloat  buffer (clojure.core/float scalar)))
+
+      :half
+      (.putShort buffer (unchecked-short (float->half (clojure.core/double scalar))))
+
+      :ubyte
+      (.put buffer (unchecked-byte (clojure.core/long scalar)))
+
+      :ushort
+      (.putShort buffer (unchecked-short (clojure.core/long scalar)))
+
+      :ubyte-norm
+      (.put buffer (unchecked-byte
+                     (Math/round (* 255.0 (max 0.0 (min 1.0 (clojure.core/double scalar)))))))
+
+      :byte-norm
+      (.put buffer (unchecked-byte
+                     (Math/round (* 127.0 (max -1.0 (min 1.0 (clojure.core/double scalar)))))))))
   buffer)
 
 (defn scalar-bytes
@@ -93,11 +155,13 @@
 
 (defn from-flat-layout
   "Creates and fills a ByteBuffer according to a flat layout of
-   glsl types and a flat collection of scalar data:
+   glsl types — plain keywords, or [glsl-name pack] pairs for packed
+   storage (see PACKED-FORMATS) — and a flat collection of scalars:
 
-  (from-flat-layout [:vec3 :int] [1.0 1.0 1.0 24])"
+  (from-flat-layout [:vec3 :int] [1.0 1.0 1.0 24])
+  (from-flat-layout [[:vec3 :half] :int] [1.0 1.0 1.0 24])"
   [type-layout flat-data]
-  (let [glsl-types (mapv glsl-type type-layout)
+  (let [glsl-types (mapv attrib-type type-layout)
         type-bytes (reduce + (map :bytes glsl-types))
         type-count (reduce + (map type-length glsl-types))
         data-count (count flat-data)]
