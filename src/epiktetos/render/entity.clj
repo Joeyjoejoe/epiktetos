@@ -23,7 +23,7 @@
   #{:program})
 
 (defonce OPTIONAL-RENDER-PARAMS
-  #{:group :primitives :indices :instances})
+  #{:group :primitives :indices :instances :max-instances})
 
 (defonce RESERVED-ENTITY-KEYS
   #{:vbo-ids :ibo-id :sort-key})
@@ -77,23 +77,46 @@
       (assoc entity :ibo-id ibo-id :ibo-length ibo-length))
     entity))
 
+(defn draw-count
+  "Instance count to draw for an entity at the current frame: the
+  static :instances value, or the result of its function form
+  evaluated against db, clamped to [0 :max-instances].
+  entity - map with :instances (int, fn of db, or nil) and
+           :max-instances (pos int, cap of the function form)
+  db     - map, application state
+  Returns a non-negative int, or nil for non-instanced entities."
+  [{:keys [instances max-instances]} db]
+  (cond
+    (nil? instances) nil
+    (fn? instances)  (-> (long (instances db)) (max 0) (min max-instances))
+    :else            instances))
+
 (defn prep-entity
-  "Prepare an entity for rendering.
+  "Prepare an entity for rendering. A function :instances (dynamic
+  instance count) requires a positive :max-instances, which sizes the
+  per-instance buffers: VBO handlers see :instances as that number.
   Return entity map"
   ([render-params]
    (prep-entity (::registrar/opengl-registry @registrar/registry) render-params))
 
   ([opengl-register render-params]
    (let [{:keys [programs vaos]} opengl-register
-         {:keys [program primitives indices]
+         {:keys [program primitives indices instances max-instances]
           :or   {primitives :triangles}}
          render-params]
 
+     (when (and (fn? instances) (not (pos-int? max-instances)))
+       (throw (ex-info "Dynamic :instances requires a positive :max-instances"
+                       {:program       program
+                        :max-instances max-instances})))
+
      (if-let [vao-id (get-in programs [program :vao-id])]
-       (-> render-params
+       (-> (cond-> render-params
+             (fn? instances) (assoc :instances max-instances))
            (assoc :primitives (DRAW-PRIMITIVES primitives))
            (build-vbos (get-in vaos [vao-id :vbos]))
-           (build-ibo  indices))
+           (build-ibo  indices)
+           (cond-> (fn? instances) (assoc :instances instances)))
        (throw (ex-info "Unknown shader program"
                        {:program program}))))))
 

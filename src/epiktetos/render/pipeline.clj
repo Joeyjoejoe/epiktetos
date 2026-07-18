@@ -1,6 +1,7 @@
 (ns epiktetos.render.pipeline
   (:require [epiktetos.registrar :as registrar]
             [epiktetos.shader-input.buffer :as input-buffer]
+            [epiktetos.render.entity :as render-entity]
             [epiktetos.render.step :as rs])
   (:import (org.lwjgl.opengl GL11 GL20 GL30 GL31 GL45)))
 
@@ -63,8 +64,9 @@
 
           (doseq [entity-id entity-ids
                   :let [entity (get entities entity-id)
-                        {:keys [vbo-ids ibo-id ibo-length primitives instances vertex-count]}
-                        entity]]
+                        {:keys [vbo-ids ibo-id ibo-length primitives vertex-count]}
+                        entity
+                        instances (render-entity/draw-count entity db)]]
 
             (update-inputs! :step/entity entity)
 
@@ -76,12 +78,14 @@
             (when ibo-id
               (GL45/glVertexArrayElementBuffer vao-id ibo-id)
               (if instances
-                (GL31/glDrawElementsInstanced primitives ibo-length GL11/GL_UNSIGNED_INT 0 instances)
+                (when (pos? instances)
+                  (GL31/glDrawElementsInstanced primitives ibo-length GL11/GL_UNSIGNED_INT 0 (int instances)))
                 (GL11/glDrawElements primitives ibo-length GL11/GL_UNSIGNED_INT 0)))
 
             (when-not ibo-id
               (if instances
-                (GL31/glDrawArraysInstanced primitives 0 vertex-count instances)
+                (when (pos? instances)
+                  (GL31/glDrawArraysInstanced primitives 0 vertex-count (int instances)))
                 (GL11/glDrawArrays primitives 0 vertex-count)))
 
 
