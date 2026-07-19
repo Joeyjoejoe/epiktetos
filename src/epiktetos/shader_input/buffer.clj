@@ -4,7 +4,7 @@
             [epiktetos.shader-input.data :as data]
             [epiktetos.shader-input.types :as types])
   (:import (org.lwjgl BufferUtils)
-           (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL31 GL42 GL43)))
+           (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL31 GL41 GL42 GL43)))
 
 (defonce ^:private RESOURCE-BINDING-MAX
   {:ubo            GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
@@ -33,17 +33,28 @@
    with :alloc and its registered binding point otherwise. Throws on a
    conflicting explicit binding."
   [program-input]
-  (let [{:keys [buffer-binding varname]} program-input]
+  (let [{:keys [buffer-binding varname]} program-input
+        {:keys [binding-point resource]} (registrar/lookup-program-input varname)]
+    (cond
+      (= :uniform resource)
+      (throw (ex-info "Block name already registered as a plain uniform"
+                      {:program  (:program program-input)
+                       :resource varname}))
 
-    (if-let [{:keys [binding-point]} (registrar/lookup-program-input varname)]
-      (cond
-        (= buffer-binding 0)             (assoc program-input :alloc :registrar :buffer-binding binding-point)
-        (= buffer-binding binding-point) (assoc program-input :alloc :valid)
-        :else (throw (ex-info "Binding conflict"
-                              {:program (:program program-input)
-                               :resource varname
-                               :cause (str varname " can't be bound to " buffer-binding ", already registered at binding point " binding-point ".")})))
-      program-input)))
+      (nil? binding-point)
+      program-input
+
+      (= buffer-binding 0)
+      (assoc program-input :alloc :registrar :buffer-binding binding-point)
+
+      (= buffer-binding binding-point)
+      (assoc program-input :alloc :valid)
+
+      :else
+      (throw (ex-info "Binding conflict"
+                      {:program (:program program-input)
+                       :resource varname
+                       :cause (str varname " can't be bound to " buffer-binding ", already registered at binding point " binding-point ".")})))))
 
 (defn- allocate-known-bindings
   "Allocates registered binding points across program inputs.
@@ -131,10 +142,10 @@
   {:ubo  GL31/GL_UNIFORM_BUFFER
    :ssbo GL43/GL_SHADER_STORAGE_BUFFER})
 
-(defn- forget-input-value!
+(defn forget-input-value!
   "Drops the cached last-written value of an input, so the next
-   update writes its (recreated, zeroed) buffer again.
-   varname - string, block variable name
+   update writes its (recreated or relinked) target again.
+   varname - string, input variable name
    Returns nil."
   [varname]
   (swap! registrar/render-state
@@ -248,8 +259,9 @@
    Returns nil."
   [varname]
   (when-let [existing (registrar/lookup-program-input varname)]
-    (let [{:keys [resource schema binding-point buffer-data-size]} existing
-          capacity (block-capacity resource schema varname)]
+    (when (BLOCK-BUFFER-TARGET (:resource existing))
+      (let [{:keys [resource schema binding-point buffer-data-size]} existing
+            capacity (block-capacity resource schema varname)]
       (when (not= capacity (:capacity existing))
         (let [schema    (types/set-capacity schema capacity)
               size      (block-buffer-size schema buffer-data-size capacity)
@@ -263,7 +275,7 @@
                    :buffer-binding binding-point
                    :buffer-id      buffer-id
                    :schema         schema
-                   :capacity       capacity))))))
+                   :capacity       capacity)))))))
   nil)
 
 (defn inputs-by-step
@@ -276,7 +288,114 @@
              {}
              input-registry))
 
-(defn- update-input!
+(defn- unchanged-uniform-value?
+  "True when a plain uniform handler output equals the last written
+   value: identical for cached structures, member-per-member for
+   maps, by value for numbers and booleans.
+   prev  - last written value, or nil
+   value - handler output"
+  [prev value]
+  (or (identical? prev value)
+      (and (some? prev)
+           (or (number? value) (boolean? value))
+           (= prev value))
+      (and (map? prev) (map? value)
+           (unchanged-value? prev value))))
+
+(defn- write-uniform-value!
+  "Writes a validated plain uniform value to a program, at the
+   locations of its schema.
+   program-id - int, GL program id
+   schema     - map, uniform schema node (see types/uniforms->schema)
+   value      - the validated handler value
+   Returns nil."
+  [program-id schema value]
+  (case (:kind schema)
+    :scalar
+    (let [{:keys [integer? double?]} (:type schema)
+          location (:location schema)
+          value    (if (boolean? value) (if value 1 0) value)]
+      (cond
+        double?  (GL41/glProgramUniform1d program-id location (double value))
+        integer? (GL41/glProgramUniform1i program-id location (int value))
+        :else    (GL41/glProgramUniform1f program-id location (float value))))
+
+    :vector
+    (let [{:keys [integer? double? size]} (:type schema)
+          location (:location schema)
+          scalars  (mapv #(if (boolean? %) (if % 1 0) %) value)]
+      (cond
+        double?
+        (let [array (double-array scalars)]
+          (case (int size)
+            2 (GL41/glProgramUniform2dv program-id location array)
+            3 (GL41/glProgramUniform3dv program-id location array)
+            4 (GL41/glProgramUniform4dv program-id location array)))
+
+        integer?
+        (let [array (int-array scalars)]
+          (case (int size)
+            2 (GL41/glProgramUniform2iv program-id location array)
+            3 (GL41/glProgramUniform3iv program-id location array)
+            4 (GL41/glProgramUniform4iv program-id location array)))
+
+        :else
+        (let [array (float-array (map float scalars))]
+          (case (int size)
+            2 (GL41/glProgramUniform2fv program-id location array)
+            3 (GL41/glProgramUniform3fv program-id location array)
+            4 (GL41/glProgramUniform4fv program-id location array)))))
+
+    :matrix
+    (let [{:keys [glsl-name]} (:type schema)
+          location (:location schema)
+          array    (float-array (map float value))]
+      (case glsl-name
+        :mat2 (GL41/glProgramUniformMatrix2fv program-id location false array)
+        :mat3 (GL41/glProgramUniformMatrix3fv program-id location false array)
+        :mat4 (GL41/glProgramUniformMatrix4fv program-id location false array)
+        (throw (ex-info "Unsupported plain uniform matrix type"
+                        {:glsl-name glsl-name}))))
+
+    :struct
+    (doseq [[fname fschema] (:fields schema)]
+      (write-uniform-value! program-id fschema (get value fname)))
+
+    :array
+    (doseq [[element-schema element] (map vector (:elements schema) value)]
+      (write-uniform-value! program-id element-schema element)))
+  nil)
+
+(defn- update-uniform!
+  "Executes one plain uniform handler and writes its output to every
+   program declaring the uniform. The write is skipped when the
+   output equals the last written value; the cache is dropped when a
+   declaring program is (re)registered, so relinked programs are
+   rewritten. Validation runs before any write: invalid data throws
+   with the input varname added.
+   db            - map, application state of the current frame
+   program-input - map, registered uniform with :shape and :programs
+   input         - map, input definition with :handler
+   step-value    - the current step value, passed to the handler
+   Returns nil."
+  [db program-input input step-value]
+  (let [{:keys [varname handler]} input
+        value (handler db step-value)
+        prev  (get-in @registrar/render-state
+                      [::registrar/input-values varname])]
+    (when-not (unchanged-uniform-value? prev value)
+      (try
+        (data/validate-uniform (:shape program-input) value)
+        (catch clojure.lang.ExceptionInfo e
+          (throw (ex-info (ex-message e)
+                          (assoc (ex-data e) :varname varname)))))
+      (doseq [[_ {:keys [program-id schema]}] (:programs program-input)]
+        (write-uniform-value! program-id schema value))
+      (swap! registrar/render-state
+             assoc-in [::registrar/input-values varname] value))
+    nil))
+
+(defn- update-block!
   "Executes one input handler and writes its output to the block
    buffer. The write is skipped when the output is member-per-member
    identical to the last written value (see unchanged-value?); the
@@ -305,6 +424,20 @@
       (swap! registrar/render-state
              assoc-in [::registrar/input-values varname] value))
     nil))
+
+(defn- update-input!
+  "Executes one input handler and writes its output to its GPU
+   target: the block buffer for :ubo and :ssbo inputs, the uniform
+   locations of every declaring program for :uniform inputs.
+   db            - map, application state of the current frame
+   program-input - map, registered program input
+   input         - map, input definition with :handler
+   step-value    - the current step value, passed to the handler
+   Returns nil."
+  [db program-input input step-value]
+  (if (= :uniform (:resource program-input))
+    (update-uniform! db program-input input step-value)
+    (update-block! db program-input input step-value)))
 
 (defn update-inputs!
   "Executes the input handlers registered on a render step whose

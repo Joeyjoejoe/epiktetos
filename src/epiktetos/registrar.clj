@@ -54,6 +54,38 @@
   [varname]
   (get-in @registry [::input-registry varname]))
 
+(defn register-program-uniform!
+  "Registers the program side of a plain uniform, merging the
+   program's fan-out target into the entry shared by every program
+   declaring the name.
+   varname   - string, uniform name
+   program-k - keyword, program id in the registry
+   target    - map with :program-id, :schema and :shape
+   Returns the updated registry value."
+  [varname program-k target]
+  (swap! registry update-in [::opengl-registry :program-inputs varname]
+         (fn [entry]
+           (-> (or entry {:varname  varname
+                          :resource :uniform
+                          :shape    (:shape target)})
+               (assoc-in [:programs program-k] (dissoc target :shape))))))
+
+(defn forget-program-uniforms!
+  "Removes a program from the fan-out targets of every registered
+   plain uniform, before its re-introspection.
+   program-k - keyword, program id in the registry
+   Returns the updated registry value."
+  [program-k]
+  (swap! registry update-in [::opengl-registry :program-inputs]
+         (fn [inputs]
+           (if inputs
+             (update-vals inputs
+                          (fn [entry]
+                            (if (= :uniform (:resource entry))
+                              (update entry :programs dissoc program-k)
+                              entry)))
+             inputs))))
+
 (defn register-program-input!
   "Registers the program side of a shader input.
    resource      - keyword, e.g. :ubo, :ssbo

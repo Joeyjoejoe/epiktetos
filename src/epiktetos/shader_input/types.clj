@@ -141,6 +141,50 @@
     (assoc-in schema [fname :capacity] capacity)
     schema))
 
+(defn- uniform-schema
+  "Builds the schema of an introspected default-block uniform: its
+   GLSL type schema at its location, or an array of it expanded from
+   :array-size (array elements occupy consecutive locations).
+   uniform - map, introspected uniform properties
+   Returns a schema map."
+  [uniform]
+  (let [{:keys [array-size location type]} uniform
+        leaf {:kind (glsl-type-kind type) :type type :location location}]
+    (if (< 1 array-size)
+      {:kind     :array
+       :count    array-size
+       :elements (mapv #(assoc leaf :location (+ location %))
+                       (range array-size))}
+      leaf)))
+
+(defn uniforms->schema
+  "Builds a schema tree for the plain uniforms of one program.
+   uniforms - coll of maps, introspected default-block uniforms
+   Returns a map {uniform-name schema} with the same node kinds as
+   members->schema, carrying :location on leaves instead of :offset."
+  [uniforms]
+  (-> (reduce (fn [tree uniform]
+                (assoc-in tree (member-path uniform) (uniform-schema uniform)))
+              {}
+              uniforms)
+      (update-vals finalize-schema)))
+
+(defn uniform-shape
+  "Location-free view of a uniform schema, used to compare the
+   declarations of a uniform name across programs.
+   schema - map, uniform schema node
+   Returns the schema with locations removed."
+  [schema]
+  (case (:kind schema)
+    (:scalar :vector :matrix)
+    (dissoc schema :location)
+
+    :struct
+    (update schema :fields update-vals uniform-shape)
+
+    :array
+    (update schema :elements #(mapv uniform-shape %))))
+
 (defn members->schema
   "Builds a recursive block schema from introspected block members.
    block-name - string, GLSL block variable name

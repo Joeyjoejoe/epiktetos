@@ -39,6 +39,7 @@
                     attribute/setup!
                     input/setup-ubos!
                     input/setup-ssbos!
+                    (input/setup-uniforms! prog-k)
                     (assoc :dirty layout-changed?))]
 
     (when old-prog

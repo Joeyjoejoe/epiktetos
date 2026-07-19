@@ -115,6 +115,15 @@
   [schema value]
   (validate-value {:kind :struct :fields schema} [] value))
 
+(defn validate-uniform
+  "Validates a plain uniform handler output against its schema node.
+   Throws ex-info with :path and :error on the first invalid value.
+   schema - map, uniform schema node (see types/uniforms->schema)
+   value  - the handler return value
+   Returns nil when value is safe to write to the uniform locations."
+  [schema value]
+  (validate-value schema [] value))
+
 (defn- shift-offsets
   "Shifts every absolute offset of a schema by delta bytes.
    schema - map, schema

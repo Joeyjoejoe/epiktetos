@@ -1,8 +1,10 @@
 (ns epiktetos.shader-input.registration
-  (:require [epiktetos.opengl.introspection :as introspect]
+  (:require [clojure.string :as string]
+            [epiktetos.opengl.introspection :as introspect]
             [epiktetos.registrar :as registrar]
             [epiktetos.render.step :as render-step]
-            [epiktetos.shader-input.buffer :as buffer])
+            [epiktetos.shader-input.buffer :as buffer]
+            [epiktetos.shader-input.types :as types])
   (:import (org.lwjgl.opengl GL31 GL43)))
 
 (defn- setup-block-bindings!
@@ -46,6 +48,57 @@
                          (fn [program-id idx binding-point]
                            (GL43/glShaderStorageBlockBinding program-id idx binding-point))
                          #(registrar/register-program-input! :ssbo %)))
+
+(defn- plain-uniform?
+  "True for an introspected uniform belonging to the default block,
+   of a transparent type: not a block member, not a built-in, not an
+   opaque type (samplers and images belong to the texture spec).
+   uniform - map, introspected uniform properties"
+  [uniform]
+  (and (= -1 (:block-index uniform))
+       (some? (:type uniform))
+       (not (string/starts-with? (:varname uniform) "gl_"))))
+
+(defn setup-uniforms!
+  "Introspects the plain uniforms of a program and registers their
+   fan-out targets: GL program id and location schema per uniform
+   name, shared with every other program declaring the name. The
+   written-value cache of each uniform is dropped, so relinked
+   programs are rewritten at the next step execution. Throws when a
+   name is already registered as a block input or with a different
+   shape.
+   program   - program map with :id
+   program-k - keyword, program id in the registry
+   Returns program with uniform varnames added to :inputs."
+  [program program-k]
+  (registrar/forget-program-uniforms! program-k)
+  (let [program-id (:id program)
+        schema     (->> (introspect/resource-properties program-id
+                                                        ::introspect/uniform)
+                        (filter plain-uniform?)
+                        types/uniforms->schema)]
+    (doseq [[varname node] schema]
+      (let [shape    (types/uniform-shape node)
+            existing (registrar/lookup-program-input varname)]
+        (when (and existing (not= :uniform (:resource existing)))
+          (throw (ex-info "Uniform name already registered as a block"
+                          {:varname    varname
+                           :resource   (:resource existing)
+                           :in-program program-id})))
+        (when (and existing (not= shape (:shape existing)))
+          (throw (ex-info "Uniform shape mismatch"
+                          {:varname      varname
+                           :registered   (:shape existing)
+                           :introspected shape
+                           :in-program   program-id})))
+        (registrar/register-program-uniform! varname program-k
+                                             {:program-id program-id
+                                              :schema     node
+                                              :shape      shape})
+        (buffer/forget-input-value! varname)
+        (when-not (registrar/lookup-input varname)
+          (println "[epiktetos] No input registered for uniform" varname))))
+    (update program :inputs into (keys schema))))
 
 (defn- assert-known-step!
   "Validates that step is a core render step or a custom step already
