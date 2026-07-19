@@ -28,6 +28,7 @@
    :hint.window/resizable          GLFW/GLFW_RESIZABLE
    :hint.window/visible            GLFW/GLFW_VISIBLE
    :hint.window/samples            GLFW/GLFW_SAMPLES
+   :hint.window/srgb-capable       GLFW/GLFW_SRGB_CAPABLE
    :hint.context/version.maj       GLFW/GLFW_CONTEXT_VERSION_MAJOR
    :hint.context/version.min       GLFW/GLFW_CONTEXT_VERSION_MINOR
    :hint.context/gl.profile        GLFW/GLFW_OPENGL_PROFILE
@@ -53,5 +54,6 @@
         [:hint.window/resizable   :hint.context/gl.forward-compat
          :hint.window/visible     :hint.context/version.maj
          :hint.context/gl.profile :hint.context/version.min
-         :hint.window/samples     :hint.window/gl.debug-context]
+         :hint.window/samples     :hint.window/gl.debug-context
+         :hint.window/srgb-capable]
         :hint.type/integer)))

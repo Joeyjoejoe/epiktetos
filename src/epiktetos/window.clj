@@ -6,7 +6,7 @@
             [epiktetos.lang.glfw :as glfw])
   (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback)
            (org.lwjgl.system MemoryUtil)
-           (org.lwjgl.opengl GL GL11 GL13 GL20 GL32 GL43 GLDebugMessageCallback)))
+           (org.lwjgl.opengl GL GL11 GL13 GL20 GL30 GL32 GL43 GLDebugMessageCallback)))
 
 
 (defn get-size
@@ -176,6 +176,9 @@
 
   ;; MSAA
   (GL11/glEnable GL13/GL_MULTISAMPLE)
+
+  ;; Gamma-correct output (hardware conversion, no performance cost)
+  (GL11/glEnable GL30/GL_FRAMEBUFFER_SRGB)
 
   w)
 
