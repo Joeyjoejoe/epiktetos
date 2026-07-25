@@ -33,11 +33,16 @@
   (when-not (id PLACEHOLDER-EVENTS)
     (println "event not registered" id)))
 
-(defn dispatch [event]
-  (let [id (get-id event)]
-    (if (get-handler id)
-      (swap! queue conj event)
-      (log-missing-event! id))))
+(defn dispatch
+  "Queue an event for the next simulation step. The registry is not
+  inspected: an event whose id has no handler yet is queued all the
+  same, and reported by execute at consumption time — so a handler
+  registered between the dispatch and the consumption works, and top
+  level user declarations stack up freely before the engine starts.
+  event - vector, [id & args]
+  Returns the updated queue"
+  [event]
+  (swap! queue conj event))
 
 (defn register
   ([id handler]

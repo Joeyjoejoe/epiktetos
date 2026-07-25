@@ -16,18 +16,6 @@
 
 (def db app-db/db)
 
-(defn run
-  "Run the engine.
-  - startup-events is a vector of events to dispatch
-  - config-path is a path to an edn configuration file"
-  ([]
-   (run startup/DEFAULT_CONFIG_PATH))
-  ([config-path]
-   (-> config-path
-       startup/init-systems
-       (assoc-in [:gl/engine :config-path] config-path)
-       startup/start-engine!)))
-
 (defn reg-cofx
   "A cofx is a function that takes a coeffects map and
   an optional parameter, and return a modified version
@@ -119,102 +107,127 @@
    (update fx ::fx/reg-texture conj [id spec])))
 
 
-(reg-event ::event/reg-p
-           (fn [cofx fx]
-             (let [[id prog] (get-in cofx [:event 1])]
-               (reg-p fx id prog))))
-
-(reg-event ::event/reg-input
-           (fn [cofx fx]
-             (let [[varname handler options] (get-in cofx [:event 1])]
-               (reg-input fx varname handler options))))
-
-(reg-event ::event/reg-texture
-           (fn [cofx fx]
-             (let [[id spec] (get-in cofx [:event 1])]
-               (reg-texture fx id spec))))
-
-(reg-event ::entity/render
-           (fn [cofx fx]
-             (let [[id render-params] (get-in cofx [:event 1])]
-               (render fx id render-params))))
-
-(reg-event ::entity/delete
-           (fn [cofx fx]
-             (let [id (get-in cofx [:event 1])]
-               (delete fx id))))
-
-(reg-cofx :inject-system
-          (fn [coeffects]
-            (assoc coeffects :system (::registrar/system-registry @registrar/registry))))
-
-(reg-cofx :inject-db
-          (fn [coeffects]
-            (assoc coeffects :db @app-db/db)))
-
-(reg-cofx :error-logger
-          (fn [coeffects]
-            (when-let [errors (:errors coeffects)]
-              (doseq [err errors] (pprint err)))
-            coeffects))
-
-(reg-fx ::fx/dispatch
-        (fn dispatch-event!
-          [event-coll]
-            (doseq [e event-coll]
-              (event/dispatch e))))
-
-(reg-fx ::fx/reg-p
-        (fn [prog-coll]
-          (doseq [[id prog-map] prog-coll]
-            (prog/setup! id prog-map))))
-
-(reg-fx ::fx/reg-input
-        (fn [input-coll]
-          (doseq [[varname handler options] input-coll]
-            (shader-input/register-input-handler! varname handler options))))
-
-(reg-fx ::fx/reg-texture
-        (fn [texture-coll]
-          (doseq [[id spec] texture-coll]
-            (texture/register-texture! id spec))))
-
-(reg-fx :db
-        (fn update-db! [new-db]
-          (reset! app-db/db new-db)))
-
-(reg-fx ::fx/render
-        (fn render-entity! [entity-coll]
-          (doseq [[id render-params] entity-coll]
-            (entity/add-entity! id render-params))))
-
-(reg-fx ::fx/delete
-        (fn delete-entity! [entity-ids]
-          (doseq [id entity-ids]
-            (entity/delete-entity! id))))
-
 (defn reg-steps!
   [& steps]
   (dispatch ::render-step/register steps))
 
-(reg-event ::render-step/register
-           (fn [cofx fx]
-             (let [step-coll (get-in cofx [:event 1])]
-               (assoc fx ::fx/reg-steps step-coll))))
+(defn install-core!
+  "Register the engine's own events, coeffects and effects.
 
-;; NOTE This will invalidate every single sort-key in
-;; the render-state when custom-step-coll is different
-;; from previous call.
-;; This won't happen in production, but in development,
-;; ns reloads are frequent. Most of the time custom-step-coll
-;; will remains the same.
-;; TODO For the rare occasion when an actuel step is added
-;; or modified, we should recompute all sort-keys. To detect
-;; such event, we could hash steps vector and compare them, which
-;; induce the need to prevent anonymous functions in step vector,
-;; for the hash algorithm and comparison to be effective.
-(reg-fx ::fx/reg-steps
-        (fn register-cutom-steps! [custom-step-coll]
-          (->> custom-step-coll
-               (apply render-step/build-render-steps)
-               (swap! registrar/render-state merge))))
+  Called by run before the loop consumes anything, so a restarted
+  engine — the halt empties the registry — always runs on its complete
+  core state, whatever the previous session left behind. Dispatch
+  queues events without inspecting the registry, so user declarations
+  made at load time wait in the queue until this has run.
+
+  Returns nil"
+  []
+  (reg-event ::event/reg-p
+             (fn [cofx fx]
+               (let [[id prog] (get-in cofx [:event 1])]
+                 (reg-p fx id prog))))
+
+  (reg-event ::event/reg-input
+             (fn [cofx fx]
+               (let [[varname handler options] (get-in cofx [:event 1])]
+                 (reg-input fx varname handler options))))
+
+  (reg-event ::event/reg-texture
+             (fn [cofx fx]
+               (let [[id spec] (get-in cofx [:event 1])]
+                 (reg-texture fx id spec))))
+
+  (reg-event ::entity/render
+             (fn [cofx fx]
+               (let [[id render-params] (get-in cofx [:event 1])]
+                 (render fx id render-params))))
+
+  (reg-event ::entity/delete
+             (fn [cofx fx]
+               (let [id (get-in cofx [:event 1])]
+                 (delete fx id))))
+
+  (reg-cofx :inject-system
+            (fn [coeffects]
+              (assoc coeffects :system (::registrar/system-registry @registrar/registry))))
+
+  (reg-cofx :inject-db
+            (fn [coeffects]
+              (assoc coeffects :db @app-db/db)))
+
+  (reg-cofx :error-logger
+            (fn [coeffects]
+              (when-let [errors (:errors coeffects)]
+                (doseq [err errors] (pprint err)))
+              coeffects))
+
+  (reg-fx ::fx/dispatch
+          (fn dispatch-event!
+            [event-coll]
+              (doseq [e event-coll]
+                (event/dispatch e))))
+
+  (reg-fx ::fx/reg-p
+          (fn [prog-coll]
+            (doseq [[id prog-map] prog-coll]
+              (prog/setup! id prog-map))))
+
+  (reg-fx ::fx/reg-input
+          (fn [input-coll]
+            (doseq [[varname handler options] input-coll]
+              (shader-input/register-input-handler! varname handler options))))
+
+  (reg-fx ::fx/reg-texture
+          (fn [texture-coll]
+            (doseq [[id spec] texture-coll]
+              (texture/register-texture! id spec))))
+
+  (reg-fx :db
+          (fn update-db! [new-db]
+            (reset! app-db/db new-db)))
+
+  (reg-fx ::fx/render
+          (fn render-entity! [entity-coll]
+            (doseq [[id render-params] entity-coll]
+              (entity/add-entity! id render-params))))
+
+  (reg-fx ::fx/delete
+          (fn delete-entity! [entity-ids]
+            (doseq [id entity-ids]
+              (entity/delete-entity! id))))
+
+  (reg-event ::render-step/register
+             (fn [cofx fx]
+               (let [step-coll (get-in cofx [:event 1])]
+                 (assoc fx ::fx/reg-steps step-coll))))
+
+  ;; NOTE This will invalidate every single sort-key in
+  ;; the render-state when custom-step-coll is different
+  ;; from previous call.
+  ;; This won't happen in production, but in development,
+  ;; ns reloads are frequent. Most of the time custom-step-coll
+  ;; will remains the same.
+  ;; TODO For the rare occasion when an actuel step is added
+  ;; or modified, we should recompute all sort-keys. To detect
+  ;; such event, we could hash steps vector and compare them, which
+  ;; induce the need to prevent anonymous functions in step vector,
+  ;; for the hash algorithm and comparison to be effective.
+  (reg-fx ::fx/reg-steps
+          (fn register-cutom-steps! [custom-step-coll]
+            (->> custom-step-coll
+                 (apply render-step/build-render-steps)
+                 (swap! registrar/render-state merge))))
+  nil)
+
+(defn run
+  "Run the engine.
+  - startup-events is a vector of events to dispatch
+  - config-path is a path to an edn configuration file"
+  ([]
+   (run startup/DEFAULT_CONFIG_PATH))
+  ([config-path]
+   (install-core!)
+   (-> config-path
+       startup/init-systems
+       (assoc-in [:gl/engine :config-path] config-path)
+       startup/start-engine!)))
