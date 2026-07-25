@@ -3,7 +3,8 @@
   (:import (org.lwjgl.glfw GLFW
                            GLFWKeyCallback
                            GLFWCursorPosCallback
-                           GLFWMouseButtonCallback)))
+                           GLFWMouseButtonCallback
+                           GLFWScrollCallback)))
 
 (defonce KEYBOARD-EVENTS {GLFW/GLFW_PRESS   "press"
                           GLFW/GLFW_RELEASE "release"
@@ -193,7 +194,15 @@
         (when (event/handler? event-id)
           (event/dispatch [event-id]))))))
 
+;; https://www.glfw.org/docs/3.3/group__input.html#gaf656112c33de3efdb587575ae10ad43
+(def scroll-callback
+  (proxy [GLFWScrollCallback] []
+    (invoke [window x y]
+      (when (event/handler? :mouse/scroll)
+        (event/dispatch [:mouse/scroll [x y]])))))
+
 (defn set-callbacks [window]
   (GLFW/glfwSetCursorPosCallback window mouse-callback)
   (GLFW/glfwSetMouseButtonCallback window mouse-button-callback)
+  (GLFW/glfwSetScrollCallback window scroll-callback)
   (GLFW/glfwSetKeyCallback window keyboard-callback))

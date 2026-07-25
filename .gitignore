@@ -12,4 +12,6 @@ pom.xml.asc
 .clj-kondo/
 .lsp/
 .claude/
+ai-exercices/
+ai-spec/
 CLAUDE.md
