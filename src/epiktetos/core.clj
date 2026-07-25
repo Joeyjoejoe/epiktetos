@@ -10,6 +10,7 @@
             [epiktetos.render.step :as render-step]
             [epiktetos.opengl.shader-program :as prog]
             [epiktetos.shader-input.registration :as shader-input]
+            [epiktetos.shader-input.texture :as texture]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
             [epiktetos.window]))
 
@@ -111,6 +112,12 @@
   ([fx varname handler options]
    (update fx ::fx/reg-input conj [varname handler options])))
 
+(defn reg-texture
+  ([id spec]
+   (dispatch ::event/reg-texture [id spec]))
+  ([fx id spec]
+   (update fx ::fx/reg-texture conj [id spec])))
+
 
 (reg-event ::event/reg-p
            (fn [cofx fx]
@@ -121,6 +128,11 @@
            (fn [cofx fx]
              (let [[varname handler options] (get-in cofx [:event 1])]
                (reg-input fx varname handler options))))
+
+(reg-event ::event/reg-texture
+           (fn [cofx fx]
+             (let [[id spec] (get-in cofx [:event 1])]
+               (reg-texture fx id spec))))
 
 (reg-event ::entity/render
            (fn [cofx fx]
@@ -161,6 +173,11 @@
         (fn [input-coll]
           (doseq [[varname handler options] input-coll]
             (shader-input/register-input-handler! varname handler options))))
+
+(reg-fx ::fx/reg-texture
+        (fn [texture-coll]
+          (doseq [[id spec] texture-coll]
+            (texture/register-texture! id spec))))
 
 (reg-fx :db
         (fn update-db! [new-db]

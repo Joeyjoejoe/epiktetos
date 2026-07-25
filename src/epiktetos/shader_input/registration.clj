@@ -4,6 +4,7 @@
             [epiktetos.registrar :as registrar]
             [epiktetos.render.step :as render-step]
             [epiktetos.shader-input.buffer :as buffer]
+            [epiktetos.shader-input.texture :as texture]
             [epiktetos.shader-input.types :as types])
   (:import (org.lwjgl.opengl GL31 GL43)))
 
@@ -49,34 +50,37 @@
                            (GL43/glShaderStorageBlockBinding program-id idx binding-point))
                          #(registrar/register-program-input! :ssbo %)))
 
-(defn- plain-uniform?
+(defn- default-block-uniform?
   "True for an introspected uniform belonging to the default block,
-   of a transparent type: not a block member, not a built-in, not an
-   opaque type (samplers and images belong to the texture spec).
+   built-ins excluded.
    uniform - map, introspected uniform properties"
   [uniform]
   (and (= -1 (:block-index uniform))
-       (some? (:type uniform))
        (not (string/starts-with? (:varname uniform) "gl_"))))
 
 (defn setup-uniforms!
-  "Introspects the plain uniforms of a program and registers their
-   fan-out targets: GL program id and location schema per uniform
-   name, shared with every other program declaring the name. The
-   written-value cache of each uniform is dropped, so relinked
-   programs are rewritten at the next step execution. Throws when a
-   name is already registered as a block input or with a different
-   shape.
+  "Introspects the default-block uniforms of a program and registers
+   their fan-out targets: sampler uniforms become texture inputs
+   (unit allocated, unit index written to the program), transparent
+   uniforms become plain uniform inputs (location schemas shared with
+   every other program declaring the name); other opaque types are
+   skipped. The written-value cache of each plain uniform is dropped,
+   so relinked programs are rewritten at the next step execution.
+   Throws when a name is already registered as another input kind or
+   with a different shape.
    program   - program map with :id
    program-k - keyword, program id in the registry
-   Returns program with uniform varnames added to :inputs."
+   Returns program with uniform and sampler varnames added to :inputs."
   [program program-k]
   (registrar/forget-program-uniforms! program-k)
   (let [program-id (:id program)
-        schema     (->> (introspect/resource-properties program-id
+        uniforms   (->> (introspect/resource-properties program-id
                                                         ::introspect/uniform)
-                        (filter plain-uniform?)
-                        types/uniforms->schema)]
+                        (filter default-block-uniform?))
+        samplers   (filter texture/sampler-kind uniforms)
+        schema     (types/uniforms->schema (filter :type uniforms))]
+    (doseq [sampler samplers]
+      (texture/setup-sampler-uniform! program-id program-k sampler))
     (doseq [[varname node] schema]
       (let [shape    (types/uniform-shape node)
             existing (registrar/lookup-program-input varname)]
@@ -98,7 +102,8 @@
         (buffer/forget-input-value! varname)
         (when-not (registrar/lookup-input varname)
           (println "[epiktetos] No input registered for uniform" varname))))
-    (update program :inputs into (keys schema))))
+    (update program :inputs into (concat (keys schema)
+                                         (map :varname samplers)))))
 
 (defn- assert-known-step!
   "Validates that step is a core render step or a custom step already
@@ -146,6 +151,7 @@
         input (merge options {:varname varname :handler handler :step step})]
     (assert-known-step! varname step)
     (assert-capacity! varname options)
+    (texture/validate-sampler-options varname options)
     (let [registry (registrar/register-input! input)]
       (buffer/ensure-block-capacity! varname)
       registry)))

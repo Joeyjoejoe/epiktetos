@@ -72,7 +72,7 @@
 
 (defn forget-program-uniforms!
   "Removes a program from the fan-out targets of every registered
-   plain uniform, before its re-introspection.
+   plain uniform and texture input, before its re-introspection.
    program-k - keyword, program id in the registry
    Returns the updated registry value."
   [program-k]
@@ -81,10 +81,40 @@
            (if inputs
              (update-vals inputs
                           (fn [entry]
-                            (if (= :uniform (:resource entry))
+                            (if (contains? #{:uniform :texture} (:resource entry))
                               (update entry :programs dissoc program-k)
                               entry)))
              inputs))))
+
+(defn register-program-texture!
+  "Registers the program side of a texture input, merging the
+   program's fan-out target into the entry shared by every program
+   declaring the sampler name.
+   varname   - string, sampler uniform name
+   program-k - keyword, program id in the registry
+   base      - map with :unit and :sampler-type, set at first registration
+   target    - map with :program-id and :location
+   Returns the updated registry value."
+  [varname program-k base target]
+  (swap! registry update-in [::opengl-registry :program-inputs varname]
+         (fn [entry]
+           (-> (or entry (merge {:varname varname :resource :texture} base))
+               (assoc-in [:programs program-k] target)))))
+
+(defn register-texture!
+  "Registers a texture resource under its id.
+   id      - keyword, texture id
+   texture - map with :texture-id, :target, :width, :height, :format,
+             :mips?
+   Returns the updated registry value."
+  [id texture]
+  (swap! registry assoc-in [::opengl-registry :textures id] texture))
+
+(defn lookup-texture
+  "Returns the texture registered under id, or nil.
+   id - keyword, texture id"
+  [id]
+  (get-in @registry [::opengl-registry :textures id]))
 
 (defn register-program-input!
   "Registers the program side of a shader input.

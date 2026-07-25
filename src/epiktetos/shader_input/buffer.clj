@@ -2,6 +2,7 @@
   (:require [epiktetos.opengl.buffer :as gl-buffer]
             [epiktetos.registrar :as registrar]
             [epiktetos.shader-input.data :as data]
+            [epiktetos.shader-input.texture :as texture]
             [epiktetos.shader-input.types :as types])
   (:import (org.lwjgl BufferUtils)
            (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL31 GL41 GL42 GL43)))
@@ -428,15 +429,17 @@
 (defn- update-input!
   "Executes one input handler and writes its output to its GPU
    target: the block buffer for :ubo and :ssbo inputs, the uniform
-   locations of every declaring program for :uniform inputs.
+   locations of every declaring program for :uniform inputs, the
+   texture unit binding for :texture inputs.
    db            - map, application state of the current frame
    program-input - map, registered program input
    input         - map, input definition with :handler
    step-value    - the current step value, passed to the handler
    Returns nil."
   [db program-input input step-value]
-  (if (= :uniform (:resource program-input))
-    (update-uniform! db program-input input step-value)
+  (case (:resource program-input)
+    :uniform (update-uniform! db program-input input step-value)
+    :texture (texture/update-texture-input! db program-input input step-value)
     (update-block! db program-input input step-value)))
 
 (defn update-inputs!

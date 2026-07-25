@@ -54,6 +54,11 @@
    GL40/GL_DOUBLE_MAT4x2        {:base-type GL11/GL_DOUBLE       :size 2 :bytes 64  :total-locations 4 :double? true :glsl-name :dmat4x2}
    GL40/GL_DOUBLE_MAT4x3        {:base-type GL11/GL_DOUBLE       :size 3 :bytes 96  :total-locations 4 :double? true :glsl-name :dmat4x3}})
 
+(def SAMPLER-TYPE
+  "Opaque sampler uniform types supported as texture inputs.
+  - OpenGL type constant int -> {:glsl-name :target}"
+  {GL20/GL_SAMPLER_2D {:glsl-name :sampler2d :target :2d}})
+
 (def TYPE-BY-NAME
   "Reverse index from GLSL type name keyword to OpenGL type constant integer.
   - glsl-name keyword -> int

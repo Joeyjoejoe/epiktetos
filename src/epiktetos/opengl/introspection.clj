@@ -180,7 +180,8 @@
 
 
     (-> props-map
-        (assoc :varname varname :interface-index interface-index :program program-id)
+        (assoc :varname varname :interface-index interface-index :program program-id
+               :type-enum (:type props-map))
         (update :type #(get glsl/TRANSPARENT-TYPE %)))))
 
 
