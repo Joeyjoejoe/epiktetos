@@ -1,16 +1,18 @@
 (ns epiktetos.startup
   (:require [clojure.java.io :as io]
             [integrant.core :as ig]
+            [epiktetos.opengl.shader-attribute :as attribute]
             [epiktetos.opengl.shader-program :as prog]
             [nextjournal.beholder :as beholder]
             [epiktetos.registrar :as registrar]
+            [epiktetos.render.entity :as entity]
             [epiktetos.render.step :as render-step]
-            [epiktetos.texture :as texture]
+            [epiktetos.shader-input.buffer :as input-buffer]
+            [epiktetos.shader-input.texture :as texture]
             [epiktetos.db :as app-db]
             [epiktetos.event :as event]
             [epiktetos.loop :as game-loop])
-  (:import (org.lwjgl.glfw GLFW)
-           (org.lwjgl.opengl GL15)))
+  (:import (org.lwjgl.opengl GL GLCapabilities)))
 
 (defonce DEFAULT_CONFIG_PATH "epiktetos/default-config.edn")
 
@@ -34,13 +36,21 @@
 
 (defn start-engine!
   "Start the engine with a list of user defined
-  events to execute immediately"
+  events to execute immediately.
+
+  Blocks until the loop stops, then halts every system on the loop
+  thread — the only one holding the GL context — so the engine tears
+  its GPU resources down before the window, and its context, are
+  destroyed."
   ([] (start-engine! (init-systems)))
   ([systems]
     (swap! registrar/registry assoc ::registrar/system-registry systems)
     (when-not (::registrar/steps @registrar/render-state)
       (swap! registrar/render-state merge (render-step/build-render-steps)))
-    (game-loop/start systems)))
+    (try
+      (game-loop/start systems)
+      (finally
+        (ig/halt! systems)))))
 
 (defmethod ig/init-key
   :gl/engine
@@ -55,26 +65,33 @@
                                                      hot-reload)
                                      :paths hot-reload}))))
 
+(defn- reset-engine-state!
+  "Reset every engine state container to its initial value: registry,
+  render state, event queue and application db.
+  Returns nil"
+  []
+  (reset! registrar/registry {})
+  (reset! registrar/render-state {})
+  (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
+  (reset! app-db/db {})
+  nil)
+
 (defmethod ig/halt-key!
   :gl/engine
   [_ system]
   (let [{:keys [hot-reload]} system
-        render-state @registrar/render-state]
-
-    ;; Delete ibos and vbos
-    (doseq [[entitiy-id {:keys [ibo-id vbo-ids]}] (::registrar/entities render-state)]
-      (println "Clear entity " entitiy-id)
-      (when ibo-id
-        (println "ibo " ibo-id " deleted...")
-        (GL15/glDeleteBuffers ibo-id))
-      (doseq [vbo-id vbo-ids]
-        (println "vbo " vbo-id " deleted...")
-        (GL15/glDeleteBuffers vbo-id)))
+        registry     @registrar/registry
+        render-state @registrar/render-state
+        ^GLCapabilities no-capabilities nil]
 
     (when hot-reload
       (beholder/stop (:watcher hot-reload)))
 
-    (reset! registrar/registry {})
-    (reset! registrar/render-state {})
-    (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
-    (reset! app-db/db {})))
+    (entity/delete-entities-buffers! render-state)
+    (input-buffer/delete-block-buffers! registry)
+    (texture/delete-textures! registry)
+    (prog/delete-programs! registry)
+    (attribute/delete-vaos! registry)
+
+    (GL/setCapabilities no-capabilities)
+    (reset-engine-state!)))

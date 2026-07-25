@@ -3,7 +3,7 @@
             [epiktetos.render.step :as render-step]
             [epiktetos.opengl.buffer :as buffer]
             [epiktetos.effect :as fx])
-  (:import (org.lwjgl.opengl GL11 GL32 GL40 GL44 GL45)))
+  (:import (org.lwjgl.opengl GL11 GL15 GL32 GL40 GL44 GL45)))
 
 (defonce DRAW-PRIMITIVES
   {:triangles                GL11/GL_TRIANGLES
@@ -144,15 +144,56 @@
     render-state))
 
 (defn add-entity
-  [render-state opengl-registry entity-id render-params]
-  (->> render-params
-       (prep-entity opengl-registry)
-       (reg-entity (delete-entity render-state entity-id) entity-id)))
+  "Register a prepared entity under entity-id, replacing any previous
+  one in :entities and :queue.
+  render-state - map, the render state value
+  entity-id    - keyword, entity id
+  entity       - map, prepared entity (see prep-entity)
+  Returns the updated render state"
+  [render-state entity-id entity]
+  (-> render-state
+      (delete-entity entity-id)
+      (reg-entity entity-id entity)))
+
+(defn delete-buffers!
+  "Delete the GPU buffers owned by an entity: its vertex buffers and,
+  when indexed, its element buffer.
+  entity - map, prepared entity with :vbo-ids and an optional :ibo-id
+  Returns nil"
+  [{:keys [vbo-ids ibo-id]}]
+  (doseq [vbo-id vbo-ids]
+    (GL15/glDeleteBuffers (int vbo-id)))
+  (when ibo-id
+    (GL15/glDeleteBuffers (int ibo-id)))
+  nil)
+
+(defn delete-entities-buffers!
+  "Delete the GPU buffers of every entity of a render state.
+  render-state - map, the render state value
+  Returns nil"
+  [render-state]
+  (run! delete-buffers! (vals (::registrar/entities render-state)))
+  nil)
 
 (defn add-entity!
+  "Prepare an entity and register it under entity-id, deleting the GPU
+  buffers of the entity it replaces. Buffers are created before the
+  state transition, so a contended swap never leaks them.
+  entity-id     - keyword, entity id
+  render-params - map, user render params (see prep-entity)
+  Returns nil"
   [entity-id render-params]
-  (swap! registrar/render-state add-entity (::registrar/opengl-registry @registrar/registry) entity-id render-params))
+  (let [entity     (prep-entity (::registrar/opengl-registry @registrar/registry)
+                                render-params)
+        [previous] (swap-vals! registrar/render-state add-entity entity-id entity)]
+    (some-> (get-in previous [::registrar/entities entity-id]) delete-buffers!)
+    nil))
 
 (defn delete-entity!
+  "Remove an entity from the render state and delete its GPU buffers.
+  entity-id - keyword, entity id
+  Returns nil"
   [entity-id]
-  (swap! registrar/render-state delete-entity entity-id))
+  (let [[previous] (swap-vals! registrar/render-state delete-entity entity-id)]
+    (some-> (get-in previous [::registrar/entities entity-id]) delete-buffers!)
+    nil))

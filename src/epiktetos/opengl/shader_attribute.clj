@@ -3,7 +3,7 @@
             [epiktetos.opengl.buffer :as buffer]
             [epiktetos.opengl.introspection :as introspect]
             [epiktetos.utils.hash :as hash])
-  (:import (org.lwjgl.opengl GL45)))
+  (:import (org.lwjgl.opengl GL30 GL45)))
 
 (defn- assert-packing!
   "Validates the :packing map of a vertex-buffer-map against the
@@ -138,3 +138,23 @@
                                         :layout-hash layout-hash
                                         :vbos        vertex-buffers})
         (assoc prog-map :vao-id vao-id)))))
+
+(defn delete-vao!
+  "Delete a VAO and unregister it, unless a registered program still
+   references it.
+   vao-id - int, GL vertex array id
+   Returns nil."
+  [vao-id]
+  (when-not (registrar/vao-referenced? vao-id)
+    (GL30/glDeleteVertexArrays (int vao-id))
+    (registrar/unregister-vao! vao-id))
+  nil)
+
+(defn delete-vaos!
+  "Delete every registered VAO.
+   registry - map, the registry value
+   Returns nil."
+  [registry]
+  (doseq [vao-id (keys (get-in registry [::registrar/opengl-registry :vaos]))]
+    (GL30/glDeleteVertexArrays (int vao-id)))
+  nil)

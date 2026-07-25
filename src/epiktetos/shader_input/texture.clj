@@ -220,29 +220,51 @@
     (free!)
     texture))
 
-(def ^:private FALLBACK
-  "Built-in fallback texture, bound whenever a texture input cannot be
-   resolved: an unmistakable magenta and black checkerboard."
-  (delay
-    (let [size   8
-          pixels (BufferUtils/createByteBuffer (* size size 4))]
-      (doseq [y (range size)
-              x (range size)]
-        (let [magenta? (even? (+ x y))]
-          (.put pixels (unchecked-byte (if magenta? 255 0)))
-          (.put pixels (unchecked-byte 0))
-          (.put pixels (unchecked-byte (if magenta? 255 0)))
-          (.put pixels (unchecked-byte 255))))
-      (.flip pixels)
-      (let [texture (GL45/glCreateTextures GL11/GL_TEXTURE_2D)]
-        (GL45/glTextureStorage2D texture 1 GL11/GL_RGBA8 size size)
-        (GL45/glTextureSubImage2D texture 0 0 0 size size
-                                  GL11/GL_RGBA GL11/GL_UNSIGNED_BYTE
-                                  ^java.nio.ByteBuffer pixels)
-        texture))))
+(defn- ensure-fallback-texture!
+  "Returns the built-in fallback texture, bound whenever a texture
+   input cannot be resolved: an unmistakable magenta and black
+   checkerboard. Created and registered on first use, so it always
+   belongs to the GL context of the running engine.
+   Returns the GL texture id."
+  []
+  (or (registrar/lookup-fallback-texture)
+      (let [size   8
+            pixels (BufferUtils/createByteBuffer (* size size 4))]
+        (doseq [y (range size)
+                x (range size)]
+          (let [magenta? (even? (+ x y))]
+            (.put pixels (unchecked-byte (if magenta? 255 0)))
+            (.put pixels (unchecked-byte 0))
+            (.put pixels (unchecked-byte (if magenta? 255 0)))
+            (.put pixels (unchecked-byte 255))))
+        (.flip pixels)
+        (let [texture (GL45/glCreateTextures GL11/GL_TEXTURE_2D)]
+          (GL45/glTextureStorage2D texture 1 GL11/GL_RGBA8 size size)
+          (GL45/glTextureSubImage2D texture 0 0 0 size size
+                                    GL11/GL_RGBA GL11/GL_UNSIGNED_BYTE
+                                    ^java.nio.ByteBuffer pixels)
+          (registrar/register-fallback-texture! texture)
+          texture))))
 
-(defonce ^:private sampler-cache (atom {}))
-(defonce ^:private warned-missing (atom #{}))
+(defn- warned-missing?
+  "True when the missing texture id of an input has already been
+   warned about, so the warning fires once per input and id.
+   varname - string, input variable name
+   id      - keyword, texture id returned by the handler"
+  [varname id]
+  (contains? (::registrar/warned-textures @registrar/render-state #{})
+             [varname id]))
+
+(defn- warn-missing!
+  "Records that the missing texture id of an input has been warned
+   about.
+   varname - string, input variable name
+   id      - keyword, texture id returned by the handler
+   Returns nil."
+  [varname id]
+  (swap! registrar/render-state
+         update ::registrar/warned-textures (fnil conj #{}) [varname id])
+  nil)
 
 (defn- sampler-object!
   "Returns the GL sampler object for a texture input's :sampler/*
@@ -256,7 +278,7 @@
                        (if mips? :linear-mipmap-linear :linear))
         key        (assoc (select-keys options SAMPLER-OPTION-KEYS)
                           :sampler/min-filter min-filter)]
-    (or (@sampler-cache key)
+    (or (registrar/lookup-sampler key)
         (let [sampler (GL33/glGenSamplers)
               {:sampler/keys [mag-filter wrap border-color anisotropy
                               min-lod max-lod lod-bias]} key
@@ -281,7 +303,7 @@
             (GL33/glSamplerParameterf sampler GL12/GL_TEXTURE_MAX_LOD (float max-lod)))
           (when lod-bias
             (GL33/glSamplerParameterf sampler GL14/GL_TEXTURE_LOD_BIAS (float lod-bias)))
-          (swap! sampler-cache assoc key sampler)
+          (registrar/register-sampler! key sampler)
           sampler))))
 
 (defn- allocate-unit!
@@ -325,7 +347,7 @@
                                             :location   location})
       (GL41/glProgramUniform1i program-id location unit)
       (when-not existing
-        (GL45/glBindTextureUnit unit @FALLBACK))
+        (GL45/glBindTextureUnit unit (ensure-fallback-texture!)))
       (when-not (registrar/lookup-input varname)
         (println "[epiktetos] No input registered for sampler" varname))))
   nil)
@@ -342,12 +364,12 @@
   (if-let [{:keys [texture-id mips?]} (registrar/lookup-texture id)]
     (do (GL45/glBindTextureUnit unit texture-id)
         (GL33/glBindSampler unit (sampler-object! input mips?)))
-    (do (GL45/glBindTextureUnit unit @FALLBACK)
+    (do (GL45/glBindTextureUnit unit (ensure-fallback-texture!))
         (GL33/glBindSampler unit (sampler-object! input false))
-        (when-not (@warned-missing [(:varname input) id])
+        (when-not (warned-missing? (:varname input) id)
           (println "[epiktetos] No texture registered under" id
                    "for sampler" (:varname input) "- fallback bound")
-          (swap! warned-missing conj [(:varname input) id]))))
+          (warn-missing! (:varname input) id))))
   nil)
 
 (defn update-texture-input!
@@ -399,6 +421,24 @@
     (swap! registrar/render-state update ::registrar/input-values
            (fn [values]
              (into {} (remove (fn [[_ v]] (= v id))) values)))
-    (swap! warned-missing
-           (fn [warned] (set (remove (fn [[_ tid]] (= tid id)) warned))))
+    (swap! registrar/render-state update ::registrar/warned-textures
+           (fn [warned]
+             (into #{} (remove (fn [[_ tid]] (= tid id))) warned)))
     nil))
+
+(defn delete-textures!
+  "Deletes every GL texture and sampler object owned by the engine:
+   the textures registered with reg-texture, the deduplicated sampler
+   objects of the texture inputs, and the fallback checkerboard.
+   registry - map, the registry value
+   Returns nil."
+  [registry]
+  (let [{:keys [textures samplers fallback-texture]}
+        (::registrar/opengl-registry registry)]
+    (doseq [{:keys [texture-id]} (vals textures)]
+      (GL11/glDeleteTextures (int texture-id)))
+    (doseq [sampler-id (vals samplers)]
+      (GL33/glDeleteSamplers (int sampler-id)))
+    (when fallback-texture
+      (GL11/glDeleteTextures (int fallback-texture))))
+  nil)

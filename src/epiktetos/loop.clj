@@ -1,8 +1,6 @@
 (ns epiktetos.loop
   (:require [epiktetos.event :as event]
             [epiktetos.db :as app-db]
-            [epiktetos.registrar :as registrar]
-            [integrant.core :as ig]
             [epiktetos.render.pipeline :as render])
 
   (:import (org.lwjgl.glfw GLFW))
@@ -70,8 +68,4 @@
              (update :iter inc)
              (recur lag)))))
 
-   ;; Stop window system
-   (-> (::registrar/system-registry @registrar/registry)
-       (select-keys [:glfw/window])
-       ig/halt!)
    :engine/stop)

@@ -47,4 +47,17 @@
 
     (registrar/register-program prog-k program)
 
+    (when-let [old-vao-id (:vao-id old-prog)]
+      (when-not (= old-vao-id (:vao-id program))
+        (attribute/delete-vao! old-vao-id)))
+
     program))
+
+(defn delete-programs!
+  "Delete the GL program of every registered shader program.
+   registry - map, the registry value
+   Returns nil."
+  [registry]
+  (doseq [{:keys [id]} (vals (get-in registry [::registrar/opengl-registry :programs]))]
+    (GL20/glDeleteProgram id))
+  nil)

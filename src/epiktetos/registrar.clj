@@ -19,6 +19,22 @@
   [hash-k vao]
   (swap! registry assoc-in [::opengl-registry :vaos hash-k] vao))
 
+(defn unregister-vao!
+  "Removes a VAO from the registry.
+   vao-id - int, GL vertex array id
+   Returns the updated registry value."
+  [vao-id]
+  (swap! registry update-in [::opengl-registry :vaos] dissoc vao-id))
+
+(defn vao-referenced?
+  "True when at least one registered program uses the VAO.
+   vao-id - int, GL vertex array id"
+  [vao-id]
+  (->> (get-in @registry [::opengl-registry :programs])
+       vals
+       (some #(= vao-id (:vao-id %)))
+       boolean))
+
 (defn register-program
   [hash-k program]
   (swap! registry assoc-in [::opengl-registry :programs hash-k] program))
@@ -115,6 +131,36 @@
    id - keyword, texture id"
   [id]
   (get-in @registry [::opengl-registry :textures id]))
+
+(defn register-fallback-texture!
+  "Registers the engine's fallback texture, bound whenever a texture
+   input cannot be resolved.
+   texture-id - int, GL texture id
+   Returns the updated registry value."
+  [texture-id]
+  (swap! registry assoc-in [::opengl-registry :fallback-texture] texture-id))
+
+(defn lookup-fallback-texture
+  "Returns the id of the engine's fallback texture, or nil when it has
+   not been created yet."
+  []
+  (get-in @registry [::opengl-registry :fallback-texture]))
+
+(defn register-sampler!
+  "Registers a GL sampler object under the reg-input options it was
+   built from, so inputs sharing a read configuration share it.
+   options    - map, the :sampler/* options of a texture input
+   sampler-id - int, GL sampler id
+   Returns the updated registry value."
+  [options sampler-id]
+  (swap! registry assoc-in [::opengl-registry :samplers options] sampler-id))
+
+(defn lookup-sampler
+  "Returns the GL sampler object registered for a set of read options,
+   or nil.
+   options - map, the :sampler/* options of a texture input"
+  [options]
+  (get-in @registry [::opengl-registry :samplers options]))
 
 (defn register-program-input!
   "Registers the program side of a shader input.

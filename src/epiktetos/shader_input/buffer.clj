@@ -279,6 +279,18 @@
                    :capacity       capacity)))))))
   nil)
 
+(defn delete-block-buffers!
+  "Deletes the GPU buffer of every registered block input; plain
+   uniform and texture inputs own none.
+   registry - map, the registry value
+   Returns nil."
+  [registry]
+  (doseq [{:keys [buffer-id]} (vals (get-in registry [::registrar/opengl-registry
+                                                      :program-inputs]))
+          :when buffer-id]
+    (GL15/glDeleteBuffers (int buffer-id)))
+  nil)
+
 (defn inputs-by-step
   "Groups registered input definitions by render step.
    input-registry - map {varname input}
