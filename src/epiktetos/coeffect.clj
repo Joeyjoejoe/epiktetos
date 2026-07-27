@@ -9,28 +9,15 @@
   [id cofx-fn]
   (event/register :coeffects id cofx-fn))
 
-;; TODO implement fx-error to prevent loop break
-(defn cofx-error
-  "Register an error that occurred in a coeffect.
-  Coeffect errors prevent events handler functions
-  from executing, and display a warning."
-
-  ([cofx err-map]
-   (if (:errors cofx)
-     (update cofx :errors conj err-map)
-     (assoc cofx :errors [err-map])))
-
-  ([cofx cofx-id msg]
-   (let [event   (:event cofx)
-         err-map {:event event :coeffect cofx-id :error msg}]
-     (cofx-error cofx err-map)))
-
-  ([cofx cofx-id value msg]
-   (let [event   (:event cofx)
-         err-map {:event event :coeffect cofx-id :value value :error msg}]
-     (cofx-error cofx err-map))))
-
 (defn inject
+  "Build the interceptor injecting the cofx registered under id into
+  the context coeffects. A missing registration or a throwing cofx
+  handler throws an ex-info tagged with :coeffect (and :value when
+  given) — captured as data by the chain (see epiktetos.interceptors),
+  so the event handler never runs on incomplete coeffects.
+  id    - keyword, the registered cofx
+  value - optional argument passed to the cofx handler
+  Returns an interceptor map"
   ([id]
    (->interceptor
      :id      :coeffects
@@ -39,23 +26,23 @@
                 (if-let [handler (event/get-handler :coeffects id)]
                   (try
                     (update context :coeffects handler)
-                    (catch Exception e
-                      (update context :coeffects
-                              #(cofx-error % id (cons (.toString e) (.getStackTrace e))))))
-                  (update context :coeffects
-                          #(cofx-error % id "cofx not registered"))))))
+                    (catch Throwable t
+                      (throw (ex-info "Coeffect error"
+                                      {:coeffect id}
+                                      t))))
+                  (throw (ex-info "Coeffect not registered"
+                                  {:coeffect id}))))))
   ([id value]
    (->interceptor
      :id     :coeffects
      :before  (fn coeffects-before
                 [context]
                 (if-let [handler (event/get-handler :coeffects id)]
-                  ;; TODO rescue handler execution errors and create
-                  ;; proper cofx-error
                   (try
                     (update context :coeffects handler value)
-                    (catch Exception e
-                      (update context :coeffects
-                          #(cofx-error % id value (cons (.toString e) (.getStackTrace e))))))
-                  (update context :coeffects
-                          #(cofx-error % id value "cofx not registered")))))))
+                    (catch Throwable t
+                      (throw (ex-info "Coeffect error"
+                                      {:coeffect id :value value}
+                                      t))))
+                  (throw (ex-info "Coeffect not registered"
+                                  {:coeffect id :value value})))))))

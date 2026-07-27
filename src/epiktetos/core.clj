@@ -1,6 +1,5 @@
 (ns epiktetos.core
-  (:require [clojure.pprint :refer [pprint]]
-            [epiktetos.db :as app-db]
+  (:require [epiktetos.db :as app-db]
             [epiktetos.registrar :as registrar]
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
@@ -46,16 +45,12 @@
                     :before (fn handler [context]
                               (let [cofx (:coeffects context)
                                     fx   {}]
-
-                                (if (:errors cofx)
-                                  (assoc context :effects {})
-                                  (->> (handler-fn cofx fx)
-                                       (assoc context :effects)))))})
+                                (->> (handler-fn cofx fx)
+                                     (assoc context :effects))))})
          interceptors [fx/do-fx
                        (inject-cofx :inject-db)
                        (inject-cofx :inject-system)
                        coeffects
-                       (inject-cofx :error-logger)
                        handler]
          chain        (->> interceptors flatten (remove nil?))]
      (event/register :events id chain))))
@@ -154,12 +149,6 @@
   (reg-cofx :inject-db
             (fn [coeffects]
               (assoc coeffects :db @app-db/db)))
-
-  (reg-cofx :error-logger
-            (fn [coeffects]
-              (when-let [errors (:errors coeffects)]
-                (doseq [err errors] (pprint err)))
-              coeffects))
 
   (reg-fx ::fx/dispatch
           (fn dispatch-event!
