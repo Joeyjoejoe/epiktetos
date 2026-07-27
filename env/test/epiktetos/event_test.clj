@@ -44,11 +44,12 @@
                           (throw (ex-info "broken" {}))
                           (assoc fx ::log :fixed))))
       (event/dispatch [::fragile])
-      (with-redefs [error/wake-loop!      (fn [] nil)
-                    error/pump-os-events! (fn []
-                                            (reset! broken? false)
-                                            (error/retry!))]
-        (with-out-str (event/consume!)))
+      (let [pause-log (with-redefs [error/wake-loop!      (fn [] nil)
+                                    error/pump-os-events! (fn []
+                                                            (reset! broken? false)
+                                                            (error/retry!))]
+                        (with-out-str (event/consume!)))]
+        (t/is (re-find #"✔ retry succeeded" pause-log)))
       (t/is (= [:fixed] @log))
       (t/is (false? (error/paused?))))))
 

@@ -116,8 +116,9 @@
                 :abort :abort
                 :retry (let [pending (or replacement pending)]
                          (if-let [report (try-execute pending)]
-                           (recur pending report)
-                           (do (when paused? (error/print-resumed!))
+                           (do (error/print-retry-failed! pending)
+                               (recur pending report))
+                           (do (error/print-retry-succeeded! pending)
                                :redrain)))))))
       :continue)))
 

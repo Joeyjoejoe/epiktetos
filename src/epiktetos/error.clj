@@ -166,8 +166,24 @@
   []
   (println "▶ resumed"))
 
+(defn print-retry-succeeded!
+  "Log the outcome of a successful retry — the loop resumes.
+  event - the retried event vector
+  Returns nil"
+  [event]
+  (println (str "✔ retry succeeded — " (event-signature event))))
+
+(defn print-retry-failed!
+  "Log the outcome of a failed retry, right before the next error
+  pause block.
+  event - the retried event vector
+  Returns nil"
+  [event]
+  (println (str "✖ retry failed — " (event-signature event))))
+
 (defn- print-report!
   [{:keys [stage severity error] :as data}]
+  (println "")
   (println "⏸ paused ─ event error ─────────────────────────────────────")
   (println (str "│ " (failure-sentence data)))
   (when-not (= :lookup stage)
@@ -187,8 +203,8 @@
       (println (if (= :lookup stage)
                  "│ Recoverable — the event is kept. Register the handler, then:"
                  "│ Recoverable — nothing was applied. Fix, reload, then:"))
-      (println "├─ (retry!)             re-run the event")
-      (println "├─ (retry! [:id args])  replace and re-run")
+      (println "├─ (retry!)             re-run the event and resume")
+      (println "├─ (retry! [:id args])  replace the event, re-run and resume")
       (println "├─ (skip!)              drop the event and resume")
       (println "├─ (abort!)             stop the engine")
       (println "╰─ (error-report)       the full context"))))
