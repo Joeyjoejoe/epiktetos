@@ -13,8 +13,10 @@
   "Build the interceptor injecting the cofx registered under id into
   the context coeffects. A missing registration or a throwing cofx
   handler throws an ex-info tagged with :coeffect (and :value when
-  given) — captured as data by the chain (see epiktetos.interceptors),
-  so the event handler never runs on incomplete coeffects.
+  given) — plus :coeffect/missing for the lookup case, mirroring the
+  :fx/missing preflight of do-fx — captured as data by the chain (see
+  epiktetos.interceptors), so the event handler never runs on
+  incomplete coeffects.
   id    - keyword, the registered cofx
   value - optional argument passed to the cofx handler
   Returns an interceptor map"
@@ -31,7 +33,7 @@
                                       {:coeffect id}
                                       t))))
                   (throw (ex-info "Coeffect not registered"
-                                  {:coeffect id}))))))
+                                  {:coeffect id :coeffect/missing id}))))))
   ([id value]
    (->interceptor
      :id     :coeffects
@@ -45,4 +47,4 @@
                                       {:coeffect id :value value}
                                       t))))
                   (throw (ex-info "Coeffect not registered"
-                                  {:coeffect id :value value})))))))
+                                  {:coeffect id :coeffect/missing id :value value})))))))

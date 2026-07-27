@@ -34,7 +34,17 @@
       (t/is (= :coeffects (:stage data)))
       (t/is (= :recoverable (:severity data)))
       (t/is (identical? throwable (:error data)))
+      (t/is (= :now (:coeffect data)))
       (t/is (not (contains? data :coeffects)))))
+
+  (t/testing "a missing coeffect is lifted into the report, like :fx/missing"
+    (let [throwable (ex-info "Coeffect not registered"
+                             {:coeffect :rng :coeffect/missing :rng})
+          data      (ex-data (error/chain-report
+                               [:evt 1]
+                               (chain-error :coeffects :before throwable {})))]
+      (t/is (= :rng (:coeffect/missing data)))
+      (t/is (= :recoverable (:severity data)))))
 
   (t/testing "a handler failure: recoverable, coeffects exposed"
     (let [data (ex-data (error/chain-report
@@ -114,8 +124,8 @@
             log      (with-out-str
                        (reset! decision (error/handle-error! report)))]
         (t/is (= {:action :retry :event [:fixed 1] :paused? true} @decision))
-        (t/is (re-find #"paused ─ event error" log))
-        (t/is (re-find #"Recoverable" log))
+        (t/is (re-find #"⏸ Event Error \(:evt\)" log))
+        (t/is (re-find #"Debug with:" log))
         (t/is (false? (error/paused?)))))))
 
 (t/deftest error-report-access-test
@@ -181,11 +191,55 @@
     (t/is (= "[:spawn 1] failed acquiring its coeffect :now."
              (#'error/failure-sentence {:event [:spawn 1]
                                         :stage :coeffects
-                                        :error (ex-info "Coeffect error" {:coeffect :now})})))
+                                        :coeffect :now})))
     (t/is (= "[:doom 1] failed executing its effect :audio/play."
              (#'error/failure-sentence {:event [:doom 1]
                                         :stage :effects
                                         :fx/failed [:audio/play :explosion]})))))
+
+(t/deftest print-report-format-test
+  (t/testing "a lookup error block: synthetic message, registration tip, full controls"
+    (let [log (with-out-str
+                (#'error/print-report!
+                  {:event      [:game/save nil]
+                   :stage      :effects
+                   :severity   :recoverable
+                   :fx/missing [:save/write]}))]
+      (t/is (re-find #"⏸ Effect Lookup Error :save/write \(:game/save\) ─" log))
+      (t/is (re-find #"│  no effect :save/write is registered" log))
+      (t/is (re-find #"│  Register it with:" log))
+      (t/is (re-find #"│  \(reg-fx :save/write handler-fn\)" log))
+      (t/is (re-find #"├─ \(retry!\)" log))))
+
+  (t/testing "an execution error block: root cause, user frame, no tip"
+    (let [throwable (doto (Exception. "saves/session.edn (No such file or directory)")
+                      (.setStackTrace
+                        (into-array StackTraceElement
+                                    [(StackTraceElement. "user$save" "invoke" "user.clj" 16)])))
+          log       (with-out-str
+                      (#'error/print-report!
+                        {:event     [:game/save nil]
+                         :stage     :effects
+                         :severity  :terminal
+                         :error     throwable
+                         :fx/failed [:save/write {}]}))]
+      (t/is (re-find #"⏸ Effect Error :save/write \(:game/save\) ─" log))
+      (t/is (re-find #"│  Exception: saves/session.edn" log))
+      (t/is (re-find #"│  at user/save \(user.clj:16\)" log))
+      (t/is (not (re-find #"Register it with:" log)))
+      (t/is (not (re-find #"\(retry!\)" log)))
+      (t/is (re-find #"├─ \(abort!\)" log))))
+
+  (t/testing "a missing coeffect block maps on reg-cofx"
+    (let [log (with-out-str
+                (#'error/print-report!
+                  {:event            [:loot/roll]
+                   :stage            :coeffects
+                   :severity         :recoverable
+                   :coeffect/missing :random}))]
+      (t/is (re-find #"⏸ Coeffect Lookup Error :random \(:loot/roll\) ─" log))
+      (t/is (re-find #"│  no coeffect :random is registered" log))
+      (t/is (re-find #"│  \(reg-cofx :random handler-fn\)" log)))))
 
 (t/deftest controls-without-pending-error-test
   (t/testing "controls are inert and explain themselves"

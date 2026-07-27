@@ -85,6 +85,10 @@
                 (#{:handler :effects} stage)
                 (assoc :coeffects (:coeffects context))
 
+                (= :coeffects stage)
+                (merge (select-keys (ex-data throwable)
+                                    [:coeffect :coeffect/missing]))
+
                 (= :effects stage)
                 (-> (assoc :effects (:effects context))
                     (merge (select-keys (ex-data throwable)
@@ -155,8 +159,10 @@
   (let [signature (event-signature event)]
     (case stage
       :lookup    (str signature " has no registered handler — a typo?")
-      :coeffects (str signature " failed acquiring its coeffect "
-                      (:coeffect (ex-data error)) ".")
+      :coeffects (if-let [missing (:coeffect/missing data)]
+                   (str signature " has no registered coeffect " missing " — a typo?")
+                   (str signature " failed acquiring its coeffect "
+                        (:coeffect data) "."))
       :handler   (str signature " blew up in its handler.")
       :effects   (if-let [missing (:fx/missing data)]
                    (str signature " has no registered handler for effect "
@@ -205,34 +211,82 @@
   [event]
   (println (str "⏹ aborted — " (event-signature event))))
 
+(defn- header-title
+  "The title of an error pause block: error type, the failing
+  coeffect/effect key when applicable, and the source event key"
+  [{:keys [event stage] :as data}]
+  (let [source (get event 0)]
+    (case stage
+      :lookup    (str "Event Lookup Error (" source ")")
+      :handler   (str "Event Error (" source ")")
+      :coeffects (if-let [missing (:coeffect/missing data)]
+                   (str "Coeffect Lookup Error " missing " (" source ")")
+                   (str "Coeffect Error " (:coeffect data) " (" source ")"))
+      :effects   (if-let [missing (:fx/missing data)]
+                   (str "Effect Lookup Error " (string/join ", " missing)
+                        " (" source ")")
+                   (str "Effect Error " (first (:fx/failed data))
+                        " (" source ")")))))
+
+(defn- header-rule
+  "The block header line: pause icon, title, trailing rule"
+  [title]
+  (let [prefix (str "⏸ " title " ")]
+    (str prefix (apply str (repeat (max 4 (- 78 (count prefix))) "─")))))
+
+(defn- message-lines
+  "The error lines of a pause block: a synthetic message for lookup
+  errors, the root cause and the topmost user frame otherwise"
+  [{:keys [stage error] :as data}]
+  (cond
+    (= :lookup stage)
+    [(str "no event " (get-in data [:event 0]) " is registered")]
+
+    (:coeffect/missing data)
+    [(str "no coeffect " (:coeffect/missing data) " is registered")]
+
+    (:fx/missing data)
+    (mapv #(str "no effect " % " is registered") (:fx/missing data))
+
+    :else
+    (let [cause (root-cause error)
+          frame (user-frame error)]
+      (cond-> [(str (.getSimpleName (class cause)) ": " (clean-message cause))]
+        frame (conj (str "at " frame))))))
+
+(defn- tip-lines
+  "The registration forms fixing a lookup error, or nil when no tip
+  applies"
+  [{:keys [stage] :as data}]
+  (cond
+    (= :lookup stage)
+    [(str "(reg-event " (get-in data [:event 0]) " handler-fn)")]
+
+    (:coeffect/missing data)
+    [(str "(reg-cofx " (:coeffect/missing data) " handler-fn)")]
+
+    (:fx/missing data)
+    (mapv #(str "(reg-fx " % " handler-fn)") (:fx/missing data))))
+
 (defn- print-report!
-  [{:keys [stage severity error] :as data}]
+  [{:keys [severity] :as data}]
   (println "")
-  (println "⏸ paused ─ event error ─────────────────────────────────────")
-  (println (str "│ " (failure-sentence data)))
-  (when-not (or (= :lookup stage) (:fx/missing data))
-    (println "│")
-    (let [cause (root-cause error)]
-      (println (str "│ " (.getSimpleName (class cause)) ": " (clean-message cause)))
-      (when-let [frame (user-frame error)]
-        (println (str "│ at " frame)))))
+  (println (header-rule (header-title data)))
   (println "│")
+  (doseq [line (message-lines data)]
+    (println (str "│  " line)))
+  (println "│")
+  (when-let [tip (tip-lines data)]
+    (println "│  Register it with:")
+    (doseq [line tip]
+      (println (str "│  " line)))
+    (println "│"))
+  (println "│  Debug with:")
   (if (= :terminal severity)
     (do
-      (println "│ Terminal — effects were partially applied, the state can't")
-      (println "│ be guaranteed. Inspect, then restart:")
       (println "├─ (abort!)         stop the engine")
       (println "╰─ (error-report)   the full context"))
     (do
-      (println (cond
-                 (= :lookup stage)
-                 "│ Recoverable — the event is kept. Register the handler, then:"
-
-                 (:fx/missing data)
-                 "│ Recoverable — nothing was applied. Register the effect, then:"
-
-                 :else
-                 "│ Recoverable — nothing was applied. Fix, reload, then:"))
       (println "├─ (retry!)             re-run the event and resume")
       (println "├─ (retry! [:id args])  replace the event, re-run and resume")
       (println "├─ (skip!)              drop the event and resume")
