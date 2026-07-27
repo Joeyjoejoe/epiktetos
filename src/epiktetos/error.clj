@@ -170,6 +170,16 @@
       (do (pump-os-events!)
           (recur)))))
 
+(defn- stop-engine!
+  "Ask the loop to exit — the halt then runs on the loop thread, in
+  startup/start-engine!.
+  Returns nil"
+  []
+  (when-let [window (get-in @registrar/registry
+                            [::registrar/system-registry :glfw/window])]
+    (GLFW/glfwSetWindowShouldClose window true))
+  nil)
+
 (defn handle-error!
   "React to a failed event, on the loop thread.
 
@@ -194,6 +204,8 @@
           (reset! pause-state {:report report :decision nil})
           (let [decision (await-decision!)]
             (clear-pause-state!)
+            (when (= :abort (:action decision))
+              (stop-engine!))
             decision)))))
 
 ;; -- Controls ------------------------------------------------------------
