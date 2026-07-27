@@ -100,19 +100,43 @@
 (defn inspect!
   "Pause the loop and open the Portal inspector on a full snapshot of
   the engine state: registry, render-state, event queue, db. A toggle:
-  called on a paused loop, closes the inspector and resumes — resume!
-  is its readable alias for that direction.
+  called on a paused loop, closes the inspector and resumes.
   Returns nil"
   []
   (event/dispatch [:dev/pause-toggle])
   (wake-paused-loop!)
   nil)
 
-(defn resume!
-  "Close the inspector and resume a loop paused by inspect!.
+(defn error-report
+  "Return the report data of the pending error — event, stage,
+  severity, coeffects, effects bookkeeping — or nil when the engine is
+  not paused on an error (ai-spec/specs/error-spec.md)"
+  []
+  (error/error-report))
+
+(defn retry!
+  "Re-execute the pending event of a recoverable error pause — from
+  the start of its chain, coeffects re-acquired — replaced by the
+  given event when provided. Inert outside a recoverable error pause.
+  event - optional replacement event vector
+  Returns nil"
+  ([] (error/retry!))
+  ([event] (error/retry! event)))
+
+(defn skip!
+  "Drop the pending event of a recoverable error pause entirely and
+  resume the loop. Inert outside a recoverable error pause.
   Returns nil"
   []
-  (inspect!))
+  (error/skip!))
+
+(defn stop!
+  "Stop the engine — epiktetos.core/stop!, re-exposed next to the
+  other debug controls: during an error pause it delivers the abort
+  decision, the only control of a terminal pause.
+  Returns nil"
+  []
+  (error/stop!))
 
 (defn start
   "Install the development tooling handlers, then start the engine and

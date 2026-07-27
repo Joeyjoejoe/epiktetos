@@ -3,11 +3,12 @@
 
   Builds the error report of a failed event, prints the instructive
   log, and drives the error pause: the loop thread blocks in
-  handle-error! until a control fn — retry!, skip!, abort!, called
-  from the REPL — delivers a decision. A development feature, enabled
-  from the engine configuration (:gl/engine :error-pause); disabled,
-  the engine behaves as before, the report enriching the fatal
-  exception for free."
+  handle-error! until a control fn — retry!, skip!, stop!, called
+  from the REPL through their epiktetos.dev delegations — delivers a
+  decision. A development feature, enabled from the engine
+  configuration (:gl/engine :error-pause); disabled, the engine
+  behaves as before, the report enriching the fatal exception for
+  free."
   (:require [clojure.string :as string]
             [epiktetos.db :as app-db]
             [epiktetos.registrar :as registrar])
@@ -284,13 +285,13 @@
   (println "│  Debug with:")
   (if (= :terminal severity)
     (do
-      (println "├─ (abort!)         stop the engine")
+      (println "├─ (stop!)          stop the engine")
       (println "╰─ (error-report)   the full context"))
     (do
       (println "├─ (retry!)             re-run the event and resume")
       (println "├─ (retry! [:id args])  replace the event, re-run and resume")
       (println "├─ (skip!)              drop the event and resume")
-      (println "├─ (abort!)             stop the engine")
+      (println "├─ (stop!)              stop the engine")
       (println "╰─ (error-report)       the full context"))))
 
 (defn- print-dropped!
@@ -319,16 +320,39 @@
   []
   (GLFW/glfwPostEmptyEvent))
 
+(defn- window-should-close?
+  "True when the window was asked to close — the close button or
+  stop! during a pause"
+  []
+  (when-let [window (get-in @registrar/registry
+                            [::registrar/system-registry :glfw/window])]
+    (GLFW/glfwWindowShouldClose window)))
+
 (defn- await-decision!
   "Block the calling thread — the loop thread — until a control fn
-  delivers a decision.
+  delivers a decision. A window close request counts as an abort: the
+  close button stays honest during a pause.
   Returns the decision map: {:action :retry|:skip|:abort, :event replacement-or-nil}"
   []
   (loop []
-    (if-let [decision (:decision @pause-state)]
-      decision
-      (do (pump-os-events!)
-          (recur)))))
+    (cond
+      (:decision @pause-state) (:decision @pause-state)
+      (window-should-close?)   {:action :abort :event nil}
+      :else                    (do (pump-os-events!)
+                                   (recur)))))
+
+(defn- load-dev-tooling!
+  "Load epiktetos.dev when the engine enters an error pause, so the
+  debug delegations — retry!, skip!, error-report — are resolvable
+  from the REPL without any prior require. Reached only when the
+  error pause is enabled: production never loads the tooling. A
+  namespace that cannot load is ignored.
+  Returns nil"
+  []
+  (try
+    (require 'epiktetos.dev)
+    (catch Throwable _ nil))
+  nil)
 
 (defn stop-engine!
   "Ask the loop to exit — the halt then runs on the loop thread, in
@@ -365,7 +389,8 @@
         (do (print-dropped! data)
             {:action :skip :event nil})
         (throw report))
-      (do (print-report! data)
+      (do (load-dev-tooling!)
+          (print-report! data)
           (reset! pause-state {:report report :decision nil})
           (let [decision (await-decision!)]
             (clear-pause-state!)
@@ -390,7 +415,7 @@
       (do (println "[epiktetos] The error is terminal: effects were partially applied,")
           (println "            the engine can no longer guarantee its state.")
           (println "            Keep your effects small, feed them validated data, decide")
-          (println "            in pure code. Inspect (error-report), then (abort!)."))
+          (println "            in pure code. Inspect (error-report), then (stop!)."))
 
       :else
       (do (swap! pause-state assoc :decision {:action action :event replacement})
@@ -414,9 +439,13 @@
   []
   (deliver-decision! :skip nil))
 
-(defn abort!
-  "Stop the engine from an error pause — the clean halt, and the only
-  control of a terminal pause. Inert outside an error pause.
+(defn stop!
+  "Stop the engine — the clean halt. During an error pause, delivers
+  the abort decision to the paused loop thread — the only control of
+  a terminal pause; otherwise asks the loop to exit at the end of its
+  iteration. Callable from any thread; a no-op when no engine runs.
   Returns nil"
   []
-  (deliver-decision! :abort nil))
+  (if (paused?)
+    (deliver-decision! :abort nil)
+    (stop-engine!)))

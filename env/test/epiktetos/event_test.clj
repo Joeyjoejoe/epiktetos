@@ -152,7 +152,7 @@
       (event/dispatch [::boom])
       (event/dispatch [::never])
       (let [pause-log (with-redefs [error/wake-loop!      (fn [] nil)
-                                    error/pump-os-events! (fn [] (error/abort!))]
+                                    error/pump-os-events! (fn [] (error/stop!))]
                         (with-out-str (event/consume!)))]
         (t/is (re-find #"⏹ aborted" pause-log)))
       (t/is (= [] @log))
@@ -175,7 +175,7 @@
                                             (t/is (= :terminal (:severity report)))
                                             (t/is (= [:db] (:fx/executed report)))
                                             (t/is (= [::explode true] (:fx/failed report))))
-                                          (error/abort!))]
+                                          (error/stop!))]
       (with-out-str (event/consume!)))
     (t/is (false? (error/paused?)))))
 

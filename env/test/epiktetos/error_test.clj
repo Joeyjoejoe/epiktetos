@@ -151,8 +151,8 @@
         (let [log (with-out-str (error/retry!) (error/skip!))]
           (t/is (nil? (:decision @error/pause-state)))
           (t/is (re-find #"terminal" log))))
-      (t/testing "abort! is the only exit"
-        (with-out-str (error/abort!))
+      (t/testing "stop! is the only exit"
+        (with-out-str (error/stop!))
         (t/is (= {:action :abort :event nil}
                  (:decision @error/pause-state)))))))
 
@@ -228,7 +228,7 @@
       (t/is (re-find #"│  at user/save \(user.clj:16\)" log))
       (t/is (not (re-find #"Register it with:" log)))
       (t/is (not (re-find #"\(retry!\)" log)))
-      (t/is (re-find #"├─ \(abort!\)" log))))
+      (t/is (re-find #"├─ \(stop!\)" log))))
 
   (t/testing "a missing coeffect block maps on reg-cofx"
     (let [log (with-out-str
@@ -244,6 +244,6 @@
 (t/deftest controls-without-pending-error-test
   (t/testing "controls are inert and explain themselves"
     (with-redefs [error/wake-loop! (fn [] nil)]
-      (let [log (with-out-str (error/retry!) (error/skip!) (error/abort!))]
+      (let [log (with-out-str (error/retry!) (error/skip!) (error/stop!))]
         (t/is (false? (error/paused?)))
         (t/is (re-find #"No pending error" log))))))
