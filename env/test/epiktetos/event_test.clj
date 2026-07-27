@@ -78,9 +78,10 @@
       (core/reg-event ::ok (fn [_cofx fx] (assoc fx ::log :ok)))
       (event/dispatch [::boom])
       (event/dispatch [::ok])
-      (with-redefs [error/wake-loop!      (fn [] nil)
-                    error/pump-os-events! (fn [] (error/skip!))]
-        (with-out-str (event/consume!)))
+      (let [pause-log (with-redefs [error/wake-loop!      (fn [] nil)
+                                    error/pump-os-events! (fn [] (error/skip!))]
+                        (with-out-str (event/consume!)))]
+        (t/is (re-find #"⏭ skipped" pause-log)))
       (t/is (= [:ok] @log)))))
 
 (t/deftest lookup-retry-test
@@ -108,9 +109,10 @@
       (core/reg-event ::never (fn [_cofx fx] (assoc fx ::log :never)))
       (event/dispatch [::boom])
       (event/dispatch [::never])
-      (with-redefs [error/wake-loop!      (fn [] nil)
-                    error/pump-os-events! (fn [] (error/abort!))]
-        (with-out-str (event/consume!)))
+      (let [pause-log (with-redefs [error/wake-loop!      (fn [] nil)
+                                    error/pump-os-events! (fn [] (error/abort!))]
+                        (with-out-str (event/consume!)))]
+        (t/is (re-find #"⏹ aborted" pause-log)))
       (t/is (= [] @log))
       (t/is (= [[::never]] (vec @event/queue))))))
 

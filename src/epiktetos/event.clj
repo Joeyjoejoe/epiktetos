@@ -111,9 +111,10 @@
             (let [{:keys [action paused?] replacement :event}
                   (error/handle-error! report)]
               (case action
-                :skip  (do (when paused? (error/print-resumed!))
+                :skip  (do (when paused? (error/print-skipped! pending))
                            :redrain)
-                :abort :abort
+                :abort (do (error/print-aborted! pending)
+                           :abort)
                 :retry (let [pending (or replacement pending)]
                          (if-let [report (try-execute pending)]
                            (do (error/print-retry-failed! pending)

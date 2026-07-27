@@ -181,6 +181,20 @@
   [event]
   (println (str "✖ retry failed — " (event-signature event))))
 
+(defn print-skipped!
+  "Log a skipped pending event — the loop resumes without it.
+  event - the dropped event vector
+  Returns nil"
+  [event]
+  (println (str "⏭ skipped — " (event-signature event))))
+
+(defn print-aborted!
+  "Log the abort decision on the pending event — the engine stops.
+  event - the pending event vector
+  Returns nil"
+  [event]
+  (println (str "⏹ aborted — " (event-signature event))))
+
 (defn- print-report!
   [{:keys [stage severity error] :as data}]
   (println "")
