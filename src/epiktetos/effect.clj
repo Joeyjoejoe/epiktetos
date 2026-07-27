@@ -30,28 +30,35 @@
 
 (def do-fx
   "The engine interceptor executing on its :after pass the effects
-  described by the event handler, in ordered-effects order. An effect
-  without registered handler logs a warning and is skipped. A throwing
-  effect aborts the walk: the error is rethrown tagged with the
-  effects bookkeeping — :fx/executed, :fx/failed, :fx/remaining — and
-  captured as data by the chain (see epiktetos.interceptors)."
+  described by the event handler, in ordered-effects order. Every
+  effect id is checked against the registry **before any execution**:
+  a missing handler throws tagged with :fx/missing while nothing has
+  been applied yet — the event stays retryable. A throwing effect
+  aborts the walk: the error is rethrown tagged with the effects
+  bookkeeping — :fx/executed, :fx/failed, :fx/remaining — and captured
+  as data by the chain (see epiktetos.interceptors)."
   (->interceptor
     :id    :effects
     :after (fn do-all-fx
              [context]
-             (loop [remaining (ordered-effects (:effects context))
-                    executed  []]
-               (if-let [[id value] (first remaining)]
-                 (if-let [effect-fn (event/get-handler :effects id)]
-                   (do (try
-                         (effect-fn value)
-                         (catch Throwable t
-                           (throw (ex-info "Effect error"
-                                           {:fx/executed  executed
-                                            :fx/failed    [id value]
-                                            :fx/remaining (mapv first (rest remaining))}
-                                           t))))
-                       (recur (rest remaining) (conj executed id)))
-                   (do (println "no handler registered for effect:" id ". Ignoring.")
-                       (recur (rest remaining) executed)))
-                 context)))))
+             (let [ordered (ordered-effects (:effects context))
+                   missing (->> (map first ordered)
+                                (remove #(event/get-handler :effects %))
+                                vec)]
+               (when (seq missing)
+                 (throw (ex-info "No handler registered for effects"
+                                 {:fx/missing missing})))
+               (loop [remaining ordered
+                      executed  []]
+                 (if-let [[id value] (first remaining)]
+                   (let [effect-fn (event/get-handler :effects id)]
+                     (try
+                       (effect-fn value)
+                       (catch Throwable t
+                         (throw (ex-info "Effect error"
+                                         {:fx/executed  executed
+                                          :fx/failed    [id value]
+                                          :fx/remaining (mapv first (rest remaining))}
+                                         t))))
+                     (recur (rest remaining) (conj executed id)))
+                   context))))))

@@ -62,6 +62,14 @@
       (t/is (= [::render :r] (:fx/failed data)))
       (t/is (= [::audio] (:fx/remaining data)))))
 
+  (t/testing "a missing effect handler is recoverable — nothing was executed"
+    (let [throwable (ex-info "No handler registered for effects"
+                             {:fx/missing [:audio/play]})
+          data      (ex-data (error/chain-report
+                               [:evt] (chain-error :effects :after throwable {})))]
+      (t/is (= :recoverable (:severity data)))
+      (t/is (= [:audio/play] (:fx/missing data)))))
+
   (t/testing "an unknown interceptor id falls back on the direction"
     (t/is (= :effects
              (:stage (ex-data (error/chain-report

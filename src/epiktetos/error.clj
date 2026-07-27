@@ -52,15 +52,21 @@
 ;; -- Reports -------------------------------------------------------------
 
 (defn- severity-of
-  [stage]
-  (if (= :effects stage) :terminal :recoverable))
+  "Terminal only when effects have started mutating: a missing effect
+  handler is detected before any execution (do-fx preflight) and stays
+  recoverable"
+  [stage throwable]
+  (if (and (= :effects stage)
+           (not (:fx/missing (ex-data throwable))))
+    :terminal
+    :recoverable))
 
 (defn- report
   "Build the report ex-info from its data map and original throwable"
   [{:keys [stage] :as data} throwable]
   (ex-info "Event pipeline error"
            (assoc data
-                  :severity (severity-of stage)
+                  :severity (severity-of stage throwable)
                   :iter     (get-in @app-db/db [:core/loop :iter]))
            throwable))
 
@@ -82,7 +88,8 @@
                 (= :effects stage)
                 (-> (assoc :effects (:effects context))
                     (merge (select-keys (ex-data throwable)
-                                        [:fx/executed :fx/failed :fx/remaining]))))]
+                                        [:fx/executed :fx/failed
+                                         :fx/remaining :fx/missing]))))]
     (report data throwable)))
 
 (defn lookup-report
@@ -151,8 +158,11 @@
       :coeffects (str signature " failed acquiring its coeffect "
                       (:coeffect (ex-data error)) ".")
       :handler   (str signature " blew up in its handler.")
-      :effects   (str signature " failed executing its effect "
-                      (first (:fx/failed data)) "."))))
+      :effects   (if-let [missing (:fx/missing data)]
+                   (str signature " has no registered handler for effect "
+                        (string/join ", " missing) " — a typo?")
+                   (str signature " failed executing its effect "
+                        (first (:fx/failed data)) ".")))))
 
 (defn print-paused!
   "Log the unified loop pause header with its reason.
@@ -200,7 +210,7 @@
   (println "")
   (println "⏸ paused ─ event error ─────────────────────────────────────")
   (println (str "│ " (failure-sentence data)))
-  (when-not (= :lookup stage)
+  (when-not (or (= :lookup stage) (:fx/missing data))
     (println "│")
     (let [cause (root-cause error)]
       (println (str "│ " (.getSimpleName (class cause)) ": " (clean-message cause)))
@@ -214,8 +224,14 @@
       (println "├─ (abort!)         stop the engine")
       (println "╰─ (error-report)   the full context"))
     (do
-      (println (if (= :lookup stage)
+      (println (cond
+                 (= :lookup stage)
                  "│ Recoverable — the event is kept. Register the handler, then:"
+
+                 (:fx/missing data)
+                 "│ Recoverable — nothing was applied. Register the effect, then:"
+
+                 :else
                  "│ Recoverable — nothing was applied. Fix, reload, then:"))
       (println "├─ (retry!)             re-run the event and resume")
       (println "├─ (retry! [:id args])  replace the event, re-run and resume")
@@ -275,10 +291,11 @@
 (defn handle-error!
   "React to a failed event, on the loop thread.
 
-  Error pause disabled: :lookup and :coeffects reports are printed and
-  the event dropped — the confinement existing before the error pause —
-  while :handler and :effects reports are thrown: the session ends as
-  before, the report carried by the exception.
+  Error pause disabled: :lookup and :coeffects reports, and the
+  missing effect handler case (:fx/missing — nothing was applied), are
+  printed and the whole event dropped, while :handler reports and
+  effect execution errors are thrown: the session ends as before, the
+  report carried by the exception.
 
   Enabled: print the instructive log, hold the report as the pending
   error and block until a control fn delivers a decision.
@@ -289,7 +306,8 @@
   [report]
   (let [{:keys [stage] :as data} (ex-data report)]
     (if-not (enabled?)
-      (if (#{:lookup :coeffects} stage)
+      (if (or (#{:lookup :coeffects} stage)
+              (:fx/missing data))
         (do (print-dropped! data)
             {:action :skip :event nil})
         (throw report))

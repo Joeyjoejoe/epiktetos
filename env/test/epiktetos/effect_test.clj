@@ -59,9 +59,15 @@
       (t/is (= [[:db :new-db] [::fx/reg-p :p]] @log)))))
 
 (t/deftest do-fx-missing-handler-test
-  (t/testing "an effect without handler is skipped and excluded from the bookkeeping"
+  (t/testing "a missing effect handler aborts before any execution"
     (let [log (atom [])]
+      (fx/register :db (recording :db log))
       (fx/register ::user (recording ::user log))
-      ((:after fx/do-fx) {:effects {::unknown-effect :x
-                                    ::user           :u}})
-      (t/is (= [[::user :u]] @log)))))
+      (try
+        ((:after fx/do-fx) {:effects {:db              :new-db
+                                      ::unknown-effect :x
+                                      ::user           :u}})
+        (t/is false "an ex-info should have been thrown")
+        (catch clojure.lang.ExceptionInfo e
+          (t/is (= [::unknown-effect] (:fx/missing (ex-data e))))))
+      (t/is (= [] @log)))))

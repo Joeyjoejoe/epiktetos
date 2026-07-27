@@ -100,6 +100,48 @@
         (with-out-str (event/consume!)))
       (t/is (= [5] @log)))))
 
+(t/deftest missing-cofx-pause-test
+  (t/testing "an unregistered coeffect pauses at :coeffects and heals on retry"
+    (enable-error-pause!)
+    (let [log (atom [])]
+      (core/reg-fx ::log (fn [value] (swap! log conj value)))
+      (core/reg-event ::needs-cofx
+                      [(core/inject-cofx ::not-registered)]
+                      (fn [cofx fx]
+                        (assoc fx ::log (::not-registered cofx))))
+      (event/dispatch [::needs-cofx])
+      (with-redefs [error/wake-loop!      (fn [] nil)
+                    error/pump-os-events! (fn []
+                                            (t/is (= :coeffects (:stage (error/error-report))))
+                                            (core/reg-cofx ::not-registered
+                                                           (fn [coeffects]
+                                                             (assoc coeffects ::not-registered 7)))
+                                            (error/retry!))]
+        (with-out-str (event/consume!)))
+      (t/is (= [7] @log)))))
+
+(t/deftest missing-effect-handler-test
+  (t/testing "an unregistered effect pauses recoverably before any execution"
+    (enable-error-pause!)
+    (let [log (atom [])]
+      (core/reg-event ::wants-effect
+                      (fn [{:keys [db]} fx]
+                        (-> fx
+                            (assoc :db (assoc db ::touched? true))
+                            (assoc ::missing-probe :payload))))
+      (event/dispatch [::wants-effect])
+      (with-redefs [error/wake-loop!      (fn [] nil)
+                    error/pump-os-events! (fn []
+                                            (let [report (error/error-report)]
+                                              (t/is (= :effects (:stage report)))
+                                              (t/is (= :recoverable (:severity report)))
+                                              (t/is (= [::missing-probe] (:fx/missing report))))
+                                            (core/reg-fx ::missing-probe
+                                                         (fn [value] (swap! log conj value)))
+                                            (error/retry!))]
+        (with-out-str (event/consume!)))
+      (t/is (= [:payload] @log)))))
+
 (t/deftest abort-test
   (t/testing "aborting stops consumption, the remainder stays queued"
     (enable-error-pause!)
