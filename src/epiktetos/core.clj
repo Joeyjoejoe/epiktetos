@@ -116,30 +116,6 @@
   []
   (error/stop!))
 
-(defn error-report
-  "Return the report data of the pending error — event, stage,
-  severity, coeffects, effects bookkeeping — or nil when the engine is
-  not paused on an error (ai-spec/specs/error-spec.md)"
-  []
-  (error/error-report))
-
-(defn retry!
-  "Re-execute the pending event of a recoverable error pause — from
-  the start of its chain, coeffects re-acquired — replaced by the
-  given event when provided. Inert outside a recoverable error pause:
-  a debug control, operative only with the error pause enabled.
-  event - optional replacement event vector
-  Returns nil"
-  ([] (error/retry!))
-  ([event] (error/retry! event)))
-
-(defn skip!
-  "Drop the pending event of a recoverable error pause entirely and
-  resume the loop. Inert outside a recoverable error pause: a debug
-  control, operative only with the error pause enabled.
-  Returns nil"
-  []
-  (error/skip!))
 
 (defn install-core!
   "Register the engine's own events, coeffects and effects.
@@ -243,15 +219,25 @@
                  (swap! registrar/render-state merge))))
   nil)
 
-(defn run
-  "Run the engine.
-  - startup-events is a vector of events to dispatch
-  - config-path is a path to an edn configuration file"
+(defn start
+  "Start the engine and block until it stops: install the engine core
+  state, initialize the systems from the edn configuration, then enter
+  the loop. When the error pause is enabled, the development tooling
+  is installed with the systems (startup/install-dev-tooling!).
+
+  Refuses to start while an engine is already running — stop it with
+  stop! first: halting from the REPL thread would issue GL calls
+  outside the thread holding the context.
+
+  config-path - string, classpath path to an edn config (optional)
+  Returns the loop exit value, or nil when an engine already runs"
   ([]
-   (run startup/DEFAULT_CONFIG_PATH))
+   (start startup/DEFAULT_CONFIG_PATH))
   ([config-path]
-   (install-core!)
-   (-> config-path
-       startup/init-systems
-       (assoc-in [:gl/engine :config-path] config-path)
-       startup/start-engine!)))
+   (if (seq (::registrar/system-registry @registrar/registry))
+     (println "[epiktetos] Engine already running - stop it with (epiktetos.core/stop!) before restarting.")
+     (do (install-core!)
+         (-> config-path
+             startup/init-systems
+             (assoc-in [:gl/engine :config-path] config-path)
+             startup/start-engine!)))))

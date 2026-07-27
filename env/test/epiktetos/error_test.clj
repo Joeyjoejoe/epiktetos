@@ -209,7 +209,7 @@
       (t/is (re-find #"│  no effect :save/write is registered" log))
       (t/is (re-find #"│  Register it with:" log))
       (t/is (re-find #"│  \(reg-fx :save/write handler-fn\)" log))
-      (t/is (re-find #"├─ \(retry!\)" log))))
+      (t/is (re-find #"├─ \(epiktetos.dev/retry!\)" log))))
 
   (t/testing "an execution error block: root cause, user frame, no tip"
     (let [throwable (doto (Exception. "saves/session.edn (No such file or directory)")
@@ -228,7 +228,7 @@
       (t/is (re-find #"│  at user/save \(user.clj:16\)" log))
       (t/is (not (re-find #"Register it with:" log)))
       (t/is (not (re-find #"\(retry!\)" log)))
-      (t/is (re-find #"├─ \(stop!\)" log))))
+      (t/is (re-find #"├─ \(epiktetos.core/stop!\)" log))))
 
   (t/testing "a missing coeffect block maps on reg-cofx"
     (let [log (with-out-str

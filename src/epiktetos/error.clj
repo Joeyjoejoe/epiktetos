@@ -285,14 +285,14 @@
   (println "│  Debug with:")
   (if (= :terminal severity)
     (do
-      (println "├─ (stop!)          stop the engine")
-      (println "╰─ (error-report)   the full context"))
+      (println "├─ (epiktetos.core/stop!)         stop the engine")
+      (println "╰─ (epiktetos.dev/error-report)   the full context"))
     (do
-      (println "├─ (retry!)             re-run the event and resume")
-      (println "├─ (retry! [:id args])  replace the event, re-run and resume")
-      (println "├─ (skip!)              drop the event and resume")
-      (println "├─ (stop!)              stop the engine")
-      (println "╰─ (error-report)       the full context"))))
+      (println "├─ (epiktetos.dev/retry!)             re-run the event and resume")
+      (println "├─ (epiktetos.dev/retry! [:id args])  replace the event, re-run and resume")
+      (println "├─ (epiktetos.dev/skip!)              drop the event and resume")
+      (println "├─ (epiktetos.core/stop!)             stop the engine")
+      (println "╰─ (epiktetos.dev/error-report)       the full context"))))
 
 (defn- print-dropped!
   "Log a report confined without pause (error pause disabled)"
@@ -401,7 +401,8 @@
       (do (println "[epiktetos] The error is terminal: effects were partially applied,")
           (println "            the engine can no longer guarantee its state.")
           (println "            Keep your effects small, feed them validated data, decide")
-          (println "            in pure code. Inspect (error-report), then (stop!)."))
+          (println "            in pure code. Inspect (epiktetos.dev/error-report), then")
+          (println "            (epiktetos.core/stop!)."))
 
       :else
       (do (swap! pause-state assoc :decision {:action action :event replacement})

@@ -1,6 +1,6 @@
 (ns epiktetos.dev
   (:require [portal.api :as p]
-            [epiktetos.core :as epiktet :refer [reg-event reg-fx]]
+            [epiktetos.core :refer [reg-event reg-fx]]
             [epiktetos.loop :as epiktet-loop]
             [epiktetos.db :as app-db]
             [epiktetos.error :as error]
@@ -41,8 +41,8 @@
   empties the registry, tooling included, so it is registered again at
   every launch — automatically by the engine startup when the error
   pause is enabled (startup/install-dev-tooling! — development mode is
-  declared by the configuration), and explicitly by start, which keeps
-  working for sessions running with the pause disabled.
+  declared by the configuration). A session running with the pause
+  disabled calls it explicitly before epiktetos.core/start.
 
   Returns nil"
   []
@@ -109,25 +109,27 @@
   (wake-paused-loop!)
   nil)
 
+(defn error-report
+  "Return the report data of the pending error — event, stage,
+  severity, coeffects, effects bookkeeping — or nil when the engine is
+  not paused on an error (ai-spec/specs/error-spec.md)"
+  []
+  (error/error-report))
 
-(defn start
-  "Install the development tooling handlers, then start the engine and
-  block until it stops. The halt empties the registry, this tooling
-  included, so start is where it is registered. Nothing a user
-  namespace declared at load time is replayed: reloading it is the
-  developer's call, from the editor.
+(defn retry!
+  "Re-execute the pending event of a recoverable error pause — from
+  the start of its chain, coeffects re-acquired — replaced by the
+  given event when provided. Inert outside a recoverable error pause.
+  event - optional replacement event vector
+  Returns nil"
+  ([] (error/retry!))
+  ([event] (error/retry! event)))
 
-  Refuses to start while an engine is running — stop it with
-  epiktetos.core/stop! first: halting from the REPL thread would issue
-  GL calls outside the thread holding the context.
+(defn skip!
+  "Drop the pending event of a recoverable error pause entirely and
+  resume the loop. Inert outside a recoverable error pause.
+  Returns nil"
+  []
+  (error/skip!))
 
-  config-path - string, classpath path to an edn config (optional)
-  Returns the loop exit value, or nil when an engine is already running"
-  ([]
-   (if (seq (::registrar/system-registry @registrar/registry))
-     (println "[epiktetos] Engine already running - stop it (epiktetos.core/stop!) before restarting.")
-     (do (install-dev!)
-         (epiktet/run))))
-  ([config-path]
-   (install-dev!)
-   (epiktet/run config-path)))
+
