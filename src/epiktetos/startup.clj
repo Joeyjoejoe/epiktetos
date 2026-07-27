@@ -35,6 +35,24 @@
        ig/read-string
        ig/init)))
 
+(defn install-dev-tooling!
+  "Load and install the development tooling when the error pause is
+  enabled: :error-pause {:enabled? true} declares development mode,
+  the tooling follows it — install-dev! registers the Portal
+  inspection pause and the loop-thread evaluation handlers. Dynamic
+  require: no static engine to tooling dependency, production never
+  loads it. A tooling that cannot load is reported, never fatal.
+  Returns nil"
+  []
+  (when (error/enabled?)
+    (try
+      (require 'epiktetos.dev)
+      ((resolve 'epiktetos.dev/install-dev!))
+      (catch Throwable t
+        (println "[epiktetos] Could not install the dev tooling:"
+                 (.getMessage t)))))
+  nil)
+
 (defn start-engine!
   "Start the engine with a list of user defined
   events to execute immediately.
@@ -46,6 +64,7 @@
   ([] (start-engine! (init-systems)))
   ([systems]
     (swap! registrar/registry assoc ::registrar/system-registry systems)
+    (install-dev-tooling!)
     (when-not (::registrar/steps @registrar/render-state)
       (swap! registrar/render-state merge (render-step/build-render-steps)))
     (try

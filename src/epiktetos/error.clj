@@ -4,7 +4,7 @@
   Builds the error report of a failed event, prints the instructive
   log, and drives the error pause: the loop thread blocks in
   handle-error! until a control fn — retry!, skip!, stop!, called
-  from the REPL through their epiktetos.dev delegations — delivers a
+  from the REPL through their epiktetos.core delegations — delivers a
   decision. A development feature, enabled from the engine
   configuration (:gl/engine :error-pause); disabled, the engine
   behaves as before, the report enriching the fatal exception for
@@ -341,19 +341,6 @@
       :else                    (do (pump-os-events!)
                                    (recur)))))
 
-(defn- load-dev-tooling!
-  "Load epiktetos.dev when the engine enters an error pause, so the
-  debug delegations — retry!, skip!, error-report — are resolvable
-  from the REPL without any prior require. Reached only when the
-  error pause is enabled: production never loads the tooling. A
-  namespace that cannot load is ignored.
-  Returns nil"
-  []
-  (try
-    (require 'epiktetos.dev)
-    (catch Throwable _ nil))
-  nil)
-
 (defn stop-engine!
   "Ask the loop to exit — the halt then runs on the loop thread, in
   startup/start-engine!. Callable from any thread; a no-op when no
@@ -389,8 +376,7 @@
         (do (print-dropped! data)
             {:action :skip :event nil})
         (throw report))
-      (do (load-dev-tooling!)
-          (print-report! data)
+      (do (print-report! data)
           (reset! pause-state {:report report :decision nil})
           (let [decision (await-decision!)]
             (clear-pause-state!)

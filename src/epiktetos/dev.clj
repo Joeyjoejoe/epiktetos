@@ -38,9 +38,11 @@
   epiktetos.core/stop! — keys stay free for the application.
 
   This tooling is a user of the engine, not part of it: the halt
-  empties the registry, tooling included, so start registers it again
-  at every launch — the same launch process any application built on
-  Epiktetos writes for itself.
+  empties the registry, tooling included, so it is registered again at
+  every launch — automatically by the engine startup when the error
+  pause is enabled (startup/install-dev-tooling! — development mode is
+  declared by the configuration), and explicitly by start, which keeps
+  working for sessions running with the pause disabled.
 
   Returns nil"
   []
@@ -107,36 +109,6 @@
   (wake-paused-loop!)
   nil)
 
-(defn error-report
-  "Return the report data of the pending error — event, stage,
-  severity, coeffects, effects bookkeeping — or nil when the engine is
-  not paused on an error (ai-spec/specs/error-spec.md)"
-  []
-  (error/error-report))
-
-(defn retry!
-  "Re-execute the pending event of a recoverable error pause — from
-  the start of its chain, coeffects re-acquired — replaced by the
-  given event when provided. Inert outside a recoverable error pause.
-  event - optional replacement event vector
-  Returns nil"
-  ([] (error/retry!))
-  ([event] (error/retry! event)))
-
-(defn skip!
-  "Drop the pending event of a recoverable error pause entirely and
-  resume the loop. Inert outside a recoverable error pause.
-  Returns nil"
-  []
-  (error/skip!))
-
-(defn stop!
-  "Stop the engine — epiktetos.core/stop!, re-exposed next to the
-  other debug controls: during an error pause it delivers the abort
-  decision, the only control of a terminal pause.
-  Returns nil"
-  []
-  (error/stop!))
 
 (defn start
   "Install the development tooling handlers, then start the engine and
