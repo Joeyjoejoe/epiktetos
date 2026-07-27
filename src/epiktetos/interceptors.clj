@@ -1,4 +1,8 @@
 ;; A copy of https://github.com/day8/re-frame/blob/master/src/re_frame/interceptor.cljc
+;; Extended with a Pedestal-style :error stage (error confinement, see
+;; ai-spec/specs/error-spec.md): a thrown error is captured as data in
+;; the context, short-circuits the chain, and unwinds the stack through
+;; the interceptors :error fns.
 
 (ns epiktetos.interceptors
   (:require [clojure.set :as set]))
@@ -16,11 +20,11 @@
 (defn interceptor?
   [m]
   (and (map? m)
-       (= mandatory-interceptor-keys (-> m keys set))))
+       (set/subset? mandatory-interceptor-keys (set (keys m)))))
 
 
 (defn ->interceptor
-  [& {:as m :keys [id before after]}]
+  [& {:as m :keys [id before after error]}]
   ;; (when debug-enabled?
   ;;   (if-let [unknown-keys (seq (set/difference
   ;;                               (-> m keys set)
@@ -28,7 +32,8 @@
   ;;     (console :error "re-frame: ->interceptor" m "has unknown keys:" unknown-keys)))
   {:id     (or id :unnamed)
    :before before
-   :after  after})
+   :after  after
+   :error  error})
 
 ;; -- Effect Helpers  -----------------------------------------------------------------------------
 
@@ -70,9 +75,37 @@
 
 
 (defn- invoke-interceptor-fn
+  "Invoke the `direction` fn of interceptor on context.
+  A thrown error is captured as data under `::error` — `:throwable`,
+  `:interceptor` (the failing interceptor id), `:direction` — instead
+  of propagating, and short-circuits the rest of the chain (see
+  invoke-interceptors).
+  Returns the context, updated or marked with `::error`."
   [context interceptor direction]
   (if-let [f (get interceptor direction)]
-    (f context)
+    (try
+      (f context)
+      (catch Throwable t
+        (assoc context ::error {:throwable   t
+                                :interceptor (:id interceptor)
+                                :direction   direction})))
+    context))
+
+(defn- invoke-error-fn
+  "Invoke the :error fn of interceptor on a context carrying `::error`,
+  giving it a chance to enrich the error or to resolve it — removing
+  `::error` resumes normal :after processing for the interceptors
+  still to unwind. An interceptor without :error fn passes the context
+  through untouched; an :error fn that throws replaces the error.
+  Returns the context."
+  [context interceptor]
+  (if-let [f (:error interceptor)]
+    (try
+      (f context)
+      (catch Throwable t
+        (assoc context ::error {:throwable   t
+                                :interceptor (:id interceptor)
+                                :direction   :error})))
     context))
 
 
@@ -93,18 +126,26 @@
   But because all interceptor functions are given `context`, and can
   return a modified version of it, the way is clear for an interceptor
   to introspect the stack or queue, or even modify the queue
-  (add new interceptors via `enqueue`?). This is a very fluid arrangement."
+  (add new interceptors via `enqueue`?). This is a very fluid arrangement.
+  When the context carries `::error`, the `:before` walk halts — the
+  interceptors not yet entered are never invoked — and the `:after`
+  walk unwinds the entered interceptors through their :error fn
+  (invoke-error-fn) instead of their :after fn, until one resolves the
+  error or the stack is exhausted."
   ([context direction]
    (loop [context context]
      (let [queue (:queue context)]        ;; future interceptors
-       (if (empty? queue)
+       (if (or (empty? queue)
+               (and (= :before direction) (::error context)))
          context
          (let [interceptor (peek queue)   ;; next interceptor to call
-               stack (:stack context)]    ;; already completed interceptors
-           (recur (-> context
-                      (assoc :queue (pop queue)
-                             :stack (conj stack interceptor))
-                      (invoke-interceptor-fn interceptor direction)))))))))
+               stack (:stack context)     ;; already completed interceptors
+               context (assoc context
+                              :queue (pop queue)
+                              :stack (conj stack interceptor))]
+           (recur (if (::error context)
+                    (invoke-error-fn context interceptor)
+                    (invoke-interceptor-fn context interceptor direction)))))))))
 
 
 (defn enqueue
@@ -179,9 +220,20 @@
    Through both stages (before and after), `context` contains a `:queue`
    of interceptors yet to be processed, and a `:stack` of interceptors
    already done.  In advanced cases, these values can be modified by the
-   functions through which the context is threaded."
+   functions through which the context is threaded.
+   An error captured during the traversal (see invoke-interceptor-fn)
+   that is still present after the backwards sweep — no :error fn
+   resolved it — is rethrown as an ex-info wrapping the original
+   throwable, carrying under `::error` the failing interceptor id, the
+   direction and the final context.
+   Returns the threaded context."
   [event-v interceptors]
-  (-> (context event-v interceptors)
-      (invoke-interceptors :before)
-      change-direction
-      (invoke-interceptors :after)))
+  (let [context (-> (context event-v interceptors)
+                    (invoke-interceptors :before)
+                    change-direction
+                    (invoke-interceptors :after))]
+    (if-let [error (::error context)]
+      (throw (ex-info "Unhandled interceptor chain error"
+                      {::error (assoc error :context (dissoc context :queue :stack ::error))}
+                      (:throwable error)))
+      context)))
