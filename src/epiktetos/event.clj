@@ -108,14 +108,17 @@
             (requeue-head! remainder))
           (loop [pending event
                  report  report]
-            (let [{:keys [action] replacement :event} (error/handle-error! report)]
+            (let [{:keys [action paused?] replacement :event}
+                  (error/handle-error! report)]
               (case action
-                :skip  :redrain
+                :skip  (do (when paused? (error/print-resumed!))
+                           :redrain)
                 :abort :abort
                 :retry (let [pending (or replacement pending)]
                          (if-let [report (try-execute pending)]
                            (recur pending report)
-                           :redrain))))))
+                           (do (when paused? (error/print-resumed!))
+                               :redrain)))))))
       :continue)))
 
 (defn consume!

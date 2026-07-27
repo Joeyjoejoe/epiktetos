@@ -3,6 +3,7 @@
             [epiktetos.core :as epiktet :refer [reg-event reg-fx]]
             [epiktetos.loop :as epiktet-loop]
             [epiktetos.db :as app-db]
+            [epiktetos.error :as error]
             [epiktetos.event :as event]
             [epiktetos.registrar :as registrar])
   (:import (org.lwjgl.glfw GLFW)))
@@ -48,8 +49,10 @@
             (let [paused (get-in @app-db/db [:core/loop :paused?])]
 
               (if-not paused
-                (open-inspector)
-                (close-inspector))
+                (do (open-inspector)
+                    (error/print-paused! "state inspection"))
+                (do (close-inspector)
+                    (error/print-resumed!)))
 
               (swap! app-db/db update-in [:core/loop :paused?] not)
 

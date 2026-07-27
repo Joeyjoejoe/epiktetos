@@ -105,9 +105,9 @@
             decision (atom nil)
             log      (with-out-str
                        (reset! decision (error/handle-error! report)))]
-        (t/is (= {:action :retry :event [:fixed 1]} @decision))
-        (t/is (re-find #"engine paused" log))
-        (t/is (re-find #"recoverable" log))
+        (t/is (= {:action :retry :event [:fixed 1] :paused? true} @decision))
+        (t/is (re-find #"paused ─ event error" log))
+        (t/is (re-find #"Recoverable" log))
         (t/is (false? (error/paused?)))))))
 
 (t/deftest error-report-access-test
@@ -137,6 +137,47 @@
         (with-out-str (error/abort!))
         (t/is (= {:action :abort :event nil}
                  (:decision @error/pause-state)))))))
+
+(t/deftest log-helpers-test
+  (t/testing "user-frame extracts the topmost non-internal frame, demunged"
+    (let [throwable (doto (Exception. "boom")
+                      (.setStackTrace
+                        (into-array StackTraceElement
+                                    [(StackTraceElement. "clojure.lang.Numbers" "add" "Numbers.java" 128)
+                                     (StackTraceElement. "user$do_stuff" "invoke" "user.clj" 57)
+                                     (StackTraceElement. "epiktetos.event$execute" "invoke" "event.clj" 60)])))]
+      (t/is (= "user/do-stuff (user.clj:57)" (#'error/user-frame throwable)))))
+
+  (t/testing "user-frame is nil when every frame is internal"
+    (let [throwable (doto (Exception. "boom")
+                      (.setStackTrace
+                        (into-array StackTraceElement
+                                    [(StackTraceElement. "clojure.core$inc" "invoke" "core.clj" 928)])))]
+      (t/is (nil? (#'error/user-frame throwable)))))
+
+  (t/testing "clean-message strips the JVM module clause"
+    (t/is (= "class java.lang.String cannot be cast to class java.lang.Number"
+             (#'error/clean-message
+               (Exception. "class java.lang.String cannot be cast to class java.lang.Number (java.lang.String and java.lang.Number are in module java.base of loader 'bootstrap')")))))
+
+  (t/testing "event-signature elides long and deep arguments"
+    (let [signature (#'error/event-signature
+                      [:enemies/spawn {:wave 3 :spawns (vec (repeat 50 {:pos [1 2 3]}))}])]
+      (t/is (<= (count signature) 72))
+      (t/is (re-find #"\.\.\." signature)))
+    (t/is (= "[:do-stuff \"Doh!\"]" (#'error/event-signature [:do-stuff "Doh!"]))))
+
+  (t/testing "failure-sentence names the stage and the failing piece"
+    (t/is (= "[:do-stuff \"Doh!\"] blew up in its handler."
+             (#'error/failure-sentence {:event [:do-stuff "Doh!"] :stage :handler})))
+    (t/is (= "[:spawn 1] failed acquiring its coeffect :now."
+             (#'error/failure-sentence {:event [:spawn 1]
+                                        :stage :coeffects
+                                        :error (ex-info "Coeffect error" {:coeffect :now})})))
+    (t/is (= "[:doom 1] failed executing its effect :audio/play."
+             (#'error/failure-sentence {:event [:doom 1]
+                                        :stage :effects
+                                        :fx/failed [:audio/play :explosion]})))))
 
 (t/deftest controls-without-pending-error-test
   (t/testing "controls are inert and explain themselves"

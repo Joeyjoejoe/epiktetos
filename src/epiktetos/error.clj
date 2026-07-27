@@ -8,7 +8,8 @@
   from the engine configuration (:gl/engine :error-pause); disabled,
   the engine behaves as before, the report enriching the fatal
   exception for free."
-  (:require [epiktetos.db :as app-db]
+  (:require [clojure.string :as string]
+            [epiktetos.db :as app-db]
             [epiktetos.registrar :as registrar])
   (:import (org.lwjgl.glfw GLFW)))
 
@@ -97,50 +98,109 @@
 
 ;; -- Instructive log -----------------------------------------------------
 
-(defn- error-line
-  "One line naming the root cause of the report: class and message"
-  [throwable]
-  (let [cause (or (.getCause ^Throwable throwable) throwable)]
-    (str (.getSimpleName (class cause)) ": " (.getMessage ^Throwable cause))))
+(def ^:private INTERNAL-FRAME
+  #"(epiktetos|clojure|java|jdk|sun|nrepl)\..*")
 
-(defn- print-recoverable!
-  [{:keys [event stage error]}]
-  (println "[epiktetos] Error - engine paused")
-  (println "  event    " (pr-str event))
-  (println "  stage    " stage)
-  (println "  error    " (error-line error))
-  (println "  status    recoverable - no effect was applied, the event can be retried")
-  (println "  context   (epiktetos.core/error-report)")
-  (println "  controls  (retry!)             re-run the event (after reloading your fix)")
-  (println "            (retry! [:id args])  replace the event and re-run")
-  (println "            (skip!)              drop the event and resume")
-  (println "            (abort!)             stop the engine"))
+(defn- root-cause
+  "The deepest cause of a throwable — the user's exception, under the
+  engine's stage wrappers"
+  [^Throwable throwable]
+  (if-let [cause (.getCause throwable)]
+    (recur cause)
+    throwable))
 
-(defn- print-terminal!
-  [{:keys [event stage error] :fx/keys [executed failed remaining]}]
-  (println "[epiktetos] Error - engine paused")
-  (println "  event    " (pr-str event))
-  (println "  stage    " stage)
-  (println "  error    " (error-line error))
-  (println "  status    terminal - effects partially applied")
-  (println "           " (str "applied: " (pr-str executed)
-                              " - failed: " (pr-str (first failed))
-                              " - never ran: " (pr-str remaining)))
-  (println "            The engine can no longer guarantee its state.")
-  (println "            Inspect freely - (epiktetos.core/error-report) - then (abort!).")
-  (println "  controls  (abort!)  stop the engine"))
+(defn- clean-message
+  "The throwable message, stripped of the JVM module clause noise
+  (\"... are in module java.base of loader 'bootstrap'\")"
+  [^Throwable throwable]
+  (when-let [message (.getMessage throwable)]
+    (string/replace message #"\s*\([^()]*in (?:unnamed )?module [^()]*\)" "")))
+
+(defn- user-frame
+  "The topmost stacktrace frame of the root cause that lives outside
+  the engine and the language internals — where the user's code
+  failed, in Clojure notation.
+  Returns \"ns/fn (file:line)\", or nil when every frame is internal"
+  [^Throwable throwable]
+  (->> (.getStackTrace (root-cause throwable))
+       (filter (fn [^StackTraceElement frame]
+                 (not (re-matches INTERNAL-FRAME (.getClassName frame)))))
+       first
+       ((fn [^StackTraceElement frame]
+          (when frame
+            (str (clojure.lang.Compiler/demunge (.getClassName frame))
+                 " (" (.getFileName frame) ":" (.getLineNumber frame) ")"))))))
+
+(defn- event-signature
+  "The event printed for a log line: long or deep arguments are elided
+  (... and #) — the full data stays in the error report"
+  [event]
+  (let [signature (binding [*print-length* 4
+                            *print-level*  3]
+                    (pr-str event))]
+    (if (> (count signature) 56)
+      (str (subs signature 0 55) "…")
+      signature)))
+
+(defn- failure-sentence
+  "One sentence naming the event and the stage where it failed"
+  [{:keys [event stage error] :as data}]
+  (let [signature (event-signature event)]
+    (case stage
+      :lookup    (str signature " has no registered handler — a typo?")
+      :coeffects (str signature " failed acquiring its coeffect "
+                      (:coeffect (ex-data error)) ".")
+      :handler   (str signature " blew up in its handler.")
+      :effects   (str signature " failed executing its effect "
+                      (first (:fx/failed data)) "."))))
+
+(defn print-paused!
+  "Log the unified loop pause header with its reason.
+  Returns nil"
+  [reason]
+  (println (str "⏸ paused ─ " reason)))
+
+(defn print-resumed!
+  "Log the unified loop resume line.
+  Returns nil"
+  []
+  (println "▶ resumed"))
 
 (defn- print-report!
-  [{:keys [severity] :as data}]
+  [{:keys [stage severity error] :as data}]
+  (println "⏸ paused ─ event error ─────────────────────────────────────")
+  (println (str "│ " (failure-sentence data)))
+  (when-not (= :lookup stage)
+    (println "│")
+    (let [cause (root-cause error)]
+      (println (str "│ " (.getSimpleName (class cause)) ": " (clean-message cause)))
+      (when-let [frame (user-frame error)]
+        (println (str "│ at " frame)))))
+  (println "│")
   (if (= :terminal severity)
-    (print-terminal! data)
-    (print-recoverable! data)))
+    (do
+      (println "│ Terminal — effects were partially applied, the state can't")
+      (println "│ be guaranteed. Inspect, then restart:")
+      (println "├─ (abort!)         stop the engine")
+      (println "╰─ (error-report)   the full context"))
+    (do
+      (println (if (= :lookup stage)
+                 "│ Recoverable — the event is kept. Register the handler, then:"
+                 "│ Recoverable — nothing was applied. Fix, reload, then:"))
+      (println "├─ (retry!)             re-run the event")
+      (println "├─ (retry! [:id args])  replace and re-run")
+      (println "├─ (skip!)              drop the event and resume")
+      (println "├─ (abort!)             stop the engine")
+      (println "╰─ (error-report)       the full context"))))
 
 (defn- print-dropped!
   "Log a report confined without pause (error pause disabled)"
-  [{:keys [event stage error]}]
-  (println "[epiktetos] Event dropped -" (pr-str event)
-           "- stage" stage "-" (error-line error)))
+  [{:keys [stage error] :as data}]
+  (println "[epiktetos] Event dropped -"
+           (failure-sentence data)
+           (if (= :lookup stage)
+             ""
+             (str "(" (clean-message (root-cause error)) ")"))))
 
 ;; -- Error pause ---------------------------------------------------------
 
@@ -194,7 +254,8 @@
   error and block until a control fn delivers a decision.
 
   report - the report ex-info (chain-report, lookup-report)
-  Returns the decision map: {:action :retry|:skip|:abort, :event replacement-or-nil}"
+  Returns the decision map: {:action :retry|:skip|:abort,
+  :event replacement-or-nil, :paused? true after an actual pause}"
   [report]
   (let [{:keys [stage] :as data} (ex-data report)]
     (if-not (enabled?)
@@ -208,7 +269,7 @@
             (clear-pause-state!)
             (when (= :abort (:action decision))
               (stop-engine!))
-            decision)))))
+            (assoc decision :paused? true))))))
 
 ;; -- Controls ------------------------------------------------------------
 
