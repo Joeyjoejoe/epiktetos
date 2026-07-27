@@ -1,5 +1,6 @@
 (ns epiktetos.controls
-  (:require [epiktetos.event :as event])
+  (:require [epiktetos.event :as event]
+            [epiktetos.error :as error])
   (:import (org.lwjgl.glfw GLFW
                            GLFWKeyCallback
                            GLFWCursorPosCallback
@@ -155,50 +156,54 @@
 (def keyboard-callback
   (proxy [GLFWKeyCallback] []
     (invoke [window k scancode action mods]
-      (let [key-status   (keyword (get KEYBOARD-EVENTS action))
-            key-name     (get KEYBOARD-KEYS k)
-            key-mod      (get KEYBOARD-MODS mods)
-            event-no-mod [key-status key-name :*]
-            event-id     (->> [key-status key-mod key-name]
-                            (remove nil?)
-                            vec)]
+      (when-not (error/paused?)
+        (let [key-status   (keyword (get KEYBOARD-EVENTS action))
+              key-name     (get KEYBOARD-KEYS k)
+              key-mod      (get KEYBOARD-MODS mods)
+              event-no-mod [key-status key-name :*]
+              event-id     (->> [key-status key-mod key-name]
+                              (remove nil?)
+                              vec)]
 
-        (when (event/handler? event-no-mod)
-          (event/dispatch [event-no-mod]))
+          (when (event/handler? event-no-mod)
+            (event/dispatch [event-no-mod]))
 
-        (when (event/handler? event-id)
-          (event/dispatch [event-id]))))))
+          (when (event/handler? event-id)
+            (event/dispatch [event-id])))))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#gad6fae41b3ac2e4209aaa87b596c57f68
 (def mouse-callback
   (proxy [GLFWCursorPosCallback] []
     (invoke [window x y]
-      (when (event/handler? :mouse/position)
+      (when (and (not (error/paused?))
+                 (event/handler? :mouse/position))
         (event/dispatch [:mouse/position [x y]])))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#ga0184dcb59f6d85d735503dcaae809727
 (def mouse-button-callback
   (proxy [GLFWMouseButtonCallback] []
     (invoke [window button action mods]
-      (let [btn-status (keyword (get KEYBOARD-EVENTS action))
-            btn-name   (get MOUSE-BUTTONS button)
-            key-mod    (get KEYBOARD-MODS mods)
-            event-no-mod [btn-status btn-name :*]
-            event-id   (->> [btn-status btn-name key-mod]
-                            (remove nil?)
-                            vec)]
+      (when-not (error/paused?)
+        (let [btn-status (keyword (get KEYBOARD-EVENTS action))
+              btn-name   (get MOUSE-BUTTONS button)
+              key-mod    (get KEYBOARD-MODS mods)
+              event-no-mod [btn-status btn-name :*]
+              event-id   (->> [btn-status btn-name key-mod]
+                              (remove nil?)
+                              vec)]
 
-        (when (event/handler? event-no-mod)
-          (event/dispatch [event-no-mod]))
+          (when (event/handler? event-no-mod)
+            (event/dispatch [event-no-mod]))
 
-        (when (event/handler? event-id)
-          (event/dispatch [event-id]))))))
+          (when (event/handler? event-id)
+            (event/dispatch [event-id])))))))
 
 ;; https://www.glfw.org/docs/3.3/group__input.html#gaf656112c33de3efdb587575ae10ad43
 (def scroll-callback
   (proxy [GLFWScrollCallback] []
     (invoke [window x y]
-      (when (event/handler? :mouse/scroll)
+      (when (and (not (error/paused?))
+                 (event/handler? :mouse/scroll))
         (event/dispatch [:mouse/scroll [x y]])))))
 
 (defn set-callbacks [window]

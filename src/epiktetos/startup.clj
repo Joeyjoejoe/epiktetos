@@ -10,6 +10,7 @@
             [epiktetos.shader-input.buffer :as input-buffer]
             [epiktetos.shader-input.texture :as texture]
             [epiktetos.db :as app-db]
+            [epiktetos.error :as error]
             [epiktetos.event :as event]
             [epiktetos.loop :as game-loop])
   (:import (org.lwjgl.opengl GL GLCapabilities)))
@@ -67,13 +68,14 @@
 
 (defn- reset-engine-state!
   "Reset every engine state container to its initial value: registry,
-  render state, event queue and application db.
+  render state, event queue, application db and pending error pause.
   Returns nil"
   []
   (reset! registrar/registry {})
   (reset! registrar/render-state {})
   (reset! event/queue clojure.lang.PersistentQueue/EMPTY)
   (reset! app-db/db {})
+  (error/clear-pause-state!)
   nil)
 
 (defmethod ig/halt-key!

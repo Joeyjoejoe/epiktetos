@@ -170,14 +170,16 @@
       (do (pump-os-events!)
           (recur)))))
 
-(defn- stop-engine!
+(defn stop-engine!
   "Ask the loop to exit — the halt then runs on the loop thread, in
-  startup/start-engine!.
+  startup/start-engine!. Callable from any thread; a no-op when no
+  engine is running.
   Returns nil"
   []
   (when-let [window (get-in @registrar/registry
                             [::registrar/system-registry :glfw/window])]
-    (GLFW/glfwSetWindowShouldClose window true))
+    (GLFW/glfwSetWindowShouldClose window true)
+    (GLFW/glfwPostEmptyEvent))
   nil)
 
 (defn handle-error!

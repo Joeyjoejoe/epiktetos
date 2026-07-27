@@ -3,6 +3,7 @@
             [epiktetos.registrar :as registrar]
             [epiktetos.coeffect :as cofx]
             [epiktetos.effect :as fx]
+            [epiktetos.error :as error]
             [epiktetos.startup :as startup]
             [epiktetos.event :as event]
             [epiktetos.render.entity :as entity]
@@ -105,6 +106,44 @@
 (defn reg-steps!
   [& steps]
   (dispatch ::render-step/register steps))
+
+(defn error-report
+  "Return the report data of the pending error — event, stage,
+  severity, coeffects, effects bookkeeping — or nil when the engine is
+  not paused on an error (ai-spec/specs/error-spec.md)"
+  []
+  (error/error-report))
+
+(defn retry!
+  "Re-execute the pending event of a recoverable error pause — from
+  the start of its chain, coeffects re-acquired — replaced by the
+  given event when provided. Inert outside a recoverable error pause.
+  event - optional replacement event vector
+  Returns nil"
+  ([] (error/retry!))
+  ([event] (error/retry! event)))
+
+(defn skip!
+  "Drop the pending event of a recoverable error pause entirely and
+  resume the loop. Inert outside a recoverable error pause.
+  Returns nil"
+  []
+  (error/skip!))
+
+(defn abort!
+  "Stop the engine from an error pause — the clean halt, and the only
+  control of a terminal pause. Inert outside an error pause.
+  Returns nil"
+  []
+  (error/abort!))
+
+(defn stop!
+  "Ask the running engine to stop: the loop exits at the end of its
+  iteration and the halt releases every system on the loop thread.
+  Callable from any thread; a no-op when no engine runs.
+  Returns nil"
+  []
+  (error/stop-engine!))
 
 (defn install-core!
   "Register the engine's own events, coeffects and effects.

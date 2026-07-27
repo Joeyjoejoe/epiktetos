@@ -15,4 +15,5 @@
                :hint.window/gl.debug-context   true}
 
  :gl/engine {:context #ig/ref :glfw/window
-             :hot-reload ["resources/shaders/"]}}
+             :hot-reload ["resources/shaders/"]
+             :error-pause {:enabled? true}}}

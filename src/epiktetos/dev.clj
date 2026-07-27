@@ -30,8 +30,11 @@
   (p/close))
 
 (defn install-dev!
-  "Register the development tooling handlers: pause toggle and Portal
-  inspector, engine stop, and evaluation in the loop thread.
+  "Register the development tooling handlers: pause toggle with Portal
+  inspector (see inspect!), engine stop effect, and evaluation in the
+  loop thread. No keyboard binding: the tooling is driven by functions
+  called from the REPL/editor — inspect!, resume!, and
+  epiktetos.core/stop! — keys stay free for the application.
 
   This tooling is a user of the engine, not part of it: the halt
   empties the registry, tooling included, so start registers it again
@@ -68,14 +71,8 @@
     (fn [{[_ f] :event} fx]
       (assoc fx ::eval-in-onpengl-context f)))
 
-  (reg-event
-    [:press :escape]
-    (fn loop-stop [_ fx]
-      (assoc fx :engine/stop true)))
-
-  (reg-event
-    [:press :enter]
-    (fn loop-play [_ fx]
+  (reg-event :dev/pause-toggle
+    (fn pause-toggle [_ fx]
       (assoc fx :loop/pause-toggle true)))
 
   (reg-event ::event/loop.iter
@@ -88,6 +85,32 @@
                  (assoc fx :db new-db))))
   nil)
 
+(defn- wake-paused-loop!
+  "Wake a loop thread blocked waiting for OS events, so a dispatch
+  made from the REPL is consumed without moving the mouse.
+  Returns nil"
+  []
+  (when (get-in @registrar/registry [::registrar/system-registry :glfw/window])
+    (GLFW/glfwPostEmptyEvent))
+  nil)
+
+(defn inspect!
+  "Pause the loop and open the Portal inspector on a full snapshot of
+  the engine state: registry, render-state, event queue, db. A toggle:
+  called on a paused loop, closes the inspector and resumes — resume!
+  is its readable alias for that direction.
+  Returns nil"
+  []
+  (event/dispatch [:dev/pause-toggle])
+  (wake-paused-loop!)
+  nil)
+
+(defn resume!
+  "Close the inspector and resume a loop paused by inspect!.
+  Returns nil"
+  []
+  (inspect!))
+
 (defn start
   "Install the development tooling handlers, then start the engine and
   block until it stops. The halt empties the registry, this tooling
@@ -95,15 +118,15 @@
   namespace declared at load time is replayed: reloading it is the
   developer's call, from the editor.
 
-  Refuses to start while an engine is running — stop it with Escape
-  first: halting from the REPL thread would issue GL calls outside the
-  thread holding the context.
+  Refuses to start while an engine is running — stop it with
+  epiktetos.core/stop! first: halting from the REPL thread would issue
+  GL calls outside the thread holding the context.
 
   config-path - string, classpath path to an edn config (optional)
   Returns the loop exit value, or nil when an engine is already running"
   ([]
    (if (seq (::registrar/system-registry @registrar/registry))
-     (println "[epiktetos] Engine already running - stop it (Escape) before restarting.")
+     (println "[epiktetos] Engine already running - stop it (epiktetos.core/stop!) before restarting.")
      (do (install-dev!)
          (epiktet/run))))
   ([config-path]
