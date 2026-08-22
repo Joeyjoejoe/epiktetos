@@ -7,11 +7,14 @@
 (defonce render-state
   (atom {}))
 
-(defn find-vao-by-layout
-  "Finds a registered VAO by its layout hash"
-  [layout-hash]
+(defn find-vao-by-format
+  "Finds a registered VAO by its resolved vertex-formats.
+   vertex-formats - vector of vertex-format maps (see
+                    epiktetos.opengl.shader-attribute/resolve-vertex-format)
+   Returns the VAO entry, or nil."
+  [vertex-formats]
   (->> (get-in @registry [::opengl-registry :vaos])
-       (filter (fn [[_ vao]] (= layout-hash (:layout-hash vao))))
+       (filter (fn [[_ vao]] (= vertex-formats (:vertex-formats vao))))
        first
        second))
 

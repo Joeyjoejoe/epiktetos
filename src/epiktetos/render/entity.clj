@@ -100,7 +100,7 @@
    (prep-entity (::registrar/opengl-registry @registrar/registry) render-params))
 
   ([opengl-register render-params]
-   (let [{:keys [programs vaos]} opengl-register
+   (let [{:keys [programs]} opengl-register
          {:keys [program primitives indices instances max-instances]
           :or   {primitives :triangles}}
          render-params]
@@ -110,11 +110,11 @@
                        {:program       program
                         :max-instances max-instances})))
 
-     (if-let [vao-id (get-in programs [program :vao-id])]
+     (if (get-in programs [program :vao-id])
        (-> (cond-> render-params
              (fn? instances) (assoc :instances max-instances))
            (assoc :primitives (DRAW-PRIMITIVES primitives))
-           (build-vbos (get-in vaos [vao-id :vbos]))
+           (build-vbos (get-in programs [program :vbos]))
            (build-ibo  indices)
            (cond-> (fn? instances) (assoc :instances instances)))
        (throw (ex-info "Unknown shader program"

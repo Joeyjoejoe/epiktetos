@@ -13,7 +13,7 @@
   ;; TODO Handle dirty state here in dvelopment environement only ?
 
   (let [{::registrar/keys [opengl-registry input-registry]} registry
-        {:keys [programs vaos program-inputs]} opengl-registry
+        {:keys [programs program-inputs]} opengl-registry
         {::registrar/keys [steps custom-step-order queue entities]} render-state
         custom-steps  (keep steps custom-step-order)
         step-inputs    (input-buffer/inputs-by-step input-registry)
@@ -37,9 +37,8 @@
       (when-let [[sk entity-ids] (first rende-queue)]
 
         (let [batch-entity (get entities (first entity-ids))
-              {:keys [program group]} batch-entity
-              {:keys [id vao-id]}     (get programs program)
-              {:keys [vbos]}          (get vaos vao-id)]
+              {:keys [program group]}  batch-entity
+              {:keys [id vao-id vbos]} (get programs program)]
 
 
           (when (rs/step-changed? group-step sk prev-k)
