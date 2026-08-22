@@ -54,6 +54,8 @@
 
           (when (rs/step-changed? program-step sk prev-k)
             (GL20/glUseProgram id)
+            (input-buffer/warn-unfed-inputs! program
+                                             (:inputs (get programs program)))
             (update-inputs! :step/program program))
 
           (doseq [custom-step custom-steps

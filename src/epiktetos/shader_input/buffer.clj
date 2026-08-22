@@ -1,5 +1,6 @@
 (ns epiktetos.shader-input.buffer
-  (:require [epiktetos.opengl.buffer :as gl-buffer]
+  (:require [epiktetos.error :as error]
+            [epiktetos.opengl.buffer :as gl-buffer]
             [epiktetos.registrar :as registrar]
             [epiktetos.shader-input.data :as data]
             [epiktetos.shader-input.texture :as texture]
@@ -468,6 +469,36 @@
     (println (str "✔ input \"" varname "\" restored")))
   nil)
 
+(defn- warn-once!
+  "Prints a degradation line once per varname, until the varname is
+   rearmed (rearm-input!: registration, or first successful update).
+   varname - string, input variable name
+   line    - string, the full line to print
+   Returns nil."
+  [varname line]
+  (when-not (contains? (get @registrar/render-state ::registrar/warned-inputs #{})
+                       varname)
+    (swap! registrar/render-state
+           update ::registrar/warned-inputs (fnil conj #{}) varname)
+    (println line))
+  nil)
+
+(defn warn-unfed-inputs!
+  "Warns, in development mode, when a program about to draw declares
+   inputs nobody registered — the render-time lookup that fails,
+   after the batch has settled: the absence is real, and on screen.
+   program-k - keyword, program id
+   varnames  - coll of the program's input varnames
+   Returns nil."
+  [program-k varnames]
+  (when (error/enabled?)
+    (doseq [varname varnames
+            :when (nil? (registrar/lookup-input varname))]
+      (warn-once! varname
+                  (str "✖ input \"" varname "\" unfed — no reg-input"
+                       " (drawn by " program-k ")"))))
+  nil)
+
 (defn- warn-degraded!
   "Prints the degraded-input warning of a varname, once until the
    input is rearmed by a successful update or a re-registration.
@@ -502,11 +533,15 @@
   [db program-inputs inputs step-value]
   (let [warned (get @registrar/render-state ::registrar/warned-inputs)]
     (doseq [[varname input] inputs
-            :let  [program-input (get program-inputs varname)]
-            :when program-input]
-      (try
-        (update-input! db program-input input step-value)
-        (when (and warned (contains? warned varname))
-          (rearm-input! varname))
-        (catch Throwable t
-          (warn-degraded! varname t))))))
+            :let [program-input (get program-inputs varname)]]
+      (if-not program-input
+        (when (error/enabled?)
+          (warn-once! varname
+                      (str "✖ input \"" varname "\" unmatched — no program"
+                           " declares it (a varname typo?)")))
+        (try
+          (update-input! db program-input input step-value)
+          (when (and warned (contains? warned varname))
+            (rearm-input! varname))
+          (catch Throwable t
+            (warn-degraded! varname t)))))))
