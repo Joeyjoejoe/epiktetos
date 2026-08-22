@@ -124,7 +124,7 @@
             log      (with-out-str
                        (reset! decision (error/handle-error! report)))]
         (t/is (= {:action :retry :event [:fixed 1] :paused? true} @decision))
-        (t/is (re-find #"⏸ Event Error \(:evt\)" log))
+        (t/is (re-find #"⏸  Event Error :evt" log))
         (t/is (re-find #"Debug with:" log))
         (t/is (false? (error/paused?)))))))
 
@@ -205,7 +205,8 @@
                    :stage      :effects
                    :severity   :recoverable
                    :fx/missing [:save/write]}))]
-      (t/is (re-find #"⏸ Effect Lookup Error :save/write \(:game/save\) ─" log))
+      (t/is (re-find #"⏸  Effect Lookup Error :save/write ─" log))
+      (t/is (re-find #"│  event \[:game/save nil\]" log))
       (t/is (re-find #"│  no effect :save/write is registered" log))
       (t/is (re-find #"│  Register it with:" log))
       (t/is (re-find #"│  \(reg-fx :save/write handler-fn\)" log))
@@ -223,7 +224,8 @@
                          :severity  :terminal
                          :error     throwable
                          :fx/failed [:save/write {}]}))]
-      (t/is (re-find #"⏸ Effect Error :save/write \(:game/save\) ─" log))
+      (t/is (re-find #"⏸  Effect Error :save/write ─" log))
+      (t/is (re-find #"│  event \[:game/save nil\]" log))
       (t/is (re-find #"│  Exception: saves/session.edn" log))
       (t/is (re-find #"│  at user/save \(user.clj:16\)" log))
       (t/is (not (re-find #"Register it with:" log)))
@@ -237,7 +239,8 @@
                    :stage            :coeffects
                    :severity         :recoverable
                    :coeffect/missing :random}))]
-      (t/is (re-find #"⏸ Coeffect Lookup Error :random \(:loot/roll\) ─" log))
+      (t/is (re-find #"⏸  Coeffect Lookup Error :random ─" log))
+      (t/is (re-find #"│  event \[:loot/roll\]" log))
       (t/is (re-find #"│  no coeffect :random is registered" log))
       (t/is (re-find #"│  \(reg-cofx :random handler-fn\)" log)))))
 
@@ -247,3 +250,28 @@
       (let [log (with-out-str (error/retry!) (error/skip!) (error/stop!))]
         (t/is (false? (error/paused?)))
         (t/is (re-find #"No pending error" log))))))
+
+(t/deftest call-site-test
+  (t/testing "the header shows the dispatch site carried by the event meta"
+    (let [report (error/chain-report
+                   (with-meta [:evt 1] {::error/call-site "foo.clj:12"})
+                   (chain-error :coeffects :before
+                                (ex-info "boom" {:coeffect :now}) {}))
+          log    (with-out-str (#'error/print-report! (ex-data report)))]
+      (t/is (re-find #"⏸  Coeffect Error :now \(foo.clj:12\) ─" log))
+      (t/is (re-find #"│  event \[:evt 1\]" log))))
+
+  (t/testing "tag-call-site instruments before startup, and stays out of a
+             running engine without the error pause"
+    (let [saved (get @registrar/registry ::registrar/system-registry)]
+      (try
+        (swap! registrar/registry dissoc ::registrar/system-registry)
+        (let [site (::error/call-site (meta (error/tag-call-site [:evt 1])))]
+          (t/is (re-find #"\.clj:\d+" (str site))))
+        (swap! registrar/registry assoc ::registrar/system-registry
+               {:glfw/window {:id 1}})
+        (t/is (nil? (meta (error/tag-call-site [:evt 1]))))
+        (finally
+          (if saved
+            (swap! registrar/registry assoc ::registrar/system-registry saved)
+            (swap! registrar/registry dissoc ::registrar/system-registry)))))))

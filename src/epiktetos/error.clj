@@ -83,6 +83,8 @@
         data  (cond-> {:event event
                        :stage stage
                        :error throwable}
+                (::call-site (meta event))
+                (assoc :call-site (::call-site (meta event)))
                 (#{:handler :effects} stage)
                 (assoc :coeffects (:coeffects context))
 
@@ -103,10 +105,50 @@
   Returns an ex-info whose ex-data is the report map of the spec"
   [event]
   (let [throwable (ex-info "No handler registered for event" {:event event})]
-    (report {:event event
-             :stage :lookup
-             :error throwable}
+    (report (cond-> {:event event
+                     :stage :lookup
+                     :error throwable}
+              (::call-site (meta event))
+              (assoc :call-site (::call-site (meta event))))
             throwable)))
+
+;; -- Declaration events --------------------------------------------------
+
+(def DECLARATION-EVENTS
+  "The engine's last-wins declaration events — one identity, the
+  latest registration replaces the previous one — mapped to the pause
+  header label of their failures. Their fix always lands in the
+  queue: reloading a namespace re-dispatches the top level
+  declaration, and retry! adopts it (epiktetos.event)."
+  {:epiktetos.event/reg-input      "Shader Input Error"
+   :epiktetos.event/reg-p          "Program Error"
+   :epiktetos.event/reg-texture    "Texture Error"
+   :epiktetos.render.entity/render "Render Error"})
+
+(def ^:private DECLARATION-FORMS
+  "The core API form behind each declaration event, for log subjects"
+  {:epiktetos.event/reg-input      "reg-input"
+   :epiktetos.event/reg-p          "reg-p"
+   :epiktetos.event/reg-texture    "reg-texture"
+   :epiktetos.render.entity/render "render"})
+
+(defn declaration-event?
+  "True for a declaration event (see DECLARATION-EVENTS)"
+  [event]
+  (contains? DECLARATION-EVENTS (get event 0)))
+
+(defn declaration-identity
+  "The last-wins identity of a declaration event: the varname of a
+  reg-input, the id of a reg-p, reg-texture or render"
+  [event]
+  (get-in event [1 0]))
+
+(defn- declaration-signature
+  "The subject of a declaration event's log lines: its core API form
+  and its identity"
+  [event]
+  (str (DECLARATION-FORMS (get event 0)) " "
+       (pr-str (declaration-identity event))))
 
 ;; -- Instructive log -----------------------------------------------------
 
@@ -142,6 +184,42 @@
           (when frame
             (str (clojure.lang.Compiler/demunge (.getClassName frame))
                  " (" (.getFileName frame) ":" (.getLineNumber frame) ")"))))))
+
+(defn call-site
+  "The topmost user frame of the current stack, as \"file:line\" —
+  captured at dispatch time, because events are consumed later on the
+  loop thread, where the call site is gone from the stack.
+  Returns a string, or nil when no user file frame exists (bare REPL
+  input)"
+  []
+  (->> (.getStackTrace (Thread/currentThread))
+       (filter (fn [^StackTraceElement frame]
+                 (not (re-matches INTERNAL-FRAME (.getClassName frame)))))
+       first
+       ((fn [^StackTraceElement frame]
+          (when-let [file (some-> frame .getFileName)]
+            (when-not (= "NO_SOURCE_FILE" file)
+              (str file ":" (.getLineNumber frame))))))))
+
+(defn dev-mode?
+  "True when the development error tooling should instrument: the
+  error pause is enabled, or no engine runs yet — top level
+  declarations dispatch before the configuration is known, and they
+  are the development workflow par excellence"
+  []
+  (or (enabled?)
+      (empty? (get @registrar/registry ::registrar/system-registry))))
+
+(defn tag-call-site
+  "Attach the dispatch call site to an event's metadata, in dev mode.
+  A no-op in production: no stack walk, the event flows untouched.
+  event - the reified event vector
+  Returns the event, carrying ::call-site meta in dev mode"
+  [event]
+  (or (when (dev-mode?)
+        (when-let [site (call-site)]
+          (vary-meta event assoc ::call-site site)))
+      event))
 
 (defn- event-signature
   "The event printed for a log line: long or deep arguments are elided
@@ -183,12 +261,20 @@
   []
   (println "▶ resumed"))
 
+(defn- outcome-signature
+  "The subject of an outcome line: declaration events name their form
+  and identity, other events their elided signature"
+  [event]
+  (if (declaration-event? event)
+    (declaration-signature event)
+    (event-signature event)))
+
 (defn print-retry-succeeded!
   "Log the outcome of a successful retry — the loop resumes.
   event - the retried event vector
   Returns nil"
   [event]
-  (println (str "✔ retry succeeded — " (event-signature event))))
+  (println (str "✔ retry succeeded — " (outcome-signature event))))
 
 (defn print-retry-failed!
   "Log the outcome of a failed retry, right before the next error
@@ -196,48 +282,126 @@
   event - the retried event vector
   Returns nil"
   [event]
-  (println (str "✖ retry failed — " (event-signature event))))
+  (println (str "✖ retry failed — " (outcome-signature event))))
 
 (defn print-skipped!
   "Log a skipped pending event — the loop resumes without it.
   event - the dropped event vector
   Returns nil"
   [event]
-  (println (str "⏭ skipped — " (event-signature event))))
+  (println (str "⏭ skipped — " (outcome-signature event))))
 
 (defn print-aborted!
   "Log the abort decision on the pending event — the engine stops.
   event - the pending event vector
   Returns nil"
   [event]
-  (println (str "⏹ aborted — " (event-signature event))))
+  (println (str "⏹ aborted — " (outcome-signature event))))
 
 (defn- header-title
-  "The title of an error pause block: error type, the failing
-  coeffect/effect key when applicable, and the source event key"
-  [{:keys [event stage] :as data}]
-  (let [source (get event 0)]
-    (case stage
-      :lookup    (str "Event Lookup Error (" source ")")
-      :handler   (str "Event Error (" source ")")
-      :coeffects (if-let [missing (:coeffect/missing data)]
-                   (str "Coeffect Lookup Error " missing " (" source ")")
-                   (str "Coeffect Error " (:coeffect data) " (" source ")"))
-      :effects   (if-let [missing (:fx/missing data)]
-                   (str "Effect Lookup Error " (string/join ", " missing)
-                        " (" source ")")
-                   (str "Effect Error " (first (:fx/failed data))
-                        " (" source ")")))))
+  "The title of an error pause block: error type, failing identifier,
+  and the dispatch call site when one was captured. The source event
+  of coeffect and effect errors moves to the block body"
+  [{:keys [event stage call-site] :as data}]
+  (let [source (get event 0)
+        title  (case stage
+                 :lookup    (str "Event Lookup Error " source)
+                 :handler   (if (declaration-event? event)
+                              (str (DECLARATION-EVENTS (get event 0)) " "
+                                   (pr-str (declaration-identity event)))
+                              (str "Event Error " source))
+                 :coeffects (if-let [missing (:coeffect/missing data)]
+                              (str "Coeffect Lookup Error " missing)
+                              (str "Coeffect Error " (:coeffect data)))
+                 :effects   (if-let [missing (:fx/missing data)]
+                              (str "Effect Lookup Error "
+                                   (string/join ", " missing))
+                              (str "Effect Error "
+                                   (first (:fx/failed data)))))]
+    (cond-> title
+      call-site (str " (" call-site ")"))))
 
 (defn- header-rule
   "The block header line: pause icon, title, trailing rule"
   [title]
-  (let [prefix (str "⏸ " title " ")]
+  (let [prefix (str "⏸  " title " ")]
     (str prefix (apply str (repeat (max 4 (- 78 (count prefix))) "─")))))
 
+(defn- allowed-line
+  "One line listing the allowed values of a failed input parameter"
+  [allowed]
+  (str "Allowed: "
+       (if (coll? allowed)
+         (string/join ", " (map str (sort-by str allowed)))
+         allowed)))
+
+(defn- input-message-lines
+  "The error lines of a shader input registration failure, shaped by
+  its data: parameter and option errors name the offending value and
+  the allowed ones, dry-run errors the validation path or the
+  crashing handler's user frame — the header names the input, the
+  skip! control carries the fix flow"
+  [{:keys [error]}]
+  (let [{:keys [input/varname input/unknown-options
+                option value allowed requires step known-steps path]
+         :as data} (ex-data error)
+        description (:error data)]
+    (-> (cond
+          unknown-options
+          [(str "Unknown option" (when (next unknown-options) "s") " "
+                (string/join ", " unknown-options))
+           (allowed-line allowed)]
+
+          option
+          (cond-> [(str "Invalid " option " "
+                        (pr-str value))]
+            allowed  (conj (allowed-line allowed))
+            requires (conj (str "Requires " requires)))
+
+          known-steps
+          [(str "Unknown render step " step)
+           (allowed-line known-steps)
+           "Custom steps must be registered with reg-steps! before reg-input"]
+
+          (contains? data :ssbo/capacity)
+          [(str "Invalid :ssbo/capacity "
+                (pr-str (:ssbo/capacity data)))
+           "Allowed: a positive integer, in elements"]
+
+          description
+          [(str "Invalid value" (when path (str " at " path)) ": "
+                (if (keyword? description) (name description) description))]
+
+          (contains? data :handler)
+          [(clean-message error)
+           (str "Got: " (pr-str (:handler data)))]
+
+          (:input/dry-run data)
+          (let [cause (root-cause error)
+                frame (user-frame error)]
+            (cond-> [(str "Input \"" varname "\" — "
+                          (.getSimpleName (class cause)) ": "
+                          (clean-message cause))]
+              frame (conj (str "at " frame))))
+
+          :else
+          [(clean-message error)
+           (str "Got: " (pr-str varname))]))))
+
+(declare message-body-lines)
+
 (defn- message-lines
-  "The error lines of a pause block: a synthetic message for lookup
-  errors, the root cause and the topmost user frame otherwise"
+  "The error lines of a pause block: the source event of coeffect and
+  effect errors first (their header names the failing key), then a
+  synthetic message for lookup errors, the input lines for a shader
+  input registration failure, the root cause and the topmost user
+  frame otherwise"
+  [{:keys [stage event] :as data}]
+  (cond->> (message-body-lines data)
+    (#{:coeffects :effects} stage)
+    (into [(str "event " (event-signature event))])))
+
+(defn- message-body-lines
   [{:keys [stage error] :as data}]
   (cond
     (= :lookup stage)
@@ -248,6 +412,9 @@
 
     (:fx/missing data)
     (mapv #(str "no effect " % " is registered") (:fx/missing data))
+
+    (:input/varname (ex-data error))
+    (input-message-lines data)
 
     :else
     (let [cause (root-cause error)
@@ -269,8 +436,43 @@
     (:fx/missing data)
     (mapv #(str "(reg-fx " % " handler-fn)") (:fx/missing data))))
 
+(defn- controls-of
+  "The controls advertised by a pause block — only the pertinent
+  ones: a terminal pause offers inspection and stop, a declaration
+  failure offers the fix-reload-retry! flow (skip would leave the
+  engine state degraded, retry! adopts the reloaded declaration),
+  any other recoverable pause the full set.
+  Returns a vector of [form description] pairs"
+  [{:keys [severity event]}]
+  (cond
+    (= :terminal severity)
+    [["(epiktetos.core/stop!)"       "stop the engine"]
+     ["(epiktetos.dev/error-report)" "the full context"]]
+
+    (declaration-event? event)
+    [["(epiktetos.dev/retry!)"       "re-run the declaration — picks up your reloaded fix"]
+     ["(epiktetos.core/stop!)"       "stop the engine"]
+     ["(epiktetos.dev/error-report)" "the full context"]]
+
+    :else
+    [["(epiktetos.dev/retry!)"            "re-run the event and resume"]
+     ["(epiktetos.dev/retry! [:id args])" "replace the event, re-run and resume"]
+     ["(epiktetos.dev/skip!)"             "drop the event and resume"]
+     ["(epiktetos.core/stop!)"            "stop the engine"]
+     ["(epiktetos.dev/error-report)"      "the full context"]]))
+
+(defn- print-controls!
+  "Print the gutter branches of a pause block's controls, forms
+  aligned"
+  [controls]
+  (let [width (apply max (map (comp count first) controls))]
+    (doseq [[index [form description]] (map-indexed vector controls)
+            :let [gutter (if (= index (dec (count controls))) "╰─ " "├─ ")]]
+      (println (str gutter (format (str "%-" (+ width 2) "s") form)
+                    description)))))
+
 (defn- print-report!
-  [{:keys [severity] :as data}]
+  [data]
   (println "")
   (println (header-rule (header-title data)))
   (println "│")
@@ -283,16 +485,7 @@
       (println (str "│  " line)))
     (println "│"))
   (println "│  Debug with:")
-  (if (= :terminal severity)
-    (do
-      (println "├─ (epiktetos.core/stop!)         stop the engine")
-      (println "╰─ (epiktetos.dev/error-report)   the full context"))
-    (do
-      (println "├─ (epiktetos.dev/retry!)             re-run the event and resume")
-      (println "├─ (epiktetos.dev/retry! [:id args])  replace the event, re-run and resume")
-      (println "├─ (epiktetos.dev/skip!)              drop the event and resume")
-      (println "├─ (epiktetos.core/stop!)             stop the engine")
-      (println "╰─ (epiktetos.dev/error-report)       the full context"))))
+  (print-controls! (controls-of data)))
 
 (defn- print-dropped!
   "Log a report confined without pause (error pause disabled)"
@@ -403,6 +596,13 @@
           (println "            Keep your effects small, feed them validated data, decide")
           (println "            in pure code. Inspect (epiktetos.dev/error-report), then")
           (println "            (epiktetos.core/stop!)."))
+
+      (and (= :skip action)
+           (declaration-event? (:event (ex-data report))))
+      (do (println "[epiktetos] A declaration leaves no honest skip: its absence degrades")
+          (println "            the engine state — unfed input, missing program, texture")
+          (println "            or entity. Fix it, reload your namespace, then")
+          (println "            (epiktetos.dev/retry!) — or (epiktetos.core/stop!)."))
 
       :else
       (do (swap! pause-state assoc :decision {:action action :event replacement})
