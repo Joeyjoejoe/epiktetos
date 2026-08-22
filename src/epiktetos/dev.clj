@@ -48,7 +48,7 @@
   []
   (reg-fx :loop/pause-toggle
           (fn [db]
-            (let [paused (get-in @app-db/db [:core/loop :paused?])]
+            (let [paused (get-in @app-db/db [:core/window :paused?])]
 
               (if-not paused
                 (do (open-inspector)
@@ -56,7 +56,7 @@
                 (do (close-inspector)
                     (error/print-resumed!)))
 
-              (swap! app-db/db update-in [:core/loop :paused?] not)
+              (swap! app-db/db update-in [:core/window :paused?] not)
 
               (when-not paused
                 (portal-load-state)))))
@@ -79,15 +79,6 @@
   (reg-event :dev/pause-toggle
     (fn pause-toggle [_ fx]
       (assoc fx :loop/pause-toggle true)))
-
-  (reg-event ::event/loop.iter
-             (fn loop-infos [cofx fx]
-               (let [{[_ loop-iter] :event
-                      db :db}
-                     cofx
-
-                     new-db (assoc db :core/loop loop-iter)]
-                 (assoc fx :db new-db))))
   nil)
 
 (defn- wake-paused-loop!

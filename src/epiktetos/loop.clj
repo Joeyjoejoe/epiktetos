@@ -15,22 +15,17 @@
    (GLFW/glfwSetWindowShouldClose window-id false)
 
    (loop [{{:keys [curr delta]} :time
-           {:keys [value frames tick]} :fps
-           :as loop-iter}
+           fps :fps
+           :as window-frame}
           {:iter 1
-           :paused? false
            :time {:curr (GLFW/glfwGetTime) :prev 0 :delta 0}
-           :fps {:value 0 :frames 0 :tick 0.0}}
+           :fps  0}
 
+          {:keys [frames tick]} {:frames 0 :tick 0.0}
           lag (atom 0.0)]
 
      (swap! lag #(+ % delta))
-     (swap! app-db/db assoc :core/loop loop-iter)
-
-     ;; TODO apply entities transformations that can be multi threaded:
-     ;; like motions, animations ?
-
-     (event/execute [::event/loop.iter loop-iter])
+     (swap! app-db/db update :core/window merge window-frame)
 
      (while (>= @lag FIXED_TIMESTEP)
 
@@ -41,7 +36,7 @@
        ;; - Manual event loop consumption
        ;; - Events redo/undo
        ;; - Inspector controls
-       (while (get-in @app-db/db [:core/loop :paused?])
+       (while (get-in @app-db/db [:core/window :paused?])
          (GLFW/glfwWaitEvents)
          (event/consume!))
 
@@ -55,17 +50,18 @@
 
        (let [iter-end      (GLFW/glfwGetTime)
              iter-duration (- iter-end curr)
-             fps-tick (+ tick iter-duration)
-             fps-map  (if (> fps-tick 1.0)
-                        {:value frames :frames 0 :tick (- fps-tick 1.0)}
-                        {:value value :frames (inc frames) :tick fps-tick})]
+             fps-tick      (+ tick iter-duration)
+             fps-second?   (> fps-tick 1.0)]
 
-         (-> loop-iter
+         (-> window-frame
              (assoc-in [:time :curr]  iter-end)
              (assoc-in [:time :prev]  curr)
              (assoc-in [:time :delta] iter-duration)
-             (assoc :fps fps-map)
+             (assoc :fps (if fps-second? frames fps))
              (update :iter inc)
-             (recur lag)))))
+             (recur (if fps-second?
+                      {:frames 0 :tick (- fps-tick 1.0)}
+                      {:frames (inc frames) :tick fps-tick})
+                    lag)))))
 
    :engine/stop)

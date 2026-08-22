@@ -68,7 +68,7 @@
   (ex-info "Event pipeline error"
            (assoc data
                   :severity (severity-of stage throwable)
-                  :iter     (get-in @app-db/db [:core/loop :iter]))
+                  :iter     (get-in @app-db/db [:core/window :iter]))
            throwable))
 
 (defn chain-report

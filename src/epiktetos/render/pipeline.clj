@@ -28,7 +28,7 @@
     (GL11/glClearColor 0.1 0.1 0.1 1.0)
     (GL11/glClear (bit-or GL11/GL_COLOR_BUFFER_BIT GL11/GL_DEPTH_BUFFER_BIT))
 
-    (update-inputs! :step/frame (get-in db [:core/loop :iter]))
+    (update-inputs! :step/frame (get-in db [:core/window :iter]))
 
 
     (loop [prev-k nil
