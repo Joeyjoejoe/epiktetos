@@ -43,7 +43,7 @@
   event - vector, [id & args]
   Returns the updated queue"
   [event]
-  (swap! queue conj event))
+  (swap! queue conj (error/tag-call-site event)))
 
 (defn register
   ([id handler]
@@ -73,6 +73,49 @@
   Returns the updated queue"
   [events]
   (swap! queue #(into (into clojure.lang.PersistentQueue/EMPTY events) %)))
+
+(defn- prepare-declaration-retry!
+  "Prepare the retry of a pending declaration event from the events
+  dispatched during the pause — the tail of the queue, behind the
+  frozen batch remainder whose order stays untouched:
+
+  - the latest tail declaration of the same id and identity is
+    **adopted** as the pending replacement: declaration events are
+    last-wins by identity (error/DECLARATION-EVENTS), the reload's
+    re-dispatch is the fix;
+  - the other tail declarations are extracted as **upstream** work,
+    executed before the pending one — a fix often ships with the
+    declarations it depends on (a render with its reg-p), and
+    registration order is free by doctrine.
+
+  Tail matches and declarations are removed from the queue; any other
+  pending event passes through untouched.
+  pending - the pending event vector
+  frozen  - count of batch-remainder events at the queue head
+  Returns {:pending event, :upstream [declaration events]}"
+  [pending frozen]
+  (if-not (error/declaration-event? pending)
+    {:pending pending :upstream []}
+    (let [id     (get-id pending)
+          ident  (error/declaration-identity pending)
+          match? (fn [event] (and (= id (get-id event))
+                                  (= ident (error/declaration-identity event))))
+          result (atom {:pending pending :upstream []})]
+      (swap! queue
+             (fn [q]
+               (let [events      (vec q)
+                     split       (min frozen (count events))
+                     frozen-part (subvec events 0 split)
+                     tail        (subvec events split)
+                     adopted     (last (filterv match? tail))
+                     upstream    (filterv #(and (error/declaration-event? %)
+                                                (not (match? %)))
+                                          tail)]
+                 (reset! result {:pending  (or adopted pending)
+                                 :upstream upstream})
+                 (into (into clojure.lang.PersistentQueue/EMPTY frozen-part)
+                       (remove error/declaration-event? tail)))))
+      @result)))
 
 (defn- try-execute
   "Execute one consumed event through its interceptor chain.
@@ -115,12 +158,28 @@
                            :redrain)
                 :abort (do (error/print-aborted! pending)
                            :abort)
-                :retry (let [pending (or replacement pending)]
-                         (if-let [report (try-execute pending)]
-                           (do (error/print-retry-failed! pending)
-                               (recur pending report))
-                           (do (error/print-retry-succeeded! pending)
-                               :redrain)))))))
+                :retry
+                (let [{new-pending :pending upstream :upstream}
+                      (if replacement
+                        {:pending replacement :upstream []}
+                        (prepare-declaration-retry! pending
+                                                    (count remainder)))
+                      upstream-failure
+                      (some (fn [declaration]
+                              (when-let [report (try-execute declaration)]
+                                {:declaration declaration :report report}))
+                            upstream)]
+                  (if upstream-failure
+                    (do (swap! queue conj new-pending)
+                        (error/print-retry-failed!
+                          (:declaration upstream-failure))
+                        (recur (:declaration upstream-failure)
+                               (:report upstream-failure)))
+                    (if-let [report (try-execute new-pending)]
+                      (do (error/print-retry-failed! new-pending)
+                          (recur new-pending report))
+                      (do (error/print-retry-succeeded! new-pending)
+                          :redrain))))))))
       :continue)))
 
 (defn consume!

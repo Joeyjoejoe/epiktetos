@@ -28,6 +28,46 @@
 (defonce RESERVED-ENTITY-KEYS
   #{:vbo-ids :ibo-id :sort-key})
 
+(defn validate-declaration!
+  "Validates a render declaration from the event handler — the pure
+  stage, where an error pauses recoverably (development mode): a map
+  with a :program key naming a registered program, no reserved engine
+  key, known :primitives, and a positive :max-instances when
+  :instances is a function.
+  program       - map, registered program entry, or nil
+  entity-id     - keyword, entity id
+  render-params - map, the render declaration
+  Returns nil."
+  [program entity-id render-params]
+  (when-not (map? render-params)
+    (throw (ex-info "Render params must be a map"
+                    {:render/entity entity-id
+                     :render/params render-params})))
+  (let [{:keys [instances max-instances primitives]} render-params]
+    (when-not (:program render-params)
+      (throw (ex-info "Render params require a :program key, the id of a registered program"
+                      {:render/entity entity-id
+                       :mandatory     MANDATORY-RENDER-PARAMS})))
+    (when-not program
+      (throw (ex-info (str "Unknown shader program " (:program render-params)
+                           " - register it with reg-p, or fix the :program key")
+                      {:render/entity  entity-id
+                       :render/program (:program render-params)})))
+    (when-let [reserved (seq (filter RESERVED-ENTITY-KEYS (keys render-params)))]
+      (throw (ex-info (str "Render params carry reserved engine keys " (vec reserved))
+                      {:render/entity entity-id
+                       :reserved      (vec reserved)})))
+    (when (and primitives (not (DRAW-PRIMITIVES primitives)))
+      (throw (ex-info (str "Unknown :primitives " primitives)
+                      {:render/entity entity-id
+                       :primitives    primitives
+                       :allowed       (set (keys DRAW-PRIMITIVES))})))
+    (when (and (fn? instances) (not (pos-int? max-instances)))
+      (throw (ex-info "Dynamic :instances requires a positive :max-instances"
+                      {:render/entity entity-id
+                       :max-instances max-instances}))))
+  nil)
+
 (defn- run-handler
   "Executes a VBO handler and return output with vertex count if divisor is 0."
   [entity {:keys [handler divisor type-layout]}]

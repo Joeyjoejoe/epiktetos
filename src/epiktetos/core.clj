@@ -131,6 +131,8 @@
   (reg-event ::event/reg-p
              (fn [cofx fx]
                (let [[id prog] (get-in cofx [:event 1])]
+                 (when (error/enabled?)
+                   (prog/validate-declaration! id prog))
                  (reg-p fx id prog))))
 
   (reg-event ::event/reg-input
@@ -146,11 +148,17 @@
   (reg-event ::event/reg-texture
              (fn [cofx fx]
                (let [[id spec] (get-in cofx [:event 1])]
+                 (when (error/enabled?)
+                   (texture/validate-spec id spec))
                  (reg-texture fx id spec))))
 
   (reg-event ::entity/render
+             [(inject-cofx :inject-render-program)]
              (fn [cofx fx]
                (let [[id render-params] (get-in cofx [:event 1])]
+                 (when (error/enabled?)
+                   (entity/validate-declaration! (:render-program cofx)
+                                                 id render-params))
                  (render fx id render-params))))
 
   (reg-event ::entity/delete
@@ -173,6 +181,11 @@
                 (assoc coeffects :input-target
                        (registrar/lookup-program-input varname)))))
 
+  (reg-cofx :inject-render-program
+            (fn [coeffects]
+              (let [[_ [_ render-params]] (:event coeffects)]
+                (assoc coeffects :render-program
+                       (registrar/get-program (:program render-params))))))
 
   (reg-cofx :inject-db
             (fn [coeffects]
