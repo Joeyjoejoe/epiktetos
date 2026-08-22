@@ -438,7 +438,7 @@
              assoc-in [::registrar/input-values varname] value))
     nil))
 
-(defn- update-input!
+(defn update-input!
   "Executes one input handler and writes its output to its GPU
    target: the block buffer for :ubo and :ssbo inputs, the uniform
    locations of every declaring program for :uniform inputs, the
@@ -454,18 +454,59 @@
     :texture (texture/update-texture-input! db program-input input step-value)
     (update-block! db program-input input step-value)))
 
+(defn rearm-input!
+  "Drops the degraded-input warning of a varname — logging its
+   restoration — so its next failure warns again: called on a
+   successful update, and when the input is (re)registered.
+   varname - string, input variable name
+   Returns nil."
+  [varname]
+  (when (contains? (get @registrar/render-state ::registrar/warned-inputs #{})
+                   varname)
+    (swap! registrar/render-state
+           update ::registrar/warned-inputs disj varname)
+    (println (str "✔ input \"" varname "\" restored")))
+  nil)
+
+(defn- warn-degraded!
+  "Prints the degraded-input warning of a varname, once until the
+   input is rearmed by a successful update or a re-registration.
+   varname   - string, input variable name
+   throwable - the confined error
+   Returns nil."
+  [varname throwable]
+  (when-not (contains? (get @registrar/render-state ::registrar/warned-inputs #{})
+                       varname)
+    (swap! registrar/render-state
+           update ::registrar/warned-inputs (fnil conj #{}) varname)
+    (let [{:keys [path error]} (ex-data throwable)]
+      (println (str "✖ input \"" varname "\" degraded — "
+                    (or error (.getMessage ^Throwable throwable))
+                    (when path (str " at " path))
+                    " (fix the handler and reload)"))))
+  nil)
+
 (defn update-inputs!
   "Executes the input handlers registered on a render step whose
    varname matches a registered program input, and writes their output
-   to the GPU block buffers. Inputs with no matching program input are
-   silently skipped.
+   to its GPU target. Confined as data (design rule 5): a failing
+   handler or an invalid output degrades its input — warning printed
+   once, GPU write skipped, target left on its last valid content —
+   never the session, and the other inputs of the step still run.
+   Inputs with no matching program input are silently skipped.
    db             - map, application state of the current frame
    program-inputs - map {varname program-input}, registered blocks
    inputs         - map {varname input}, input definitions of the step
    step-value     - the current step value, passed to handlers
    Returns nil."
   [db program-inputs inputs step-value]
-  (doseq [[varname input] inputs
-          :let  [program-input (get program-inputs varname)]
-          :when program-input]
-    (update-input! db program-input input step-value)))
+  (let [warned (get @registrar/render-state ::registrar/warned-inputs)]
+    (doseq [[varname input] inputs
+            :let  [program-input (get program-inputs varname)]
+            :when program-input]
+      (try
+        (update-input! db program-input input step-value)
+        (when (and warned (contains? warned varname))
+          (rearm-input! varname))
+        (catch Throwable t
+          (warn-degraded! varname t))))))

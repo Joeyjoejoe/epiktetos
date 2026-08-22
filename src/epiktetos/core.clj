@@ -134,8 +134,13 @@
                  (reg-p fx id prog))))
 
   (reg-event ::event/reg-input
+             [(inject-cofx :inject-input-target)]
              (fn [cofx fx]
                (let [[varname handler options] (get-in cofx [:event 1])]
+                 (when (error/enabled?)
+                   (shader-input/validate-registration! (:input-target cofx)
+                                                        varname handler options
+                                                        (:db cofx)))
                  (reg-input fx varname handler options))))
 
   (reg-event ::event/reg-texture
@@ -161,6 +166,13 @@
   (reg-cofx :inject-system
             (fn [coeffects]
               (assoc coeffects :system (::registrar/system-registry @registrar/registry))))
+
+  (reg-cofx :inject-input-target
+            (fn [coeffects]
+              (let [[_ [varname]] (:event coeffects)]
+                (assoc coeffects :input-target
+                       (registrar/lookup-program-input varname)))))
+
 
   (reg-cofx :inject-db
             (fn [coeffects]

@@ -4,6 +4,7 @@
             [epiktetos.registrar :as registrar]
             [epiktetos.render.step :as render-step]
             [epiktetos.shader-input.buffer :as buffer]
+            [epiktetos.shader-input.data :as data]
             [epiktetos.shader-input.texture :as texture]
             [epiktetos.shader-input.types :as types])
   (:import (org.lwjgl.opengl GL31 GL43)))
@@ -28,9 +29,7 @@
     (doseq [{:keys [interface-index buffer-binding]
              :as   block} blocks]
       (bind! program-id interface-index buffer-binding)
-      (register! (buffer/ensure-block-buffer! resource block))
-      (when-not (registrar/lookup-input (:varname block))
-        (println "[epiktetos] No input registered for block" (:varname block))))
+      (register! (buffer/ensure-block-buffer! resource block)))
 
     (update program :inputs into (map :varname blocks))))
 
@@ -99,9 +98,7 @@
                                              {:program-id program-id
                                               :schema     node
                                               :shape      shape})
-        (buffer/forget-input-value! varname)
-        (when-not (registrar/lookup-input varname)
-          (println "[epiktetos] No input registered for uniform" varname))))
+        (buffer/forget-input-value! varname)))
     (update program :inputs into (concat (keys schema)
                                          (map :varname samplers)))))
 
@@ -136,10 +133,91 @@
                        :ssbo/capacity capacity
                        :cause ":ssbo/capacity must be a positive integer."})))))
 
+(defn- dry-run!
+  "Runs a :step/frame input handler against the current db and
+   validates its output against the registered program input, so a
+   bad handler bursts at registration — in the event pipeline, where
+   the error pause is recoverable — instead of degrading at render
+   time.
+   program-input - map, registered program input
+   varname       - string, input variable name
+   handler       - function (fn [db step-value])
+   options       - map, reg-input options
+   db            - map, application state
+   Returns nil."
+  [program-input varname handler options db]
+  (let [step-value (get-in db [:core/window :iter] 0)
+        value      (try (handler db step-value)
+                        (catch Throwable t
+                          (throw (ex-info "Input handler failed its registration dry-run"
+                                          {:input/varname varname
+                                           :input/dry-run true}
+                                          t))))]
+    (try
+      (case (:resource program-input)
+        :uniform (data/validate-uniform (:shape program-input) value)
+        :texture (when-not (keyword? value)
+                   (throw (ex-info "Invalid shader input data"
+                                   {:error "a texture input handler must return a texture id keyword"
+                                    :value value})))
+        (let [capacity (:ssbo/capacity options)
+              schema   (cond-> (:schema program-input)
+                         capacity (types/set-capacity capacity))]
+          (data/validate schema value)))
+      (catch clojure.lang.ExceptionInfo e
+        (throw (ex-info (ex-message e)
+                        (merge (ex-data e)
+                               {:input/varname varname
+                                :input/dry-run true})
+                        e))))
+    nil))
+
+(defn validate-registration!
+  "Validates a reg-input registration from the event handler — the
+   pure stage, where an error pauses recoverably: static parameters
+   first, then the dry-run of :step/frame handlers against the
+   registered program input. Silent when no program declares the
+   varname yet (registration order stays free) and for other steps
+   (no honest step-value exists before rendering — they are confined
+   at render time instead).
+   program-input - map, registered program input, or nil
+   varname       - string, input variable name
+   handler       - function (fn [db step-value])
+   options       - map, reg-input options
+   db            - map, application state
+   Returns nil."
+  [program-input varname handler options db]
+  (when-not (string? varname)
+    (throw (ex-info "Input varname must be a string, the exact GLSL variable name"
+                    {:input/varname varname})))
+  (when-not (ifn? handler)
+    (throw (ex-info "Input handler must be a function of [db step-value]"
+                    {:input/varname varname
+                     :handler       handler})))
+  (let [known-options (into #{:step :ssbo/capacity} texture/SAMPLER-OPTION-KEYS)]
+    (when-let [unknown (seq (remove known-options (keys options)))]
+      (throw (ex-info "Unknown reg-input option"
+                      {:input/varname         varname
+                       :input/unknown-options (vec unknown)
+                       :allowed               known-options}))))
+  (try
+    (assert-known-step! varname (get options :step :step/frame))
+    (assert-capacity! varname options)
+    (texture/validate-sampler-options varname options)
+    (catch clojure.lang.ExceptionInfo e
+      (throw (ex-info (ex-message e)
+                      (assoc (ex-data e) :input/varname varname)
+                      e))))
+  (when (and program-input
+             (= :step/frame (get options :step :step/frame)))
+    (dry-run! program-input varname handler options db))
+  nil)
+
 (defn register-input-handler!
-  "Registers a user input handler for a bindable shader input, and
+  "Registers a user input handler for a bindable shader input,
    reconciles the capacity of its GPU buffer when the matching program
-   input is already registered.
+   input is already registered, and rearms the degraded-input warning
+   of the varname.
    varname - string, GLSL block variable name
    handler - function (fn [db step-value]), produces the buffer data
    options - map, :step defaults to :step/frame and must be a core
@@ -154,4 +232,5 @@
     (texture/validate-sampler-options varname options)
     (let [registry (registrar/register-input! input)]
       (buffer/ensure-block-capacity! varname)
+      (buffer/rearm-input! varname)
       registry)))

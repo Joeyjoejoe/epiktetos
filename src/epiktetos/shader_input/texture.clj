@@ -48,7 +48,7 @@
    :clamp-to-border GL13/GL_CLAMP_TO_BORDER
    :mirror-clamp    GL44/GL_MIRROR_CLAMP_TO_EDGE})
 
-(defonce ^:private SAMPLER-OPTION-KEYS
+(defonce SAMPLER-OPTION-KEYS
   #{:sampler/mag-filter :sampler/min-filter :sampler/wrap
     :sampler/border-color :sampler/anisotropy
     :sampler/min-lod :sampler/max-lod :sampler/lod-bias})
@@ -124,6 +124,14 @@
                (not (and (= 4 (count border-color))
                          (every? number? border-color))))
       (fail! :sampler/border-color border-color "[r g b a] numbers"))
+    (when border-color
+      (let [modes (if (keyword? wrap) [wrap wrap] wrap)]
+        (when-not (some #{:clamp-to-border} modes)
+          (throw (ex-info "Invalid sampler option"
+                          {:varname  varname
+                           :option   :sampler/border-color
+                           :value    border-color
+                           :requires "a :sampler/wrap containing :clamp-to-border"})))))
     (when (and anisotropy (not (<= 1 anisotropy 16)))
       (fail! :sampler/anisotropy anisotropy "1 to 16"))
     (doseq [[option value] {:sampler/min-lod  min-lod
@@ -347,9 +355,7 @@
                                             :location   location})
       (GL41/glProgramUniform1i program-id location unit)
       (when-not existing
-        (GL45/glBindTextureUnit unit (ensure-fallback-texture!)))
-      (when-not (registrar/lookup-input varname)
-        (println "[epiktetos] No input registered for sampler" varname))))
+        (GL45/glBindTextureUnit unit (ensure-fallback-texture!)))))
   nil)
 
 (defn- bind-texture!
