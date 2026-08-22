@@ -38,7 +38,6 @@
           lag (atom 0.0)]
 
      (swap! lag #(+ % delta))
-     (swap! app-db/db update :core/window merge window-frame)
 
      (while (>= @lag FIXED_TIMESTEP)
 
@@ -59,18 +58,19 @@
        (render/pipeline @app-db/db)
 
        (GLFW/glfwSwapBuffers window-id)
-       (GLFW/glfwPollEvents)
 
        (let [iter-end      (GLFW/glfwGetTime)
              iter-duration (- iter-end curr)
-             fps-count     (count-fps fps-count iter-duration)]
+             fps-count     (count-fps fps-count iter-duration)
+             window-frame  (-> window-frame
+                               (assoc-in [:time :curr]  iter-end)
+                               (assoc-in [:time :prev]  curr)
+                               (assoc-in [:time :delta] iter-duration)
+                               (assoc :fps (:fps fps-count))
+                               (update :iter inc))]
 
-         (-> window-frame
-             (assoc-in [:time :curr]  iter-end)
-             (assoc-in [:time :prev]  curr)
-             (assoc-in [:time :delta] iter-duration)
-             (assoc :fps (:fps fps-count))
-             (update :iter inc)
-             (recur fps-count lag)))))
+         (event/dispatch [::event/window.state window-frame])
+         (GLFW/glfwPollEvents)
+         (recur window-frame fps-count lag))))
 
    :engine/stop)
