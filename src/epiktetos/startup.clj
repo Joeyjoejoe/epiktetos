@@ -12,6 +12,7 @@
             [epiktetos.db :as app-db]
             [epiktetos.error :as error]
             [epiktetos.event :as event]
+            [epiktetos.window :as window]
             [epiktetos.loop :as game-loop])
   (:import (org.lwjgl.opengl GL GLCapabilities)))
 
@@ -65,6 +66,8 @@
   ([systems]
     (swap! registrar/registry assoc ::registrar/system-registry systems)
     (install-dev-tooling!)
+    (swap! app-db/db assoc :core/window
+           (window/get-state (get-in systems [:glfw/window :id])))
     (when-not (::registrar/steps @registrar/render-state)
       (swap! registrar/render-state merge (render-step/build-render-steps)))
     (try

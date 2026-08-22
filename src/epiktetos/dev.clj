@@ -63,8 +63,8 @@
 
   (reg-fx :engine/stop
           (fn [_]
-            (let [window (get-in @registrar/registry [::registrar/system-registry :glfw/window])]
-              (GLFW/glfwSetWindowShouldClose window true))))
+            (let [window-id (get-in @registrar/registry [::registrar/system-registry :glfw/window :id])]
+              (GLFW/glfwSetWindowShouldClose window-id true))))
 
   (reg-fx ::eval-in-onpengl-context
           (fn [f]

@@ -324,9 +324,9 @@
   "True when the window was asked to close — the close button or
   stop! during a pause"
   []
-  (when-let [window (get-in @registrar/registry
-                            [::registrar/system-registry :glfw/window])]
-    (GLFW/glfwWindowShouldClose window)))
+  (when-let [window-id (get-in @registrar/registry
+                               [::registrar/system-registry :glfw/window :id])]
+    (GLFW/glfwWindowShouldClose window-id)))
 
 (defn- await-decision!
   "Block the calling thread — the loop thread — until a control fn
@@ -347,9 +347,9 @@
   engine is running.
   Returns nil"
   []
-  (when-let [window (get-in @registrar/registry
-                            [::registrar/system-registry :glfw/window])]
-    (GLFW/glfwSetWindowShouldClose window true)
+  (when-let [window-id (get-in @registrar/registry
+                               [::registrar/system-registry :glfw/window :id])]
+    (GLFW/glfwSetWindowShouldClose window-id true)
     (GLFW/glfwPostEmptyEvent))
   nil)
 

@@ -153,6 +153,11 @@
                (let [id (get-in cofx [:event 1])]
                  (delete fx id))))
 
+  (reg-event ::event/window.state
+             (fn [cofx fx]
+               (let [state (get-in cofx [:event 1])]
+                 (assoc fx :db (update (:db cofx) :core/window merge state)))))
+
   (reg-cofx :inject-system
             (fn [coeffects]
               (assoc coeffects :system (::registrar/system-registry @registrar/registry))))

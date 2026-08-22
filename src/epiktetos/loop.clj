@@ -9,10 +9,10 @@
 (def FIXED_TIMESTEP (/ 1.0 120.0))
 
 (defn start
-  [{window :glfw/window}]
+  [{{window-id :id} :glfw/window}]
 
    (println :engine/start)
-   (GLFW/glfwSetWindowShouldClose window false)
+   (GLFW/glfwSetWindowShouldClose window-id false)
 
    (loop [{{:keys [curr delta]} :time
            {:keys [value frames tick]} :fps
@@ -47,10 +47,10 @@
 
        (swap! lag #(- % FIXED_TIMESTEP)))
 
-     (when-not (GLFW/glfwWindowShouldClose window)
+     (when-not (GLFW/glfwWindowShouldClose window-id)
        (render/pipeline @app-db/db)
 
-       (GLFW/glfwSwapBuffers window)
+       (GLFW/glfwSwapBuffers window-id)
        (GLFW/glfwPollEvents)
 
        (let [iter-end      (GLFW/glfwGetTime)

@@ -3,8 +3,12 @@
             [integrant.core :as ig]
             [epiktetos.controls :as controls]
             [epiktetos.opengl.buffer :as b]
+            [epiktetos.event :as event]
             [epiktetos.lang.glfw :as glfw])
-  (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback)
+  (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback
+                           GLFWWindowSizeCallback GLFWFramebufferSizeCallback
+                           GLFWWindowFocusCallback GLFWWindowIconifyCallback
+                           GLFWWindowContentScaleCallback)
            (org.lwjgl.system MemoryUtil)
            (org.lwjgl.opengl GL GL11 GL13 GL20 GL30 GL32 GL43 GLDebugMessageCallback)))
 
@@ -17,6 +21,16 @@
     (GLFW/glfwGetWindowSize window width height)
     {:width (.get width 0) :height (.get height 0)}))
 
+(defn get-framebuffer-size
+  "Return the framebuffer dimensions in pixels.
+  window - long, GLFW window handle
+  Returns {:width int :height int}"
+  [window]
+  (let [width (b/int-buffer [0])
+        height (b/int-buffer [0])]
+    (GLFW/glfwGetFramebufferSize window width height)
+    {:width (.get width 0) :height (.get height 0)}))
+
 (defn get-center
   "Return the coordinates of window center"
   [window]
@@ -24,6 +38,59 @@
         x (/ (:width size) 2.0)
         y (/ (:height size) 2.0)]
     [x y]))
+
+(defn get-content-scale
+  "Return the window content scale, the ratio between the current DPI
+  and the platform's default DPI.
+  window - long, GLFW window handle
+  Returns [x y] floats."
+  [window]
+  (let [x (b/float-buffer [0])
+        y (b/float-buffer [0])]
+    (GLFW/glfwGetWindowContentScale window x y)
+    [(.get x 0) (.get y 0)]))
+
+(defn get-state
+  "Query the window-side part of the :core/window db map: dimensions,
+  framebuffer, content scale, focus and iconification.
+  window - long, GLFW window handle
+  Returns {:width int :height int :framebuffer {:width int :height int}
+           :content-scale [x y] :focused? bool :iconified? bool}"
+  [window]
+  (merge (get-size window)
+         {:framebuffer   (get-framebuffer-size window)
+          :content-scale (get-content-scale window)
+          :focused?      (= GLFW/GLFW_TRUE
+                            (GLFW/glfwGetWindowAttrib window GLFW/GLFW_FOCUSED))
+          :iconified?    (= GLFW/GLFW_TRUE
+                            (GLFW/glfwGetWindowAttrib window GLFW/GLFW_ICONIFIED))}))
+
+(def window-size-callback
+  (proxy [GLFWWindowSizeCallback] []
+    (invoke [window width height]
+      (event/dispatch [::event/window.state {:width width :height height}]))))
+
+(def framebuffer-size-callback
+  (proxy [GLFWFramebufferSizeCallback] []
+    (invoke [window width height]
+      (GL11/glViewport 0 0 width height)
+      (event/dispatch [::event/window.state {:framebuffer {:width width
+                                                           :height height}}]))))
+
+(def focus-callback
+  (proxy [GLFWWindowFocusCallback] []
+    (invoke [window focused]
+      (event/dispatch [::event/window.state {:focused? focused}]))))
+
+(def iconify-callback
+  (proxy [GLFWWindowIconifyCallback] []
+    (invoke [window iconified]
+      (event/dispatch [::event/window.state {:iconified? iconified}]))))
+
+(def content-scale-callback
+  (proxy [GLFWWindowContentScaleCallback] []
+    (invoke [window x y]
+      (event/dispatch [::event/window.state {:content-scale [x y]}]))))
 
 (defn window-hint! [property value]
   (let [hint  (property glfw/DICTIONARY)
@@ -144,6 +211,12 @@
 
   (controls/set-callbacks w)
 
+  (GLFW/glfwSetWindowSizeCallback w window-size-callback)
+  (GLFW/glfwSetFramebufferSizeCallback w framebuffer-size-callback)
+  (GLFW/glfwSetWindowFocusCallback w focus-callback)
+  (GLFW/glfwSetWindowIconifyCallback w iconify-callback)
+  (GLFW/glfwSetWindowContentScaleCallback w content-scale-callback)
+
   (doseq [[k v] opts]
     (cond
       (isa? glfw/GRAMMAR k :input/mode) (input-mode! w k v)))
@@ -184,15 +257,15 @@
 
 
 (defmethod ig/init-key :glfw/window [_ opts]
-  (let [window (-> opts
-                   create-window
-                   (configure opts))]
+  (let [window-id (-> opts
+                      create-window
+                      (configure opts))]
 
     (println "OpenGL version:" (GL11/glGetString GL11/GL_VERSION))
-    (GLFW/glfwShowWindow window)
-    window))
+    (GLFW/glfwShowWindow window-id)
+    {:id window-id}))
 
 
 (defmethod ig/halt-key! :glfw/window [_ window]
-  (GLFW/glfwDestroyWindow window)
+  (GLFW/glfwDestroyWindow (:id window))
   (GLFW/glfwTerminate))
