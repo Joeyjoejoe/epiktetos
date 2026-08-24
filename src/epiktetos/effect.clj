@@ -11,7 +11,7 @@
   user effects: resources a same-event effect may rely on (steps,
   programs, inputs, textures) are set up before entities are rendered,
   deletions come last."
-  [::dispatch ::reg-steps ::reg-p ::reg-input ::reg-texture ::render ::delete])
+  [::dispatch ::reg-steps ::reg-p ::reg-compute ::reg-input ::reg-texture ::render ::delete])
 
 (defn ordered-effects
   "Order the entries of an effects map for execution: :db first, so

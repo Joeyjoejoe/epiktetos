@@ -102,22 +102,20 @@
     (update program :inputs into (concat (keys schema)
                                          (map :varname samplers)))))
 
-(defn- assert-known-step!
+(defn assert-known-step!
   "Validates that step is a core render step or a custom step already
    registered with reg-steps!. Throws ex-info otherwise.
-   varname - string, input variable name, used as error context
-   step    - keyword, render step to validate
+   step - keyword, render step to validate
    Returns nil."
-  [varname step]
+  [step]
   (let [custom-steps (get @registrar/render-state
                           ::registrar/custom-step-order [])
         known-steps  (into render-step/CORE-STEPS custom-steps)]
     (when-not (contains? known-steps step)
       (throw (ex-info "Unknown render step"
-                      {:varname     varname
-                       :step        step
+                      {:step        step
                        :known-steps known-steps
-                       :cause "Custom steps must be registered with reg-steps! before reg-input."})))))
+                       :cause "Custom steps must be registered with reg-steps! first."})))))
 
 (defn- assert-capacity!
   "Validates the :ssbo/capacity option when present. Throws ex-info
@@ -201,7 +199,7 @@
                        :input/unknown-options (vec unknown)
                        :allowed               known-options}))))
   (try
-    (assert-known-step! varname (get options :step :step/frame))
+    (assert-known-step! (get options :step :step/frame))
     (assert-capacity! varname options)
     (texture/validate-sampler-options varname options)
     (catch clojure.lang.ExceptionInfo e
@@ -227,7 +225,7 @@
   [varname handler options]
   (let [{:keys [step] :or {step :step/frame}} options
         input (merge options {:varname varname :handler handler :step step})]
-    (assert-known-step! varname step)
+    (assert-known-step! step)
     (assert-capacity! varname options)
     (texture/validate-sampler-options varname options)
     (let [registry (registrar/register-input! input)]

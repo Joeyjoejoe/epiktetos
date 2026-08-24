@@ -1,5 +1,6 @@
 (ns epiktetos.render.pipeline
   (:require [epiktetos.registrar :as registrar]
+            [epiktetos.compute :as compute]
             [epiktetos.shader-input.buffer :as input-buffer]
             [epiktetos.render.entity :as render-entity]
             [epiktetos.render.step :as rs])
@@ -13,13 +14,17 @@
   ;; TODO Handle dirty state here in dvelopment environement only ?
 
   (let [{::registrar/keys [opengl-registry input-registry]} registry
-        {:keys [programs program-inputs]} opengl-registry
+        {:keys [programs program-inputs computes-by-step]} opengl-registry
         {::registrar/keys [steps custom-step-order queue entities]} render-state
         custom-steps  (keep steps custom-step-order)
         step-inputs    (input-buffer/inputs-by-step input-registry)
         update-inputs! (fn [step step-value]
                          (input-buffer/update-inputs!
                            db program-inputs (get step-inputs step) step-value))
+        dispatch-computes! (when (seq computes-by-step)
+                             (fn [step current-program-id]
+                               (compute/dispatch-for-step!
+                                 db computes-by-step step current-program-id)))
         {group-step   :step/group
          vao-step     :step/vao
          program-step :step/program} steps]
@@ -29,6 +34,9 @@
     (GL11/glClear (bit-or GL11/GL_COLOR_BUFFER_BIT GL11/GL_DEPTH_BUFFER_BIT))
 
     (update-inputs! :step/frame (get-in db [:core/window :iter]))
+
+    (when dispatch-computes!
+      (dispatch-computes! :step/frame nil))
 
 
     (loop [prev-k nil
@@ -46,22 +54,30 @@
             ;; - framebuffer binding
             ;; - group inputs handler
             ;; ...
-            (update-inputs! :step/group group))
+            (update-inputs! :step/group group)
+            (when dispatch-computes!
+              (dispatch-computes! :step/group id)))
 
           (when (rs/step-changed? vao-step sk prev-k)
             (GL30/glBindVertexArray vao-id)
-            (update-inputs! :step/vao vao-id))
+            (update-inputs! :step/vao vao-id)
+            (when dispatch-computes!
+              (dispatch-computes! :step/vao id)))
 
           (when (rs/step-changed? program-step sk prev-k)
             (GL20/glUseProgram id)
             (input-buffer/warn-unfed-inputs! program
                                              (:inputs (get programs program)))
-            (update-inputs! :step/program program))
+            (update-inputs! :step/program program)
+            (when dispatch-computes!
+              (dispatch-computes! :step/program id)))
 
           (doseq [custom-step custom-steps
                   :when (rs/step-changed? custom-step sk prev-k)]
             (update-inputs! (:name custom-step)
-                            ((:handler custom-step) batch-entity)))
+                            ((:handler custom-step) batch-entity))
+            (when dispatch-computes!
+              (dispatch-computes! (:name custom-step) id)))
 
           (doseq [entity-id entity-ids
                   :let [entity (get entities entity-id)
@@ -70,6 +86,9 @@
                         instances (render-entity/draw-count entity db)]]
 
             (update-inputs! :step/entity entity)
+
+            (when dispatch-computes!
+              (dispatch-computes! :step/entity id))
 
             ;; VBO binding
             (doseq [[index {:keys [binding-index stride]}] (map-indexed vector vbos)

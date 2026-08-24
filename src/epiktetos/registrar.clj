@@ -46,6 +46,32 @@
   [program-k]
   (get-in @registry [::opengl-registry :programs program-k]))
 
+(defn register-compute!
+  "Registers a compute under its id.
+   compute-k - keyword, compute id
+   compute   - map, linked and introspected compute
+   Returns the updated registry value."
+  [compute-k compute]
+  (swap! registry assoc-in [::opengl-registry :computes compute-k] compute))
+
+(defn get-compute
+  "Returns the compute registered under compute-k, or nil.
+   compute-k - keyword, compute id"
+  [compute-k]
+  (get-in @registry [::opengl-registry :computes compute-k]))
+
+(defn computes
+  "Returns the map of registered computes {compute-k compute}."
+  []
+  (get-in @registry [::opengl-registry :computes]))
+
+(defn register-computes-by-step!
+  "Registers the derived dispatch plan of the computes.
+   computes-by-step - map {step [compute-k]}, topologically ordered
+   Returns the updated registry value."
+  [computes-by-step]
+  (swap! registry assoc-in [::opengl-registry :computes-by-step] computes-by-step))
+
 (defn lookup-resource-inputs
   "Returns a list of shader inputs of same `resource` type.
    resource: keyword — e.g. :ubo, :ssbo"

@@ -26,11 +26,15 @@
       (throw (ex-info "Program declaration requires a :pipeline of [stage path] entries"
                       {:reg-p/id id})))
     (doseq [[stage path] pipeline]
+      (when (= :compute stage)
+        (throw (ex-info "The :compute stage is not a graphics stage — declare it with reg-compute"
+                        {:reg-p/id id
+                         :stage    stage})))
       (when-not (contains? shader/STAGES stage)
         (throw (ex-info (str "Unknown shader stage " stage)
                         {:reg-p/id id
                          :stage    stage
-                         :allowed  (set (keys shader/STAGES))})))
+                         :allowed  (disj (set (keys shader/STAGES)) :compute)})))
       (when-not (io/resource path)
         (throw (ex-info (str "Shader file not found on the classpath: " path)
                         {:reg-p/id id

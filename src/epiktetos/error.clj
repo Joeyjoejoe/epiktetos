@@ -122,6 +122,7 @@
   declaration, and retry! adopts it (epiktetos.event)."
   {:epiktetos.event/reg-input      "Shader Input Error"
    :epiktetos.event/reg-p          "Program Error"
+   :epiktetos.event/reg-compute    "Compute Error"
    :epiktetos.event/reg-texture    "Texture Error"
    :epiktetos.render.entity/render "Render Error"})
 
@@ -129,6 +130,7 @@
   "The core API form behind each declaration event, for log subjects"
   {:epiktetos.event/reg-input      "reg-input"
    :epiktetos.event/reg-p          "reg-p"
+   :epiktetos.event/reg-compute    "reg-compute"
    :epiktetos.event/reg-texture    "reg-texture"
    :epiktetos.render.entity/render "render"})
 

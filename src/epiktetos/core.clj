@@ -9,6 +9,7 @@
             [epiktetos.render.entity :as entity]
             [epiktetos.render.step :as render-step]
             [epiktetos.opengl.shader-program :as prog]
+            [epiktetos.compute :as compute]
             [epiktetos.shader-input.registration :as shader-input]
             [epiktetos.shader-input.texture :as texture]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
@@ -88,6 +89,12 @@
   ([fx id prog-map]
    (update fx ::fx/reg-p conj [id prog-map])))
 
+(defn reg-compute
+  ([id spec]
+   (dispatch ::event/reg-compute [id spec]))
+  ([fx id spec]
+   (update fx ::fx/reg-compute conj [id spec])))
+
 (defn reg-input
   ([varname handler]
    (reg-input varname handler {}))
@@ -135,6 +142,14 @@
                    (prog/validate-declaration! id prog))
                  (reg-p fx id prog))))
 
+  (reg-event ::event/reg-compute
+             [(inject-cofx :inject-computes)]
+             (fn [cofx fx]
+               (let [[id spec] (get-in cofx [:event 1])]
+                 (when (error/enabled?)
+                   (compute/validate-declaration! id spec (:computes cofx)))
+                 (reg-compute fx id spec))))
+
   (reg-event ::event/reg-input
              [(inject-cofx :inject-input-target)]
              (fn [cofx fx]
@@ -175,6 +190,10 @@
             (fn [coeffects]
               (assoc coeffects :system (::registrar/system-registry @registrar/registry))))
 
+  (reg-cofx :inject-computes
+            (fn [coeffects]
+              (assoc coeffects :computes (registrar/computes))))
+
   (reg-cofx :inject-input-target
             (fn [coeffects]
               (let [[_ [varname]] (:event coeffects)]
@@ -201,6 +220,11 @@
           (fn [prog-coll]
             (doseq [[id prog-map] prog-coll]
               (prog/setup! id prog-map))))
+
+  (reg-fx ::fx/reg-compute
+          (fn [compute-coll]
+            (doseq [[id spec] compute-coll]
+              (compute/setup! id spec))))
 
   (reg-fx ::fx/reg-input
           (fn [input-coll]

@@ -3,6 +3,7 @@
             [integrant.core :as ig]
             [epiktetos.opengl.shader-attribute :as attribute]
             [epiktetos.opengl.shader-program :as prog]
+            [epiktetos.compute :as compute]
             [nextjournal.beholder :as beholder]
             [epiktetos.registrar :as registrar]
             [epiktetos.render.entity :as entity]
@@ -84,7 +85,9 @@
       hot-reload (assoc :hot-reload {:watcher (apply beholder/watch
                                                      (fn [_]
                                                        (doseq [[id prog] (get-in @registrar/registry [::registrar/opengl-registry :programs])]
-                                                         (event/dispatch [::event/reg-p [id prog]])))
+                                                         (event/dispatch [::event/reg-p [id prog]]))
+                                                       (doseq [[id compute] (get-in @registrar/registry [::registrar/opengl-registry :computes])]
+                                                         (event/dispatch [::event/reg-compute [id (select-keys compute compute/SPEC-KEYS)]])))
                                                      hot-reload)
                                      :paths hot-reload}))))
 
@@ -115,6 +118,7 @@
     (input-buffer/delete-block-buffers! registry)
     (texture/delete-textures! registry)
     (prog/delete-programs! registry)
+    (compute/delete-computes! registry)
     (attribute/delete-vaos! registry)
 
     (GL/setCapabilities no-capabilities)
