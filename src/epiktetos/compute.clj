@@ -244,18 +244,24 @@
                      axes)]
         (mapv min counts (:max-workgroups compute))))))
 
-(def ^:private ALL-BARRIER-BITS GL42/GL_ALL_BARRIER_BITS)
+(def ^:private BARRIER-BITS
+  "Memory barrier bits covering everything a v1 compute can write:
+   SSBOs are the only compute-writable resource, and every consumer
+   (chained computes, draws) reads them as shader storage. Narrowed
+   from GL_ALL_BARRIER_BITS, whose full pipeline drains cost real
+   frame time at scale."
+  GL43/GL_SHADER_STORAGE_BARRIER_BIT)
 
 (defn dispatch!
   "Binds a compute program and dispatches its workgroups, followed by
-   a conservative memory barrier. Internal seam, redefined by tests.
+   a shader-storage memory barrier. Internal seam, redefined by tests.
    program-id - int, GL program id
    counts     - [x y z] workgroup counts
    Returns nil."
   [program-id [x y z]]
   (GL20/glUseProgram program-id)
   (GL43/glDispatchCompute (int x) (int y) (int z))
-  (GL42/glMemoryBarrier ALL-BARRIER-BITS)
+  (GL42/glMemoryBarrier BARRIER-BITS)
   nil)
 
 (defn- dispatch-compute!
