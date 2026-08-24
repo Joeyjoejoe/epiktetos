@@ -69,18 +69,29 @@
 
     (assoc program-map :id id)))
 
+(defn link-and-introspect!
+  "Compiles, links and introspects a program map: GLSL stages of
+   :pipeline compiled and linked, then UBOs, SSBOs and default-block
+   uniforms introspected and wired. Graphics-only setup (VAO,
+   vertex-format) and registration stay with the caller.
+   prog-k   - keyword, program id in the registry
+   prog-map - map, the declaration DSL with a :pipeline
+   Returns prog-map + :id and :inputs."
+  [prog-k prog-map]
+  (-> prog-map
+      link!
+      input/setup-ubos!
+      input/setup-ssbos!
+      (input/setup-uniforms! prog-k)))
+
 (defn setup!
   [prog-k prog-map]
   (let [old-prog        (registrar/get-program prog-k)
         layout-changed? (and old-prog
                              (not= (:vertex-layout old-prog)
                                    (:vertex-layout prog-map)))
-        program (-> prog-map
-                    link!
+        program (-> (link-and-introspect! prog-k prog-map)
                     attribute/setup!
-                    input/setup-ubos!
-                    input/setup-ssbos!
-                    (input/setup-uniforms! prog-k)
                     (assoc :dirty layout-changed?))]
 
     (when old-prog
