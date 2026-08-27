@@ -6,7 +6,7 @@
             [epiktetos.shader-input.texture :as texture]
             [epiktetos.shader-input.types :as types])
   (:import (org.lwjgl BufferUtils)
-           (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL31 GL41 GL42 GL43)))
+           (org.lwjgl.opengl GL11 GL15 GL20 GL30 GL31 GL41 GL42 GL43 GL45)))
 
 (defonce ^:private RESOURCE-BINDING-MAX
   {:ubo            GL31/GL_MAX_UNIFORM_BUFFER_BINDINGS
@@ -545,3 +545,44 @@
             (rearm-input! varname))
           (catch Throwable t
             (warn-degraded! varname t)))))))
+
+(defonce ^:private read-scratch
+  (atom nil))
+
+(defn- read-scratch-buffer
+  "The internal direct scratch buffer for GPU reads, grown on demand
+   and reused across reads (loop thread only).
+   length - long, byte count the next read needs
+   Returns a direct ByteBuffer of at least length bytes."
+  [length]
+  (let [^java.nio.ByteBuffer buf @read-scratch]
+    (if (and buf (>= (.capacity buf) length))
+      buf
+      (reset! read-scratch (BufferUtils/createByteBuffer (int length))))))
+
+(defn buffer-size
+  "The actual byte size of a GL buffer object.
+   buffer-id - int, GL buffer object id
+   Returns a long."
+  [buffer-id]
+  (GL45/glGetNamedBufferParameteri (int buffer-id) GL15/GL_BUFFER_SIZE))
+
+(defn read-block-bytes!
+  "Reads a byte region of a block's GPU buffer: the GL read goes
+   through the internal direct scratch, then a fresh little-endian
+   heap ByteBuffer is handed out — the caller owns it. The read
+   synchronizes on the buffer's pending GPU writes (implicit driver
+   sync, no fence).
+   buffer-id - int, GL buffer object id
+   offset    - long, byte offset into the buffer
+   length    - long, byte count to read
+   Returns a java.nio.ByteBuffer."
+  [buffer-id offset length]
+  (let [^java.nio.ByteBuffer scratch (read-scratch-buffer length)
+        bytes (byte-array length)]
+    (.clear scratch)
+    (.limit scratch (int length))
+    (GL45/glGetNamedBufferSubData (int buffer-id) (long offset) scratch)
+    (.get scratch bytes)
+    (-> (java.nio.ByteBuffer/wrap bytes)
+        (.order java.nio.ByteOrder/LITTLE_ENDIAN))))

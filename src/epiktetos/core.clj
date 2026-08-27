@@ -11,6 +11,7 @@
             [epiktetos.opengl.shader-program :as prog]
             [epiktetos.compute :as compute]
             [epiktetos.shader-input.registration :as shader-input]
+            [epiktetos.shader-input.buffer :as input-buffer]
             [epiktetos.shader-input.texture :as texture]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
             [epiktetos.window]))
@@ -193,6 +194,51 @@
   (reg-cofx :inject-computes
             (fn [coeffects]
               (assoc coeffects :computes (registrar/computes))))
+
+  (reg-cofx :read-input
+            (fn [coeffects value]
+              (let [{:keys [varname offset length] :as region}
+                    (if (string? value) {:varname value} value)]
+                (when-not (map? region)
+                  (throw (ex-info ":read-input takes a varname string or a {:varname :offset :length} map"
+                                  {:read-input value})))
+                (when-let [unknown (seq (remove #{:varname :offset :length}
+                                               (keys region)))]
+                  (throw (ex-info (str "Unknown :read-input key(s) "
+                                       (pr-str (vec unknown)))
+                                  {:read-input value
+                                   :allowed    #{:varname :offset :length}})))
+                (when-not (string? varname)
+                  (throw (ex-info ":read-input requires a :varname string, the exact GLSL block name"
+                                  {:read-input value})))
+                (let [input (registrar/lookup-program-input varname)]
+                  (when-not input
+                    (throw (ex-info (str "No shader input registered for "
+                                         (pr-str varname))
+                                    {:read-input varname})))
+                  (when-not (= :ssbo (:resource input))
+                    (throw (ex-info (str ":read-input only reads SSBOs — "
+                                         (pr-str varname) " is a "
+                                         (name (:resource input)))
+                                    {:read-input varname
+                                     :resource   (:resource input)})))
+                  (let [size   (input-buffer/buffer-size (:buffer-id input))
+                        offset (long (or offset 0))
+                        length (long (or length (- size offset)))]
+                    (when-not (and (>= offset 0)
+                                   (pos? length)
+                                   (<= (+ offset length) size))
+                      (throw (ex-info (str "Region out of bounds for "
+                                           (pr-str varname) ": offset " offset
+                                           ", length " length
+                                           ", buffer size " size)
+                                      {:read-input  varname
+                                       :offset      offset
+                                       :length      length
+                                       :buffer-size size})))
+                    (update coeffects :read-input assoc varname
+                            (input-buffer/read-block-bytes!
+                              (:buffer-id input) offset length)))))))
 
   (reg-cofx :inject-input-target
             (fn [coeffects]
