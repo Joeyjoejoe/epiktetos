@@ -90,7 +90,7 @@
       nil
       (cond
         double?  (.putDouble buffer (clojure.core/double scalar))
-        integer? (.putInt    buffer (clojure.core/int scalar))
+        integer? (.putInt    buffer (unchecked-int (clojure.core/long scalar)))
         :else    (.putFloat  buffer (clojure.core/float scalar)))
 
       :half
@@ -129,7 +129,7 @@
   (let [scalar (if (boolean? scalar) (if scalar 1 0) scalar)]
     (cond
       double?  (.putDouble buffer (clojure.core/int offset) (clojure.core/double scalar))
-      integer? (.putInt    buffer (clojure.core/int offset) (clojure.core/int scalar))
+      integer? (.putInt    buffer (clojure.core/int offset) (unchecked-int (clojure.core/long scalar)))
       :else    (.putFloat  buffer (clojure.core/int offset) (clojure.core/float scalar))))
   buffer)
 

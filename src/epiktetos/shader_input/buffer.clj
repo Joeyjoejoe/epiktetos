@@ -1,6 +1,7 @@
 (ns epiktetos.shader-input.buffer
   (:require [epiktetos.error :as error]
             [epiktetos.opengl.buffer :as gl-buffer]
+            [epiktetos.opengl.glsl :as glsl]
             [epiktetos.registrar :as registrar]
             [epiktetos.shader-input.data :as data]
             [epiktetos.shader-input.texture :as texture]
@@ -316,6 +317,20 @@
       (and (map? prev) (map? value)
            (unchanged-value? prev value))))
 
+(defn- uniform-type-suffix
+  "The glProgramUniform variant writing a plain uniform type, named by
+   its GL suffix. Unsigned types require the ui variants: the i
+   variants raise GL_INVALID_OPERATION on them. Bool types use the i
+   variants.
+   glsl-type - map, GLSL type from TRANSPARENT-TYPE
+   Returns :d, :ui, :i or :f."
+  [{:keys [integer? double?] :as glsl-type}]
+  (cond
+    double?                         :d
+    (glsl/unsigned-type? glsl-type) :ui
+    integer?                        :i
+    :else                           :f))
+
 (defn- write-uniform-value!
   "Writes a validated plain uniform value to a program, at the
    locations of its schema.
@@ -326,34 +341,41 @@
   [program-id schema value]
   (case (:kind schema)
     :scalar
-    (let [{:keys [integer? double?]} (:type schema)
-          location (:location schema)
+    (let [location (:location schema)
           value    (if (boolean? value) (if value 1 0) value)]
-      (cond
-        double?  (GL41/glProgramUniform1d program-id location (double value))
-        integer? (GL41/glProgramUniform1i program-id location (int value))
-        :else    (GL41/glProgramUniform1f program-id location (float value))))
+      (case (uniform-type-suffix (:type schema))
+        :d  (GL41/glProgramUniform1d program-id location (double value))
+        :ui (GL41/glProgramUniform1ui program-id location (unchecked-int (long value)))
+        :i  (GL41/glProgramUniform1i program-id location (int value))
+        :f  (GL41/glProgramUniform1f program-id location (float value))))
 
     :vector
-    (let [{:keys [integer? double? size]} (:type schema)
+    (let [{:keys [size]} (:type schema)
           location (:location schema)
           scalars  (mapv #(if (boolean? %) (if % 1 0) %) value)]
-      (cond
-        double?
+      (case (uniform-type-suffix (:type schema))
+        :d
         (let [array (double-array scalars)]
           (case (int size)
             2 (GL41/glProgramUniform2dv program-id location array)
             3 (GL41/glProgramUniform3dv program-id location array)
             4 (GL41/glProgramUniform4dv program-id location array)))
 
-        integer?
+        :ui
+        (let [array (int-array (map #(unchecked-int (long %)) scalars))]
+          (case (int size)
+            2 (GL41/glProgramUniform2uiv program-id location array)
+            3 (GL41/glProgramUniform3uiv program-id location array)
+            4 (GL41/glProgramUniform4uiv program-id location array)))
+
+        :i
         (let [array (int-array scalars)]
           (case (int size)
             2 (GL41/glProgramUniform2iv program-id location array)
             3 (GL41/glProgramUniform3iv program-id location array)
             4 (GL41/glProgramUniform4iv program-id location array)))
 
-        :else
+        :f
         (let [array (float-array (map float scalars))]
           (case (int size)
             2 (GL41/glProgramUniform2fv program-id location array)

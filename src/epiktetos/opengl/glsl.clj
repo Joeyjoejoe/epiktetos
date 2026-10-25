@@ -74,13 +74,24 @@
   [{:keys [glsl-name]}]
   (contains? #{:bool :bvec2 :bvec3 :bvec4} glsl-name))
 
+(defn unsigned-type?
+  "Returns true when glsl-type describes a GLSL uint or uvec type.
+   Bool types share the unsigned base type but are not unsigned
+   integers: they are excluded.
+   glsl-type - map, GLSL type from TRANSPARENT-TYPE"
+  [{:keys [glsl-name]}]
+  (contains? #{:uint :uvec2 :uvec3 :uvec4} glsl-name))
+
+(def ^:private UNSIGNED-INT-MAX 4294967295)
+
 (defn scalar-error
   "Validates a single scalar against a GLSL type.
    glsl-type - map, GLSL type from TRANSPARENT-TYPE
    scalar    - the value, expected number or boolean
    Returns an error keyword (:not-a-number, :float-for-integer-type,
    :integer-out-of-range), or nil when valid. Booleans are valid for
-   bool and bvec types only."
+   bool and bvec types only. Unsigned types accept [0, 2^32 - 1],
+   other integer types the signed 32-bit range."
   [glsl-type scalar]
   (cond
     (and (boolean? scalar) (bool-type? glsl-type))
@@ -91,6 +102,10 @@
 
     (and (:integer? glsl-type) (not (integer? scalar)))
     :float-for-integer-type
+
+    (unsigned-type? glsl-type)
+    (when-not (<= 0 scalar UNSIGNED-INT-MAX)
+      :integer-out-of-range)
 
     (and (:integer? glsl-type)
          (not (<= Integer/MIN_VALUE scalar Integer/MAX_VALUE)))

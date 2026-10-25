@@ -29,3 +29,9 @@
   (t/testing "unknown packing throws"
     (t/is (thrown? clojure.lang.ExceptionInfo
                    (buffer/from-flat-layout [[:vec3 :float16]] [0.0 0.0 0.0])))))
+
+(t/deftest unsigned-scalar-bits-test
+  (t/testing "uint above 2^31 is written as its 32-bit pattern"
+    (let [buf (java.nio.ByteBuffer/allocate 4)]
+      (buffer/put-scalar-at! buf (buffer/glsl-type :uint) 0 3000000000)
+      (t/is (= 3000000000 (Integer/toUnsignedLong (.getInt buf 0)))))))

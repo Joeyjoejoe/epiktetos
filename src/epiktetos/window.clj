@@ -142,7 +142,7 @@
     (invoke [source type id severity length message user-param]
       (when-not (contains? ignored-messages id)
         (println "---------------")
-        (println "Debug message (" id "): " message)
+        (println "Debug message (" id "): " (GLDebugMessageCallback/getMessage length message))
         (println (get debug-sources source "Unknown source"))
         (println (get debug-types type "Unknown type"))
         (println (get debug-severities severity "Unknown severity"))

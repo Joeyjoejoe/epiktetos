@@ -1,5 +1,6 @@
 (ns epiktetos.shader-input.buffer-test
   (:require [clojure.test :as t]
+            [epiktetos.opengl.buffer :as gl-buffer]
             [epiktetos.registrar :as registrar]
             [epiktetos.shader-input.buffer :as buffer]))
 
@@ -103,3 +104,13 @@
       (swap! registrar/render-state dissoc ::registrar/warned-inputs)
       (swap! registrar/registry update
              ::registrar/system-registry dissoc :gl/engine))))
+
+(def ^:private uniform-type-suffix @#'buffer/uniform-type-suffix)
+
+(t/deftest uniform-type-suffix-test
+  (t/is (= :ui (uniform-type-suffix (gl-buffer/glsl-type :uint))))
+  (t/is (= :ui (uniform-type-suffix (gl-buffer/glsl-type :uvec3))))
+  (t/is (= :i  (uniform-type-suffix (gl-buffer/glsl-type :ivec3))))
+  (t/is (= :i  (uniform-type-suffix (gl-buffer/glsl-type :bool))))
+  (t/is (= :f  (uniform-type-suffix (gl-buffer/glsl-type :vec3))))
+  (t/is (= :d  (uniform-type-suffix (gl-buffer/glsl-type :dvec2)))))
