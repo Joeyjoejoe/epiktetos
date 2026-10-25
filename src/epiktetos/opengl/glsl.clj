@@ -82,7 +82,7 @@
   [{:keys [glsl-name]}]
   (contains? #{:uint :uvec2 :uvec3 :uvec4} glsl-name))
 
-(def ^:private UNSIGNED-INT-MAX 4294967295)
+(def UNSIGNED-INT-MAX 4294967295)
 
 (defn scalar-error
   "Validates a single scalar against a GLSL type.

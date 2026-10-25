@@ -216,14 +216,16 @@
     buffer-id))
 
 (defn ensure-block-buffer!
-  "Adds :buffer-id, :schema and :capacity to block, reusing the
+  "Adds :buffer-id, :schema, :checker, :serializer and :capacity to
+   block (checker and serializer compiled from the schema), reusing the
    registered buffer when varname is already known with the same
    capacity, creating and binding a new one otherwise (the previous
    buffer, if any, is deleted). Throws when a block with the same
    varname is already registered with a different structure.
    resource - keyword, :ubo or :ssbo
    block    - map, introspected block
-   Returns the block map with :buffer-id, :schema and :capacity."
+   Returns the block map with :buffer-id, :schema, :checker,
+   :serializer and :capacity."
   [resource block]
   (let [{:keys [varname members buffer-data-size buffer-binding]} block
         existing (registrar/lookup-program-input varname)]
@@ -238,9 +240,13 @@
           schema   (types/set-capacity schema capacity)]
       (if (and existing (= capacity (:capacity existing)))
         (assoc block
-               :buffer-id (:buffer-id existing)
-               :schema    (:schema existing)
-               :capacity  capacity)
+               :buffer-id  (:buffer-id existing)
+               :schema     (:schema existing)
+               :checker    (or (:checker existing)
+                               (data/compile-checker (:schema existing)))
+               :serializer (or (:serializer existing)
+                               (data/compile-serializer (:schema existing)))
+               :capacity   capacity)
         (let [size      (block-buffer-size schema buffer-data-size capacity)
               buffer-id (create-block-buffer! (BLOCK-BUFFER-TARGET resource)
                                               buffer-binding size)]
@@ -248,9 +254,11 @@
             (GL15/glDeleteBuffers (int (:buffer-id existing))))
           (forget-input-value! varname)
           (assoc block
-                 :buffer-id buffer-id
-                 :schema    schema
-                 :capacity  capacity))))))
+                 :buffer-id  buffer-id
+                 :schema     schema
+                 :checker    (data/compile-checker schema)
+                 :serializer (data/compile-serializer schema)
+                 :capacity   capacity))))))
 
 (defn ensure-block-capacity!
   "Recreates the GPU buffer of a registered program input when the
@@ -278,6 +286,8 @@
                    :buffer-binding binding-point
                    :buffer-id      buffer-id
                    :schema         schema
+                   :checker        (data/compile-checker schema)
+                   :serializer     (data/compile-serializer schema)
                    :capacity       capacity)))))))
   nil)
 
@@ -437,7 +447,10 @@
    identical to the last written value (see unchanged-value?); the
    cache is dropped whenever the buffer is recreated. Validation runs
    before the GPU write: invalid data throws with the input varname
-   added, and leaves the buffer on its last valid content.
+   added, and leaves the buffer on its last valid content. The block's
+   compiled checker and serializer do the work; the interpreter
+   (validate, serialize) stands in for a block registered before they
+   existed, and validate reports the errors the checker detects.
    db            - map, application state of the current frame
    program-input - map, registered block with :schema and :buffer-id
    input         - map, input definition with :handler
@@ -445,18 +458,23 @@
    Returns nil."
   [db program-input input step-value]
   (let [{:keys [varname handler]} input
-        {:keys [schema buffer-id buffer-data-size]} program-input
+        {:keys [schema checker serializer buffer-id buffer-data-size]} program-input
         value (handler db step-value)
         prev  (get-in @registrar/render-state
                       [::registrar/input-values varname])]
     (when-not (unchanged-value? prev value)
       (try
-        (data/validate schema value)
+        (if checker
+          (data/validate-with-checker schema checker value)
+          (data/validate schema value))
         (catch clojure.lang.ExceptionInfo e
           (throw (ex-info (ex-message e)
                           (assoc (ex-data e) :varname varname)))))
       (let [size (data/block-size schema value buffer-data-size)]
-        (gl-buffer/upload! buffer-id (data/serialize schema value size)))
+        (gl-buffer/upload! buffer-id
+                           (if serializer
+                             (serializer (BufferUtils/createByteBuffer size) 0 value)
+                             (data/serialize schema value size))))
       (swap! registrar/render-state
              assoc-in [::registrar/input-values varname] value))
     nil))

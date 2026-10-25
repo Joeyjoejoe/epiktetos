@@ -161,7 +161,7 @@
         (let [capacity (:ssbo/capacity options)
               schema   (cond-> (:schema program-input)
                          capacity (types/set-capacity capacity))]
-          (data/validate schema value)))
+          (data/validate-with-checker schema (data/compile-checker schema) value)))
       (catch clojure.lang.ExceptionInfo e
         (throw (ex-info (ex-message e)
                         (merge (ex-data e)

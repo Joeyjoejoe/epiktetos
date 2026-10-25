@@ -2,7 +2,8 @@
   (:require [epiktetos.opengl.buffer :as gl-buffer]
             [epiktetos.opengl.glsl :as glsl]
             [epiktetos.shader-input.types :as types])
-  (:import (org.lwjgl BufferUtils)))
+  (:import (java.nio ByteBuffer)
+           (org.lwjgl BufferUtils)))
 
 (declare validate-value)
 
@@ -209,3 +210,330 @@
     (doseq [[fname fschema] schema]
       (write-value! buffer fschema (get value fname)))
     buffer))
+
+(def ^:private ABSENT
+  "Sentinel telling a missing struct field from a nil value."
+  (Object.))
+
+(defn- scalar-checker
+  "Compiles the validity predicate of one scalar, the compiled
+   equivalent of glsl/scalar-error.
+   glsl-type - map, GLSL type from TRANSPARENT-TYPE
+   Returns (fn [scalar]) -> boolean."
+  [glsl-type]
+  (cond
+    (glsl/bool-type? glsl-type)
+    (fn [x] (or (boolean? x)
+                (and (integer? x)
+                     (<= Integer/MIN_VALUE x)
+                     (<= x Integer/MAX_VALUE))))
+
+    (glsl/unsigned-type? glsl-type)
+    (fn [x] (and (integer? x) (<= 0 x) (<= x glsl/UNSIGNED-INT-MAX)))
+
+    (:integer? glsl-type)
+    (fn [x] (and (integer? x)
+                 (<= Integer/MIN_VALUE x)
+                 (<= x Integer/MAX_VALUE)))
+
+    :else
+    number?))
+
+(defn- items-checker
+  "Compiles the check of a sequential value holding exactly n items,
+   each satisfying item?. Indexed and counted values are counted in
+   O(1); other sequences are counted during the single traversal.
+   n     - int, expected item count
+   item? - function (fn [item]) -> boolean
+   Returns (fn [value]) -> boolean."
+  [n item?]
+  (let [n (long n)]
+    (fn [value]
+      (and (sequential? value)
+           (if (instance? clojure.lang.Indexed value)
+             (and (== n (count value))
+                  (loop [i 0]
+                    (or (== i n)
+                        (and (item? (nth value i)) (recur (inc i))))))
+             (and (or (not (counted? value)) (== n (count value)))
+                  (loop [s (seq value) i 0]
+                    (if s
+                      (and (< i n) (item? (first s)) (recur (next s) (inc i)))
+                      (== i n)))))))))
+
+(defn- runtime-items-checker
+  "Compiles the check of a runtime array value: 0 to capacity
+   elements, each satisfying element?. Other sequences than indexed
+   ones are bounded during the single traversal.
+   capacity - int, maximum element count
+   element? - function (fn [element]) -> boolean
+   Returns (fn [value]) -> boolean."
+  [capacity element?]
+  (let [capacity (long capacity)]
+    (fn [value]
+      (and (sequential? value)
+           (if (instance? clojure.lang.Indexed value)
+             (let [n (count value)]
+               (and (<= n capacity)
+                    (loop [i 0]
+                      (or (== i n)
+                          (and (element? (nth value i)) (recur (inc i)))))))
+             (loop [s (seq value) i 0]
+               (if s
+                 (and (< i capacity) (element? (first s)) (recur (next s) (inc i)))
+                 true)))))))
+
+(defn- field-names
+  "The field names of a struct schema as an array, strings interned so
+   that the keys of handler maps, usually literals, match them by
+   identity before any character comparison.
+   fields - map {field-name schema}
+   Returns an object array."
+  ^objects [fields]
+  (object-array (map #(if (string? %) (.intern ^String %) %) (keys fields))))
+
+(declare ^:private node-checker)
+
+(defn- fields-checker
+  "Compiles the check of a struct value: a map holding every field,
+   each valid, and no other key — counting the keys once every field
+   is found rules unknown keys out.
+   fields - map {field-name schema}
+   Returns (fn [value]) -> boolean."
+  [fields]
+  (let [names    (field-names fields)
+        checkers (object-array (map node-checker (vals fields)))
+        n        (alength names)]
+    (fn [value]
+      (and (map? value)
+           (== n (count value))
+           (loop [i 0]
+             (or (== i n)
+                 (let [field (get value (aget names i) ABSENT)]
+                   (and (not (identical? ABSENT field))
+                        ((aget checkers i) field)
+                        (recur (inc i))))))))))
+
+(defn- node-checker
+  "Compiles the check of one schema node.
+   schema - map, schema node
+   Returns (fn [value]) -> boolean."
+  [schema]
+  (case (:kind schema)
+    :scalar (scalar-checker (:type schema))
+    (:vector :matrix)
+    (let [glsl-type (:type schema)]
+      (items-checker (* (:size glsl-type) (get glsl-type :total-locations 1))
+                     (scalar-checker glsl-type)))
+    :struct (fields-checker (:fields schema))
+    :array  (if (= :runtime (:count schema))
+              (runtime-items-checker (get schema :capacity 1)
+                                     (node-checker (:element schema)))
+              (items-checker (:count schema)
+                             (node-checker (first (:elements schema)))))))
+
+(defn compile-checker
+  "Compiles a block schema into its checker: a predicate telling
+   whether a handler value is valid for the block, the compiled
+   equivalent of validate — true exactly when validate does not
+   throw. It never builds a report: on false, run validate for it.
+   Elements of a fixed array share one checker, offsets playing no
+   part in validity.
+   schema - map {field-name schema}, from members->schema
+   Returns (fn [value]) -> boolean."
+  [schema]
+  (fields-checker schema))
+
+(defn validate-with-checker
+  "Validates a handler value with a compiled checker, falling back on
+   validate for the detailed report when the checker rejects it.
+   Throws an internal error when validate accepts a value the checker
+   rejected — an engine defect, never written to the GPU.
+   schema  - map {field-name schema}, from members->schema
+   checker - function, from compile-checker for schema
+   value   - the handler return value
+   Returns nil when value is safe to serialize, throws ex-info with
+   :path and :error otherwise."
+  [schema checker value]
+  (when-not (checker value)
+    (validate schema value)
+    (throw (ex-info "Compiled checker rejected a value accepted by validate"
+                    {:path   []
+                     :error  :checker-mismatch
+                     :schema schema})))
+  nil)
+
+(defn- scalar-serializer
+  "Compiles the writer of one scalar of a GLSL type at an offset.
+   glsl-type - map, GLSL type
+   offset    - int, absolute byte offset of the scalar in the block
+   Returns (fn [buffer delta scalar]) writing at offset + delta."
+  [glsl-type offset]
+  (let [offset (long offset)]
+    (cond
+      (:double? glsl-type)
+      (fn [^ByteBuffer buffer delta scalar]
+        (.putDouble buffer (int (+ offset (long delta))) (double scalar)))
+
+      (glsl/bool-type? glsl-type)
+      (fn [^ByteBuffer buffer delta scalar]
+        (.putInt buffer (int (+ offset (long delta)))
+                 (if (boolean? scalar)
+                   (if scalar 1 0)
+                   (unchecked-int (long scalar)))))
+
+      (:integer? glsl-type)
+      (fn [^ByteBuffer buffer delta scalar]
+        (.putInt buffer (int (+ offset (long delta))) (unchecked-int (long scalar))))
+
+      :else
+      (fn [^ByteBuffer buffer delta scalar]
+        (.putFloat buffer (int (+ offset (long delta))) (float scalar))))))
+
+(defn- items-serializer
+  "Compiles the writer of a sequential value: item i is written by the
+   i-th writer. Indexed values are read with nth, other sequences
+   traversed once.
+   writers - vector of functions (fn [buffer delta item])
+   Returns (fn [buffer delta value])."
+  [writers]
+  (let [writers (object-array writers)
+        n       (alength writers)]
+    (fn [buffer delta value]
+      (if (instance? clojure.lang.Indexed value)
+        (loop [i 0]
+          (when (< i n)
+            ((aget writers i) buffer delta (nth value i))
+            (recur (inc i))))
+        (loop [s (seq value) i 0]
+          (when (and s (< i n))
+            ((aget writers i) buffer delta (first s))
+            (recur (next s) (inc i))))))))
+
+(defn- scalars-serializer
+  "Compiles the writer of a vector or matrix value: scalar i is written
+   at offsets[i], in one primitive loop per value with the type
+   dispatched at compile time. Sequences other than indexed ones are
+   turned into a vector once.
+   glsl-type - map, GLSL type
+   offsets   - coll of int, absolute byte offset of each scalar
+   Returns (fn [buffer delta value])."
+  [glsl-type offsets]
+  (let [offsets (long-array offsets)
+        n       (alength offsets)
+        indexed (fn [value]
+                  (if (instance? clojure.lang.Indexed value) value (vec value)))]
+    (cond
+      (:double? glsl-type)
+      (fn [^ByteBuffer buffer delta value]
+        (let [delta (long delta) value (indexed value)]
+          (dotimes [i n]
+            (.putDouble buffer (int (+ delta (aget offsets i))) (double (nth value i))))))
+
+      (glsl/bool-type? glsl-type)
+      (fn [^ByteBuffer buffer delta value]
+        (let [delta (long delta) value (indexed value)]
+          (dotimes [i n]
+            (let [scalar (nth value i)]
+              (.putInt buffer (int (+ delta (aget offsets i)))
+                       (if (boolean? scalar) (if scalar 1 0) (unchecked-int (long scalar))))))))
+
+      (:integer? glsl-type)
+      (fn [^ByteBuffer buffer delta value]
+        (let [delta (long delta) value (indexed value)]
+          (dotimes [i n]
+            (.putInt buffer (int (+ delta (aget offsets i))) (unchecked-int (long (nth value i)))))))
+
+      :else
+      (fn [^ByteBuffer buffer delta value]
+        (let [delta (long delta) value (indexed value)]
+          (dotimes [i n]
+            (.putFloat buffer (int (+ delta (aget offsets i))) (float (nth value i)))))))))
+
+(declare ^:private node-serializer)
+
+(defn- fields-serializer
+  "Compiles the writer of a struct value, field by field.
+   fields - map {field-name schema}
+   Returns (fn [buffer delta value])."
+  [fields]
+  (let [names   (field-names fields)
+        writers (object-array (map node-serializer (vals fields)))
+        n       (alength names)]
+    (fn [buffer delta value]
+      (loop [i 0]
+        (when (< i n)
+          ((aget writers i) buffer delta (get value (aget names i)))
+          (recur (inc i)))))))
+
+(defn- runtime-items-serializer
+  "Compiles the writer of a runtime array value: element i is written
+   by the element writer shifted by i × stride.
+   stride - int, byte stride between two consecutive elements
+   writer - function (fn [buffer delta element]), element 0 writer
+   Returns (fn [buffer delta value])."
+  [stride writer]
+  (let [stride (long stride)]
+    (fn [buffer delta value]
+      (let [delta (long delta)]
+        (if (instance? clojure.lang.Indexed value)
+          (let [n (count value)]
+            (loop [i 0]
+              (when (< i n)
+                (writer buffer (+ delta (* i stride)) (nth value i))
+                (recur (inc i)))))
+          (loop [s (seq value) i 0]
+            (when s
+              (writer buffer (+ delta (* i stride)) (first s))
+              (recur (next s) (inc i)))))))))
+
+(defn- node-serializer
+  "Compiles the writer of one schema node. Matrices are read in
+   column-major order.
+   schema - map, schema node
+   Returns (fn [buffer delta value]) writing at the node's absolute
+   offsets shifted by delta."
+  [schema]
+  (case (:kind schema)
+    :scalar
+    (scalar-serializer (:type schema) (:offset schema))
+
+    :vector
+    (let [{:keys [type offset]} schema
+          scalar-bytes (gl-buffer/scalar-bytes type)]
+      (scalars-serializer type (map #(+ offset (* % scalar-bytes))
+                                    (range (:size type)))))
+
+    :matrix
+    (let [{:keys [type offset matrix-stride]} schema
+          {:keys [size total-locations]} type
+          scalar-bytes (gl-buffer/scalar-bytes type)]
+      (scalars-serializer type (for [column (range total-locations)
+                                     row    (range size)]
+                                 (+ offset
+                                    (* column matrix-stride)
+                                    (* row scalar-bytes)))))
+
+    :struct
+    (fields-serializer (:fields schema))
+
+    :array
+    (if (= :runtime (:count schema))
+      (runtime-items-serializer (:stride schema) (node-serializer (:element schema)))
+      (items-serializer (mapv node-serializer (:elements schema))))))
+
+(defn compile-serializer
+  "Compiles a block schema into its serializer: a function writing a
+   validated handler value into a provided ByteBuffer, the compiled
+   equivalent of serialize. The value is written at the schema's
+   offsets shifted by offset; bytes the value does not cover are left
+   as they are.
+   schema - map {field-name schema}, from members->schema
+   Returns (fn [buffer offset value]) -> buffer, where buffer is a
+   ByteBuffer, offset the int byte offset of the block in it and value
+   a value accepted by the block's checker."
+  [schema]
+  (let [writer (fields-serializer schema)]
+    (fn [buffer offset value]
+      (writer buffer offset value)
+      buffer)))
