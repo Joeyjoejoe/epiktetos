@@ -128,6 +128,20 @@
         (t/is (re-find #"Debug with:" log))
         (t/is (false? (error/paused?)))))))
 
+(t/deftest pause-count-test
+  (t/testing "an event dropped with the error pause disabled is not counted"
+    (let [before @error/pause-count]
+      (with-out-str (error/handle-error! (error/lookup-report [:evt])))
+      (t/is (= before @error/pause-count))))
+
+  (t/testing "an actual error pause is counted once"
+    (enable-error-pause!)
+    (with-redefs [error/wake-loop!      (fn [] nil)
+                  error/pump-os-events! (fn [] (error/skip!))]
+      (let [before @error/pause-count]
+        (with-out-str (error/handle-error! (error/lookup-report [:evt])))
+        (t/is (= (inc before) @error/pause-count))))))
+
 (t/deftest error-report-access-test
   (enable-error-pause!)
   (with-redefs [error/wake-loop!      (fn [] nil)

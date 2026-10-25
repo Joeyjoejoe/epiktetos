@@ -6,6 +6,7 @@
             [epiktetos.error :as error]
             [epiktetos.startup :as startup]
             [epiktetos.event :as event]
+            [epiktetos.gamepad :as gamepad]
             [epiktetos.render.entity :as entity]
             [epiktetos.render.step :as render-step]
             [epiktetos.opengl.shader-program :as prog]
@@ -194,6 +195,13 @@
   (reg-cofx :inject-computes
             (fn [coeffects]
               (assoc coeffects :computes (registrar/computes))))
+
+  (reg-cofx :gamepads
+            (fn [coeffects]
+              (assoc coeffects :gamepads
+                     (gamepad/gamepads
+                       (get-in @registrar/registry
+                               [::registrar/system-registry :gl/engine :sdl])))))
 
   (reg-cofx :read-input
             (fn [coeffects value]

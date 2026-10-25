@@ -1,6 +1,8 @@
 (ns epiktetos.loop
   (:require [epiktetos.event :as event]
             [epiktetos.db :as app-db]
+            [epiktetos.error :as error]
+            [epiktetos.gamepad :as gamepad]
             [epiktetos.render.pipeline :as render])
 
   (:import (org.lwjgl.glfw GLFW))
@@ -23,7 +25,8 @@
       {:fps fps :frames frames :tick tick})))
 
 (defn start
-  [{{window-id :id} :glfw/window}]
+  [{{window-id :id} :glfw/window
+    {:keys [sdl]}   :gl/engine}]
 
    (println :engine/start)
    (GLFW/glfwSetWindowShouldClose window-id false)
@@ -35,7 +38,8 @@
            :fps  0}
 
           fps-count {:fps 0 :frames 0 :tick 0.0}
-          lag (atom 0.0)]
+          lag (atom 0.0)
+          poll-context {:focused? false :pause-count @error/pause-count}]
 
      (swap! lag #(+ % delta))
 
@@ -43,6 +47,9 @@
 
        (event/execute [::event/physics.update])
        (event/consume!)
+
+       (when (get-in @app-db/db [:core/window :paused?])
+         (error/count-pause!))
 
        ;; TODO Improve paused loop commands :
        ;; - Manual event loop consumption
@@ -71,6 +78,10 @@
 
          (event/dispatch [::event/window.state window-frame])
          (GLFW/glfwPollEvents)
-         (recur window-frame fps-count lag))))
+         (recur window-frame fps-count lag
+                (gamepad/poll! sdl poll-context
+                               {:focused?    (= GLFW/GLFW_TRUE
+                                                (GLFW/glfwGetWindowAttrib window-id GLFW/GLFW_FOCUSED))
+                                :pause-count @error/pause-count})))))
 
    :engine/stop)

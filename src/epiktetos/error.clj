@@ -24,6 +24,9 @@
   ;; {:report ex-info, :decision nil | {:action kw :event replacement}}
   (atom nil))
 
+(defonce pause-count
+  (atom 0))
+
 (defn enabled?
   "True when the error pause is enabled in the engine configuration,
   under [:gl/engine :error-pause :enabled?]"
@@ -35,6 +38,14 @@
   "True while the loop is paused on an error"
   []
   (some? @pause-state))
+
+(defn count-pause!
+  "Count one loop pause, error pause or inspection pause, so that the
+  gamepad poll can tell a pause happened since the previous poll.
+  Returns nil"
+  []
+  (swap! pause-count inc)
+  nil)
 
 (defn error-report
   "Return the report data of the pending error, or nil when the engine
@@ -573,6 +584,7 @@
         (throw report))
       (do (print-report! data)
           (reset! pause-state {:report report :decision nil})
+          (count-pause!)
           (let [decision (await-decision!)]
             (clear-pause-state!)
             (when (= :abort (:action decision))

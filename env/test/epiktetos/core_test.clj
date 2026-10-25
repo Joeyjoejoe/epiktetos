@@ -48,3 +48,9 @@
             (t/is (= ::boom (:coeffect (ex-data (:throwable error))))))))
       (t/is (false? @handler-ran?))
       (t/is (false? @fx-ran?)))))
+
+(t/deftest gamepads-cofx-test
+  (t/testing "without a running engine the :gamepads coeffect injects an empty map"
+    (core/install-core!)
+    (let [before (:before (core/inject-cofx :gamepads))]
+      (t/is (= {} (get-in (before {:coeffects {}}) [:coeffects :gamepads]))))))

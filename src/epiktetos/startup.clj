@@ -13,6 +13,7 @@
             [epiktetos.db :as app-db]
             [epiktetos.error :as error]
             [epiktetos.event :as event]
+            [epiktetos.gamepad :as gamepad]
             [epiktetos.window :as window]
             [epiktetos.loop :as game-loop])
   (:import (org.lwjgl.opengl GL GLCapabilities)))
@@ -79,9 +80,11 @@
 (defmethod ig/init-key
   :gl/engine
   [_ opts]
-  (let [{:keys [hot-reload]} opts]
+  (let [{:keys [hot-reload]} opts
+        sdl                  (gamepad/initialize-sdl!)]
 
     (cond-> opts
+      sdl        (assoc :sdl sdl)
       hot-reload (assoc :hot-reload {:watcher (apply beholder/watch
                                                      (fn [_]
                                                        (doseq [[id prog] (get-in @registrar/registry [::registrar/opengl-registry :programs])]
@@ -106,13 +109,15 @@
 (defmethod ig/halt-key!
   :gl/engine
   [_ system]
-  (let [{:keys [hot-reload]} system
+  (let [{:keys [hot-reload sdl]} system
         registry     @registrar/registry
         render-state @registrar/render-state
         ^GLCapabilities no-capabilities nil]
 
     (when hot-reload
       (beholder/stop (:watcher hot-reload)))
+
+    (gamepad/quit-sdl! sdl)
 
     (entity/delete-entities-buffers! render-state)
     (input-buffer/delete-block-buffers! registry)

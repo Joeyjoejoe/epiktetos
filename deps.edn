@@ -27,7 +27,12 @@
            org.lwjgl/lwjgl-stb                 {:mvn/version "3.4.3"}
            org.lwjgl/lwjgl-stb$natives-linux   {:mvn/version "3.4.3", :native-prefix ""}
            org.lwjgl/lwjgl-stb$natives-macos   {:mvn/version "3.4.3", :native-prefix ""}
-           org.lwjgl/lwjgl-stb$natives-windows {:mvn/version "3.4.3", :native-prefix ""}}
+           org.lwjgl/lwjgl-stb$natives-windows {:mvn/version "3.4.3", :native-prefix ""}
+
+           org.lwjgl/lwjgl-sdl                 {:mvn/version "3.4.3"}
+           org.lwjgl/lwjgl-sdl$natives-linux   {:mvn/version "3.4.3", :native-prefix ""}
+           org.lwjgl/lwjgl-sdl$natives-macos   {:mvn/version "3.4.3", :native-prefix ""}
+           org.lwjgl/lwjgl-sdl$natives-windows {:mvn/version "3.4.3", :native-prefix ""}}
 
  :aliases {:test {:extra-paths ["env/test"]
                   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.63.998"}}}
