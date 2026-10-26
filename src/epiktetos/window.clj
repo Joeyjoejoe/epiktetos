@@ -4,11 +4,12 @@
             [epiktetos.controls :as controls]
             [epiktetos.opengl.buffer :as b]
             [epiktetos.event :as event]
-            [epiktetos.lang.glfw :as glfw])
+            [epiktetos.lang.glfw :as glfw]
+            [epiktetos.window.settings :as settings])
   (:import (org.lwjgl.glfw GLFW GLFWKeyCallback GLFWErrorCallback GLFWCursorPosCallback
                            GLFWWindowSizeCallback GLFWFramebufferSizeCallback
                            GLFWWindowFocusCallback GLFWWindowIconifyCallback
-                           GLFWWindowContentScaleCallback)
+                           GLFWWindowContentScaleCallback GLFWVidMode)
            (org.lwjgl.system MemoryUtil)
            (org.lwjgl.opengl GL GL11 GL13 GL20 GL30 GL32 GL43 GLDebugMessageCallback)))
 
@@ -100,10 +101,6 @@
                 (isa? glfw/GRAMMAR property :hint.type/string)  (:hint.type/string glfw/DICTIONARY))]
     (f hint value)))
 
-(defn input-mode! [w property value]
-    (let [mode  (property glfw/DICTIONARY)
-          value (get glfw/DICTIONARY value)]
-      (GLFW/glfwSetInputMode w mode value)))
 
 
 
@@ -165,6 +162,17 @@
 
 
 
+(defn windowed-size
+  "The title and windowed size the window is created with: the
+  configured ones, the size defaulting to half the primary monitor.
+  params - map, the :glfw/window configuration
+  Returns {:title string :width int :height int}"
+  [{:keys [title width height]}]
+  (let [^GLFWVidMode video (GLFW/glfwGetVideoMode (GLFW/glfwGetPrimaryMonitor))]
+    {:title  (or title "")
+     :width  (or width (quot (.width video) 2))
+     :height (or height (quot (.height video) 2))}))
+
 (defn create-window
   "Create the game window and set the OpenGl context where everything will be draw"
   [params]
@@ -180,27 +188,16 @@
 
   (GLFW/glfwDefaultWindowHints)
 
-  (let [{:keys [title width height display]} params
-        monitor (GLFW/glfwGetPrimaryMonitor)
-        video   (GLFW/glfwGetVideoMode monitor)]
+  (let [{:keys [title width height]} (windowed-size params)]
 
     (doseq [[k v] params]
       (cond
         (isa? glfw/GRAMMAR k :window/hint) (window-hint! k v)))
 
-    (cond
-      (= :fullscreen/windowed display)
-      (do (GLFW/glfwWindowHint GLFW/GLFW_RED_BITS (.redBits video))
-          (GLFW/glfwWindowHint GLFW/GLFW_GREEN_BITS (.greenBits video))
-          (GLFW/glfwWindowHint GLFW/GLFW_BLUE_BITS (.blueBits video))
-          (GLFW/glfwWindowHint GLFW/GLFW_REFRESH_RATE (.refreshRate video))
-          (GLFW/glfwCreateWindow (.width video) (.height video) title monitor (MemoryUtil/NULL)))
+    (GLFW/glfwWindowHint GLFW/GLFW_VISIBLE GLFW/GLFW_FALSE)
 
-      (= :fullscreen display)
-      (GLFW/glfwCreateWindow (.width video) (.height video) title monitor (MemoryUtil/NULL))
-
-      (= :windowed display)
-      (GLFW/glfwCreateWindow width height title (MemoryUtil/NULL) (MemoryUtil/NULL)))))
+    (GLFW/glfwCreateWindow (int width) (int height) ^CharSequence title
+                           (MemoryUtil/NULL) (MemoryUtil/NULL))))
 
 
 (defn configure [w opts]
@@ -216,10 +213,6 @@
   (GLFW/glfwSetWindowFocusCallback w focus-callback)
   (GLFW/glfwSetWindowIconifyCallback w iconify-callback)
   (GLFW/glfwSetWindowContentScaleCallback w content-scale-callback)
-
-  (doseq [[k v] opts]
-    (cond
-      (isa? glfw/GRAMMAR k :input/mode) (input-mode! w k v)))
 
   (GLFW/glfwSetCursorPos w (double (first (get-center w))) (double (last (get-center w))))
 
@@ -257,13 +250,21 @@
 
 
 (defmethod ig/init-key :glfw/window [_ opts]
+  (when-let [unknown (seq (settings/unknown-settings opts))]
+    (println "[epiktetos] Unknown :glfw/window setting(s) ignored:"
+             (pr-str (vec unknown))))
   (let [window-id (-> opts
                       create-window
-                      (configure opts))]
+                      (configure opts))
+        {:keys [width height]} (windowed-size opts)
+        window    {:id    window-id
+                   :state (settings/create-window-state width height)}]
 
     (println "OpenGL version:" (GL11/glGetString GL11/GL_VERSION))
-    (GLFW/glfwShowWindow window-id)
-    {:id window-id}))
+    (settings/apply-window-settings! window
+                                     (merge {:window/visible true}
+                                            (settings/runtime-settings opts)))
+    window))
 
 
 (defmethod ig/halt-key! :glfw/window [_ window]

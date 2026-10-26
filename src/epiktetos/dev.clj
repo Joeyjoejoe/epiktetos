@@ -51,7 +51,8 @@
             (let [paused (get-in @app-db/db [:core/window :paused?])]
 
               (if-not paused
-                (do (open-inspector)
+                (do (error/release-cursor!)
+                    (open-inspector)
                     (error/print-paused! "state inspection"))
                 (do (close-inspector)
                     (error/print-resumed!)))

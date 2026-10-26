@@ -15,6 +15,7 @@
             [epiktetos.event :as event]
             [epiktetos.gamepad :as gamepad]
             [epiktetos.window :as window]
+            [epiktetos.window.settings :as window-settings]
             [epiktetos.loop :as game-loop])
   (:import (org.lwjgl.opengl GL GLCapabilities)))
 
@@ -69,7 +70,8 @@
     (swap! registrar/registry assoc ::registrar/system-registry systems)
     (install-dev-tooling!)
     (swap! app-db/db assoc :core/window
-           (window/get-state (get-in systems [:glfw/window :id])))
+           (merge (window/get-state (get-in systems [:glfw/window :id]))
+                  (window-settings/current-settings (:glfw/window systems))))
     (when-not (::registrar/steps @registrar/render-state)
       (swap! registrar/render-state merge (render-step/build-render-steps)))
     (try

@@ -11,7 +11,8 @@
   free."
   (:require [clojure.string :as string]
             [epiktetos.db :as app-db]
-            [epiktetos.registrar :as registrar])
+            [epiktetos.registrar :as registrar]
+            [epiktetos.window.settings :as window-settings])
   (:import (org.lwjgl.glfw GLFW)))
 
 (def STAGES
@@ -559,6 +560,19 @@
     (GLFW/glfwPostEmptyEvent))
   nil)
 
+(defn release-cursor!
+  "Give the pointer back to the user on entering a pause, error or
+  inspection: while events are not consumed the application cannot
+  release a captured cursor itself. The cursor mode is reflected in
+  [:core/window] at once.
+  Returns nil"
+  []
+  (when-let [applied (window-settings/release-cursor!
+                       (get-in @registrar/registry
+                               [::registrar/system-registry :glfw/window]))]
+    (swap! app-db/db update :core/window merge applied))
+  nil)
+
 (defn handle-error!
   "React to a failed event, on the loop thread.
 
@@ -585,6 +599,7 @@
       (do (print-report! data)
           (reset! pause-state {:report report :decision nil})
           (count-pause!)
+          (release-cursor!)
           (let [decision (await-decision!)]
             (clear-pause-state!)
             (when (= :abort (:action decision))

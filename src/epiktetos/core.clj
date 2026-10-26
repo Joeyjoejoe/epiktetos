@@ -15,7 +15,8 @@
             [epiktetos.shader-input.buffer :as input-buffer]
             [epiktetos.shader-input.texture :as texture]
             [epiktetos.interceptors :as interc :refer [->interceptor]]
-            [epiktetos.window]))
+            [epiktetos.window]
+            [epiktetos.window.settings :as window-settings]))
 
 (def db app-db/db)
 
@@ -112,6 +113,26 @@
    (update fx ::fx/reg-texture conj [id spec])))
 
 
+(defn window
+  "Change runtime window settings: the keys of the :glfw/window
+  configuration that are not :hint.* keys (ai-spec/specs/window-spec.md).
+  Only the keys present change; the current values are reflected in
+  [:core/window] from the next event. The settings are validated by
+  the pure arity, in the calling handler: an invalid map fails the
+  handler, never the effect.
+  settings - map, runtime setting key -> value,
+             e.g. {:mode/cursor :cursor/disabled}
+  fx       - map, effects map of a handler (pure arity)
+  Returns the updated event queue (immediate arity), or fx with the
+  settings merged into the window effect, the last value of a key
+  winning (pure arity); throws an ex-info on invalid settings (pure
+  arity)"
+  ([settings]
+   (dispatch ::event/window.settings settings))
+  ([fx settings]
+   (update fx ::fx/window merge
+           (window-settings/validate-window-settings settings))))
+
 (defn reg-steps!
   [& steps]
   (dispatch ::render-step/register steps))
@@ -182,6 +203,10 @@
              (fn [cofx fx]
                (let [id (get-in cofx [:event 1])]
                  (delete fx id))))
+
+  (reg-event ::event/window.settings
+             (fn [cofx fx]
+               (window fx (get-in cofx [:event 1]))))
 
   (reg-event ::event/window.state
              (fn [cofx fx]
@@ -289,6 +314,16 @@
           (fn [texture-coll]
             (doseq [[id spec] texture-coll]
               (texture/register-texture! id spec))))
+
+  (reg-fx ::fx/window
+          (fn apply-window-settings! [settings]
+            (window-settings/validate-window-settings settings)
+            (let [applied (window-settings/apply-window-settings!
+                            (get-in @registrar/registry
+                                    [::registrar/system-registry :glfw/window])
+                            settings)]
+              (when (seq applied)
+                (event/dispatch [::event/window.state applied])))))
 
   (reg-fx :db
           (fn update-db! [new-db]
