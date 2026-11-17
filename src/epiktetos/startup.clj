@@ -21,6 +21,80 @@
 
 (defonce DEFAULT_CONFIG_PATH "epiktetos/default-config.edn")
 
+(defonce engine-run (atom nil))
+
+(defn validate-config-path!
+  "Throw when config-path does not resolve to a classpath resource.
+
+  config-path - string, classpath path to an edn config
+  Returns nil"
+  [config-path]
+  (when-not (io/resource config-path)
+    (throw (java.io.FileNotFoundException.
+             (str "Config file not found: " config-path))))
+  nil)
+
+(defn claim-run!
+  "Claim the engine run state for handle, by compare-and-set: only
+  one start wins while no engine runs.
+
+  handle - the engine handle to install as the run state
+  Returns true when the claim succeeds, false otherwise"
+  [handle]
+  (compare-and-set! engine-run nil handle))
+
+(defn release-run!
+  "Release the engine run state, making the next start claimable.
+  Called on the loop thread once the engine is fully halted.
+
+  Returns nil"
+  []
+  (reset! engine-run nil)
+  nil)
+
+(defn engine-handle
+  "Wrap the promise of the engine outcome into the start handle.
+
+  outcome - promise, delivered with the loop exit value on a clean
+  stop, or with the Throwable that stopped the engine
+  Returns the handle: deref blocks until the engine stops and
+  returns the exit value, or rethrows the delivered Throwable; the
+  timeout arity of deref and realized? are supported"
+  [outcome]
+  (let [unwrap (fn [value]
+                 (if (instance? Throwable value)
+                   (throw value)
+                   value))]
+    (reify
+      clojure.lang.IDeref
+      (deref [_]
+        (unwrap (deref outcome)))
+      clojure.lang.IBlockingDeref
+      (deref [_ timeout-ms timeout-val]
+        (let [value (deref outcome timeout-ms ::engine-runs)]
+          (if (identical? value ::engine-runs)
+            timeout-val
+            (unwrap value))))
+      clojure.lang.IPending
+      (isRealized [_]
+        (realized? outcome)))))
+
+(defn halt-incomplete-systems!
+  "Halt the partially initialized systems carried by an integrant
+  build failure, so a failed start leaves no live system behind.
+  A no-op for an error that carries no system.
+
+  throwable - the error that stopped the startup
+  Returns nil"
+  [throwable]
+  (when-let [systems (:system (ex-data throwable))]
+    (try
+      (ig/halt! systems)
+      (catch Throwable halt-error
+        (println "[epiktetos] Could not halt the partially initialized systems:"
+                 (.getMessage halt-error)))))
+  nil)
+
 (defn init-systems
   "Start engine's systems as defined in integrant
   (https://github.com/weavejester/integrant)
@@ -29,9 +103,7 @@
    (init-systems DEFAULT_CONFIG_PATH))
   ([config-path]
 
-   (when-not (io/resource config-path)
-     (throw (java.io.FileNotFoundException.
-              (str "Config file not found: " config-path))))
+   (validate-config-path! config-path)
 
    (-> config-path
        io/resource
@@ -75,7 +147,7 @@
     (when-not (::registrar/steps @registrar/render-state)
       (swap! registrar/render-state merge (render-step/build-render-steps)))
     (try
-      (game-loop/start systems)
+      (game-loop/start! systems)
       (finally
         (ig/halt! systems)))))
 

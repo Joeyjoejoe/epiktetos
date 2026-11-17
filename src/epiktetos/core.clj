@@ -362,25 +362,56 @@
                  (swap! registrar/render-state merge))))
   nil)
 
-(defn start
-  "Start the engine and block until it stops: install the engine core
-  state, initialize the systems from the edn configuration, then enter
-  the loop. When the error pause is enabled, the development tooling
-  is installed with the systems (startup/install-dev-tooling!).
+(defn- run-engine!
+  "Run the whole engine lifecycle on the current thread: install the
+  engine core state, initialize the systems from the edn
+  configuration — the window and the GL context are created here, on
+  the loop thread — then block in the loop until the engine stops.
+
+  config-path - string, classpath path to an edn config
+  Returns the loop exit value, or the Throwable that stopped the
+  engine, after halting any partially initialized system and logging
+  the error"
+  [config-path]
+  (try
+    (install-core!)
+    (-> config-path
+        startup/init-systems
+        (assoc-in [:gl/engine :config-path] config-path)
+        startup/start-engine!)
+    (catch Throwable t
+      (startup/halt-incomplete-systems! t)
+      (println "[epiktetos] Engine stopped by error:" (str t))
+      t)))
+
+(defn start!
+  "Start the engine on a dedicated thread and return immediately: a
+  non-daemon thread named epiktetos-loop installs the engine core
+  state, initializes the systems from the edn configuration, then
+  runs the loop. When the error pause is enabled, the development
+  tooling is installed with the systems (startup/install-dev-tooling!).
 
   Refuses to start while an engine is already running — stop it with
-  stop! first: halting from the REPL thread would issue GL calls
-  outside the thread holding the context.
+  stop! first: a message is logged and nil returned.
 
-  config-path - string, classpath path to an edn config (optional)
-  Returns the loop exit value, or nil when an engine already runs"
+  config-path - string, classpath path to an edn config (optional);
+  a path missing from the classpath throws on the calling thread
+  Returns a handle: deref blocks until the engine stops and returns
+  the loop exit value, or rethrows the error that stopped it (also
+  logged when it occurs). Nil when an engine already runs"
   ([]
-   (start startup/DEFAULT_CONFIG_PATH))
+   (start! startup/DEFAULT_CONFIG_PATH))
   ([config-path]
-   (if (seq (::registrar/system-registry @registrar/registry))
-     (println "[epiktetos] Engine already running - stop it with (epiktetos.core/stop!) before restarting.")
-     (do (install-core!)
-         (-> config-path
-             startup/init-systems
-             (assoc-in [:gl/engine :config-path] config-path)
-             startup/start-engine!)))))
+   (startup/validate-config-path! config-path)
+   (let [outcome (promise)
+         handle  (startup/engine-handle outcome)]
+     (if (startup/claim-run! handle)
+       (do (doto (Thread. (bound-fn []
+                            (let [outcome-value (run-engine! config-path)]
+                              (startup/release-run!)
+                              (deliver outcome outcome-value)))
+                          "epiktetos-loop")
+             (.start))
+           handle)
+       (do (println "[epiktetos] Engine already running - stop it with (epiktetos.core/stop!) before restarting.")
+           nil)))))

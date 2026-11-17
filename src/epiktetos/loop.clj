@@ -24,7 +24,7 @@
       {:fps frames :frames 0 :tick (- tick 1.0)}
       {:fps fps :frames frames :tick tick})))
 
-(defn start
+(defn start!
   [{{window-id :id} :glfw/window
     {:keys [sdl]}   :gl/engine}]
 

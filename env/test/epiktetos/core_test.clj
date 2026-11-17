@@ -3,7 +3,9 @@
             [epiktetos.core :as core]
             [epiktetos.effect :as fx]
             [epiktetos.event :as event]
-            [epiktetos.interceptors :as interc]))
+            [epiktetos.interceptors :as interc]
+            [epiktetos.startup :as startup]
+            [integrant.core :as ig]))
 
 (t/deftest pure-forms-test
   (t/testing "pure forms accumulate their entries in the fx map"
@@ -54,3 +56,50 @@
     (core/install-core!)
     (let [before (:before (core/inject-cofx :gamepads))]
       (t/is (= {} (get-in (before {:coeffects {}}) [:coeffects :gamepads]))))))
+
+(t/deftest start-test
+  (reset! startup/engine-run nil)
+
+  (t/testing "start returns a handle delivering the loop exit value"
+    (with-redefs [startup/init-systems  (fn [_config-path] {})
+                  startup/start-engine! (fn [_systems] :engine/stop)]
+      (let [engine (core/start!)]
+        (t/is (some? engine))
+        (t/is (= :engine/stop (deref engine 2000 ::timeout))))))
+
+  (t/testing "a second start while an engine runs is refused with nil"
+    (let [halt (promise)]
+      (with-redefs [startup/init-systems  (fn [_config-path] {})
+                    startup/start-engine! (fn [_systems] @halt :engine/stop)]
+        (let [engine (core/start!)]
+          (t/is (nil? (core/start!)))
+          (deliver halt true)
+          (t/is (= :engine/stop (deref engine 2000 ::timeout)))))))
+
+  (t/testing "a missing config path throws on the calling thread"
+    (t/is (thrown? java.io.FileNotFoundException
+                   (core/start! "missing/config.edn")))
+    (t/is (nil? @startup/engine-run)))
+
+  (t/testing "a startup failure is rethrown at deref and frees the next start"
+    (with-redefs [startup/init-systems
+                  (fn [_config-path] (throw (ex-info "boom" {})))]
+      (let [engine (core/start!)]
+        (t/is (thrown? clojure.lang.ExceptionInfo
+                       (deref engine 2000 ::timeout)))))
+    (with-redefs [startup/init-systems  (fn [_config-path] {})
+                  startup/start-engine! (fn [_systems] :engine/stop)]
+      (let [engine (core/start!)]
+        (t/is (= :engine/stop (deref engine 2000 ::timeout))))))
+
+  (t/testing "an integrant build failure halts the partial systems"
+    (let [halted (atom nil)]
+      (with-redefs [startup/init-systems
+                    (fn [_config-path]
+                      (throw (ex-info "build failed"
+                                      {:system {:glfw/window ::partial}})))
+                    ig/halt! (fn [systems] (reset! halted systems))]
+        (let [engine (core/start!)]
+          (t/is (thrown? clojure.lang.ExceptionInfo
+                         (deref engine 2000 ::timeout)))
+          (t/is (= {:glfw/window ::partial} @halted)))))))
